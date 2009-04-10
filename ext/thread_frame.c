@@ -20,116 +20,132 @@ typedef struct {
 
 typedef void rb_thread_t;
 
+typedef struct 
+{
+    rb_thread_t *th;
+    rb_control_frame_t *cfp;
+} thread_frame_t;
+  
+
 #define RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp) (cfp+1)
+
+extern rb_control_frame_t * thread_context_frame(void *);
+extern rb_thread_t *ruby_current_thread;
 
 VALUE rb_cThreadFrame;
 
 static VALUE
-thread_frame_s_new(VALUE klass)
+thread_frame_alloc(VALUE klass)
 {
-    rb_control_frame_t *data;
-    VALUE thread_frame = Data_Make_Struct(klass, rb_control_frame_t, 0, -1, 
-					  data);
-    return thread_frame;
+    return Data_Wrap_Struct(klass, NULL, xfree, 0);
 }
 
-extern rb_control_frame_t * thread_context_frame(void *);
+static thread_frame_t *
+thread_frame_t_alloc(VALUE tfval)
+{
+    thread_frame_t *tf = ALLOC(thread_frame_t);
+    memset(tf, 0, sizeof(thread_frame_t));
+    DATA_PTR(tfval) = tf;
+    return tf;
+}
+
+static VALUE
+thread_frame_init(VALUE tfval)
+{
+    thread_frame_t_alloc(tfval);
+    return tfval;
+}
+
+VALUE
+rb_thread_frame_new()
+{
+    return thread_frame_init(thread_frame_alloc(rb_cThreadFrame));
+}
 
 static VALUE
 thread_frame_s_current(VALUE klass)
 {
-    rb_control_frame_t *cfp = thread_context_frame(NULL);
-    VALUE thread_frame = Data_Wrap_Struct(klass, NULL, NULL, cfp);
-    return thread_frame;
+    thread_frame_t *tf = thread_frame_t_alloc(klass);
+    tf->th = ruby_current_thread;
+    tf->cfp = thread_context_frame(tf->th);
+    return Data_Wrap_Struct(klass, NULL, xfree, tf);
 }
-
-extern rb_thread_t *ruby_current_thread;
 
 static VALUE
 thread_frame_binding(VALUE klass)
 {
-    rb_control_frame_t *cfp;
-    rb_thread_t * th = ruby_current_thread;
-    Data_Get_Struct(klass, rb_control_frame_t, cfp);
-    return rb_binding_frame_new(th, cfp);
+    thread_frame_t *tf;
+    Data_Get_Struct(klass, thread_frame_t, tf);
+    return rb_binding_frame_new(tf->th, tf->cfp);
 }
 
-static VALUE
-thread_frame_bp(VALUE klass)
-{
-    rb_control_frame_t *cfp;
-    Data_Get_Struct(klass, rb_control_frame_t, cfp);
-    return *(cfp->bp);
+#define THREAD_FRAME_FIELD_METHOD(FIELD)	\
+static VALUE					\
+thread_frame_##FIELD(VALUE klass)		\
+{						\
+    thread_frame_t *tf;				\
+    Data_Get_Struct(klass, thread_frame_t, tf); \
+    return tf->cfp->FIELD;			\
 }
 
-static VALUE
-thread_frame_pc(VALUE klass)
-{
-    rb_control_frame_t *cfp;
-    Data_Get_Struct(klass, rb_control_frame_t, cfp);
-    return *(cfp->pc);
+THREAD_FRAME_FIELD_METHOD(flag) ;
+THREAD_FRAME_FIELD_METHOD(method_class) ;
+THREAD_FRAME_FIELD_METHOD(proc) ;
+THREAD_FRAME_FIELD_METHOD(self) ;
+
+#define THREAD_FRAME_PTR_FIELD_METHOD(FIELD)	\
+static VALUE					\
+thread_frame_##FIELD(VALUE klass)		\
+{						\
+    thread_frame_t *tf;				\
+    Data_Get_Struct(klass, thread_frame_t, tf); \
+    return *(tf->cfp->FIELD);			\
 }
+
+/*THREAD_FRAME_PTR_FIELD_METHOD(bp) ;*/
+THREAD_FRAME_PTR_FIELD_METHOD(dfp) ;
+THREAD_FRAME_PTR_FIELD_METHOD(lfp) ;
+/*THREAD_FRAME_PTR_FIELD_METHOD(pc) ;*/
+/*THREAD_FRAME_PTR_FIELD_METHOD(sp) ;*/
 
 static VALUE
 thread_frame_prev(VALUE klass)
 {
-    rb_control_frame_t *cfp;
-    Data_Get_Struct(klass, rb_control_frame_t, cfp);
-    cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
-    if (cfp->iseq) {
-      VALUE thread_frame = Data_Wrap_Struct(rb_cThreadFrame, NULL, NULL, cfp);
-      return thread_frame;
+    rb_control_frame_t *prev_cfp;
+    thread_frame_t *tf;
+    Data_Get_Struct(klass, thread_frame_t, tf);
+    prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(tf->cfp);
+    if (prev_cfp->iseq) {
+        VALUE prev = rb_thread_frame_new();
+        thread_frame_t *tf_prev;
+        Data_Get_Struct(prev, thread_frame_t, tf_prev);
+        tf_prev->cfp = prev_cfp;
+        tf_prev->th = tf->th;
+        return prev;
     } else return Qnil;
 }
 
-static VALUE
-thread_frame_proc(VALUE klass)
-{
-    rb_control_frame_t *cfp;
-    Data_Get_Struct(klass, rb_control_frame_t, cfp);
-    return cfp->proc;
-}
-
-static VALUE
-thread_frame_method_class(VALUE klass)
-{
-    rb_control_frame_t *cfp;
-    Data_Get_Struct(klass, rb_control_frame_t, cfp);
-    return cfp->method_class;
-}
-
-static VALUE
-thread_frame_self(VALUE klass)
-{
-    rb_control_frame_t *cfp;
-    Data_Get_Struct(klass, rb_control_frame_t, cfp);
-    return cfp->self;
-}
-
-static VALUE
-thread_frame_sp(VALUE klass)
-{
-    rb_control_frame_t *cfp;
-    Data_Get_Struct(klass, rb_control_frame_t, cfp);
-    return *(cfp->sp);
-}
+#define RB_DEFINE_FIELD_METHOD(FIELD) \
+    rb_define_method(rb_cThreadFrame, #FIELD, thread_frame_##FIELD, 0);
 
 void
 Init_thread_frame(void)
 {
   rb_cThreadFrame = rb_define_class("ThreadFrame", rb_cObject);
-  rb_define_singleton_method(rb_cThreadFrame, "new", 
-			     thread_frame_s_new, 0);
+  rb_define_alloc_func(rb_cThreadFrame, thread_frame_alloc);
+  rb_define_method(rb_cThreadFrame, "initialize", thread_frame_init, 0);
   rb_define_singleton_method(rb_cThreadFrame, "current", 
 			     thread_frame_s_current, 0);
-  rb_define_method(rb_cThreadFrame, "bp", thread_frame_bp, 0);
-  rb_define_method(rb_cThreadFrame, "method_class", thread_frame_method_class,
-		   0);
-  rb_define_method(rb_cThreadFrame, "pc", thread_frame_pc, 0);
-  rb_define_method(rb_cThreadFrame, "prev", thread_frame_prev, 0);
-  rb_define_method(rb_cThreadFrame, "proc", thread_frame_proc, 0);
-  rb_define_method(rb_cThreadFrame, "self", thread_frame_self, 0);
-  rb_define_method(rb_cThreadFrame, "sp", thread_frame_sp, 0);
-  rb_define_method(rb_cThreadFrame, "binding", thread_frame_binding, 0);
+  RB_DEFINE_FIELD_METHOD(binding);
+  /*RB_DEFINE_FIELD_METHOD(bp);*/
+  RB_DEFINE_FIELD_METHOD(dfp);
+  RB_DEFINE_FIELD_METHOD(flag);
+  RB_DEFINE_FIELD_METHOD(lfp);
+  RB_DEFINE_FIELD_METHOD(method_class);
+  /*RB_DEFINE_FIELD_METHOD(pc);*/
+  RB_DEFINE_FIELD_METHOD(prev);
+  RB_DEFINE_FIELD_METHOD(proc);
+  RB_DEFINE_FIELD_METHOD(self);
+  /*RB_DEFINE_FIELD_METHOD(sp);*/
 }
 
