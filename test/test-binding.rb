@@ -14,6 +14,7 @@ class TestBinding < Test::Unit::TestCase
     assert_equal(5, outside(5))
     assert_equal(1, eval('a', ThreadFrame.current.binding))
     assert_equal(10, eval('$a', ThreadFrame.current.binding))
+    assert_equal(self, ThreadFrame.current.self)
     1.times do |a| 
       a = 2
       assert_equal(2, eval('a', ThreadFrame.current.binding))

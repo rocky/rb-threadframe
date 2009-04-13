@@ -56,6 +56,15 @@ thread_frame_s_current(VALUE klass)
     return Data_Wrap_Struct(klass, NULL, xfree, tf);
 }
 
+/*
+ *  call-seq:
+ *     tf.binding   => binding
+ *
+ *  Returns a binding for a given thread frame.
+ *
+ *     ThreadFrame::current.binding   #=> #<Binding:0x0000000223a648>
+ */
+
 static VALUE
 thread_frame_binding(VALUE klass)
 {
@@ -72,6 +81,20 @@ thread_frame_##FIELD(VALUE klass)		\
     Data_Get_Struct(klass, thread_frame_t, tf); \
     return tf->cfp->FIELD;			\
 }
+
+/*
+ *  call-seq:
+ *     tf.flag           => Fixnum
+ *     tf.method_class   => Module
+ *     tf.method_class   => false | proc ?
+ *
+ *  Returns an binding for a given thread frame.
+ *
+ *     ThreadFrame::current.flag          => 72
+ *     ThreadFrame::current.method_class  => Comparable (?)
+ *     ThreadFrame::current.proc          => false
+ *     ThreadFrame::current.self          => 'main'
+ */
 
 THREAD_FRAME_FIELD_METHOD(flag) ;
 THREAD_FRAME_FIELD_METHOD(method_class) ;
@@ -93,6 +116,14 @@ THREAD_FRAME_PTR_FIELD_METHOD(lfp) ;
 /*THREAD_FRAME_PTR_FIELD_METHOD(pc) ;*/
 /*THREAD_FRAME_PTR_FIELD_METHOD(sp) ;*/
 
+/*
+ *  call-seq:
+ *     tf.prev           => ThreadFrame
+ *
+ *  Returns a ThreadFrame for the frame prior to the
+ *  ThreadFrame object or nil if there is none.
+ *
+ */
 static VALUE
 thread_frame_prev(VALUE klass)
 {
