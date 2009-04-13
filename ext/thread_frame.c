@@ -1,24 +1,9 @@
+/* 
+   Access to Ruby's rb_control_frame_t and methods for working with that.
+   Things like getting a binding for a control frame.
+ */
 #include <string.h>
-#include <ruby.h>
-
-typedef struct rb_iseq_struct rb_iseq_t;
-
-typedef struct {
-    VALUE *pc;			/* cfp[0] */
-    VALUE *sp;			/* cfp[1] */
-    VALUE *bp;			/* cfp[2] */
-    rb_iseq_t *iseq;		/* cfp[3] */
-    VALUE flag;			/* cfp[4] */
-    VALUE self;			/* cfp[5] / block[0] */
-    VALUE *lfp;			/* cfp[6] / block[1] */
-    VALUE *dfp;			/* cfp[7] / block[2] */
-    rb_iseq_t *block_iseq;	/* cfp[8] / block[3] */
-    VALUE proc;			/* cfp[9] / block[4] */
-    ID method_id;               /* cfp[10] saved in special case */
-    VALUE method_class;         /* cfp[11] saved in special case */
-} rb_control_frame_t;
-
-typedef void rb_thread_t;
+#include "thread_extra.h"  /* Pulls in ruby.h */
 
 typedef struct 
 {
@@ -125,6 +110,23 @@ thread_frame_prev(VALUE klass)
     } else return Qnil;
 }
 
+static VALUE
+thread_frame_prev1(VALUE klass, VALUE thval)
+{
+    rb_control_frame_t *prev_cfp;
+    rb_thread_t *th;
+    GetThreadPtr(thval, th);
+    prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
+    if (prev_cfp->iseq) {
+        VALUE prev = rb_thread_frame_new();
+        thread_frame_t *tf_prev;
+        Data_Get_Struct(prev, thread_frame_t, tf_prev);
+        tf_prev->cfp = prev_cfp;
+        tf_prev->th = th;
+        return prev;
+    } else return Qnil;
+}
+
 #define RB_DEFINE_FIELD_METHOD(FIELD) \
     rb_define_method(rb_cThreadFrame, #FIELD, thread_frame_##FIELD, 0);
 
@@ -134,8 +136,9 @@ Init_thread_frame(void)
   rb_cThreadFrame = rb_define_class("ThreadFrame", rb_cObject);
   rb_define_alloc_func(rb_cThreadFrame, thread_frame_alloc);
   rb_define_method(rb_cThreadFrame, "initialize", thread_frame_init, 0);
-  rb_define_singleton_method(rb_cThreadFrame, "current", 
-			     thread_frame_s_current, 0);
+  rb_define_singleton_method(rb_cThreadFrame, "current", thread_frame_s_current,
+			     0);
+  rb_define_singleton_method(rb_cThreadFrame, "prev1", thread_frame_prev1, 1);
   RB_DEFINE_FIELD_METHOD(binding);
   /*RB_DEFINE_FIELD_METHOD(bp);*/
   RB_DEFINE_FIELD_METHOD(dfp);
@@ -147,5 +150,9 @@ Init_thread_frame(void)
   RB_DEFINE_FIELD_METHOD(proc);
   RB_DEFINE_FIELD_METHOD(self);
   /*RB_DEFINE_FIELD_METHOD(sp);*/
+
+  rb_define_singleton_method(rb_cThread, "ni", 
+			     thread_extra_ni, 0);
+
 }
 
