@@ -116,6 +116,19 @@ THREAD_FRAME_PTR_FIELD_METHOD(lfp) ;
 /*THREAD_FRAME_PTR_FIELD_METHOD(pc) ;*/
 /*THREAD_FRAME_PTR_FIELD_METHOD(sp) ;*/
 
+static VALUE
+thread_frame_prev_common(rb_control_frame_t *prev_cfp, rb_thread_t *th)
+{
+    if (prev_cfp->iseq) {
+        VALUE prev = rb_thread_frame_new();
+        thread_frame_t *tf_prev;
+        Data_Get_Struct(prev, thread_frame_t, tf_prev);
+        tf_prev->cfp = prev_cfp;
+        tf_prev->th = th;
+        return prev;
+    } else return Qnil;
+}
+
 /*
  *  call-seq:
  *     tf.prev           => ThreadFrame
@@ -131,14 +144,7 @@ thread_frame_prev(VALUE klass)
     thread_frame_t *tf;
     Data_Get_Struct(klass, thread_frame_t, tf);
     prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(tf->cfp);
-    if (prev_cfp->iseq) {
-        VALUE prev = rb_thread_frame_new();
-        thread_frame_t *tf_prev;
-        Data_Get_Struct(prev, thread_frame_t, tf_prev);
-        tf_prev->cfp = prev_cfp;
-        tf_prev->th = tf->th;
-        return prev;
-    } else return Qnil;
+    return thread_frame_prev_common(prev_cfp, tf->th);
 }
 
 static VALUE
@@ -148,14 +154,7 @@ thread_frame_prev1(VALUE klass, VALUE thval)
     rb_thread_t *th;
     GetThreadPtr(thval, th);
     prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
-    if (prev_cfp->iseq) {
-        VALUE prev = rb_thread_frame_new();
-        thread_frame_t *tf_prev;
-        Data_Get_Struct(prev, thread_frame_t, tf_prev);
-        tf_prev->cfp = prev_cfp;
-        tf_prev->th = th;
-        return prev;
-    } else return Qnil;
+    return thread_frame_prev_common(prev_cfp, th);
 }
 
 #define RB_DEFINE_FIELD_METHOD(FIELD) \
