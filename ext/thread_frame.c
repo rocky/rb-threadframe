@@ -16,6 +16,7 @@ typedef struct
 
 extern rb_control_frame_t * thread_context_frame(void *);
 extern rb_thread_t *ruby_current_thread;
+extern VALUE rb_iseq_disasm_internal(rb_iseq_t *iseqdat);
 
 VALUE rb_cThreadFrame;
 
@@ -147,6 +148,14 @@ thread_frame_prev(VALUE klass)
     return thread_frame_prev_common(prev_cfp, tf->th);
 }
 
+/*
+ *  call-seq:
+ *     ThreadFrame.prev1(thread)     => ThreadFrame
+ *
+ *  Returns a ThreadFrame for the frame prior to the
+ *  ThreadFrame object passed or nil if there is none.
+ *
+ */
 static VALUE
 thread_frame_prev1(VALUE klass, VALUE thval)
 {
@@ -155,6 +164,22 @@ thread_frame_prev1(VALUE klass, VALUE thval)
     GetThreadPtr(thval, th);
     prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
     return thread_frame_prev_common(prev_cfp, th);
+}
+
+/*
+ *  call-seq:
+ *     tf.prev           => ThreadFrame
+ *
+ *  Returns a ThreadFrame for the frame prior to the
+ *  ThreadFrame object or nil if there is none.
+ *
+ */
+static VALUE
+thread_frame_disasm(VALUE klass)
+{
+    thread_frame_t *tf;
+    Data_Get_Struct(klass, thread_frame_t, tf);
+    return rb_iseq_disasm_internal(tf->cfp->iseq);
 }
 
 #define RB_DEFINE_FIELD_METHOD(FIELD) \
@@ -168,6 +193,7 @@ Init_thread_frame(void)
   rb_define_method(rb_cThreadFrame, "initialize", thread_frame_init, 0);
   rb_define_singleton_method(rb_cThreadFrame, "current", thread_frame_s_current,
 			     0);
+  rb_define_method(rb_cThreadFrame, "disasm", thread_frame_disasm, 0);
   rb_define_singleton_method(rb_cThreadFrame, "prev1", thread_frame_prev1, 1);
   RB_DEFINE_FIELD_METHOD(binding);
   /*RB_DEFINE_FIELD_METHOD(bp);*/
