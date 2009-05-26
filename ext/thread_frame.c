@@ -1,31 +1,46 @@
 /* 
-   Access to Ruby's rb_control_frame_t and methods for working with that.
-   Things like getting a binding for a control frame.
+ *  Access to Ruby's rb_control_frame_t and methods for working with that.
+ *  Things like getting a binding for a control frame.
  */
+
+/* What release we got? */
+#define THREADFRAME_VERSION "0.1"  
+
 #include <string.h>
 #include "thread_extra.h"  /* Pulls in ruby.h */
 
+/* Frames can't be detached from the control frame they live in.
+   So we create a structure to contain the pair. */
 typedef struct 
 {
     rb_thread_t *th;
     rb_control_frame_t *cfp;
 } thread_frame_t;
   
-
+/* From vm_core.h: */
 #define RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp) (cfp+1)
 
 extern rb_control_frame_t * thread_context_frame(void *);
 extern rb_thread_t *ruby_current_thread;
 extern VALUE rb_iseq_disasm_internal(rb_iseq_t *iseqdat);
 
-VALUE rb_cThreadFrame;
+VALUE rb_cThreadFrame;  /* ThreadFrame class */
 
+/* 
+   Allocate a ThreadFrame used in new. Less common than
+   thread_frame_t_alloc().
+ */
 static VALUE
 thread_frame_alloc(VALUE klass)
 {
     return Data_Wrap_Struct(klass, NULL, xfree, 0);
 }
 
+/* 
+   Allocate a ThreadFrame and set its threadframe structure.
+   This is the more common allocate routine since one normally doesn't
+   create a threadframe without <i>first</i> having seomthing to put in it.
+ */
 static thread_frame_t *
 thread_frame_t_alloc(VALUE tfval)
 {
@@ -35,6 +50,20 @@ thread_frame_t_alloc(VALUE tfval)
     return tf;
 }
 
+/*
+ *  call-seq:
+ *     ThreadFrame.new()           => ThreadFrame
+ *
+ *  Returns an ThreadFrame object which can contains dynamic frame
+ *  information. Don't use this directly. Instead use one of the 
+ *  class methods.
+ *
+ *     ThreadFrame::VERSION               => 0.1 
+ *     ThreadFrame::current.flag          => 72
+ *     ThreadFrame::current.method_class  => Comparable (?)
+ *     ThreadFrame::current.proc          => false
+ *     ThreadFrame::current.self          => 'main'
+ */
 static VALUE
 thread_frame_init(VALUE tfval)
 {
@@ -48,6 +77,12 @@ rb_thread_frame_new()
     return thread_frame_init(thread_frame_alloc(rb_cThreadFrame));
 }
 
+/*
+ *  call-seq:
+ *     ThreadFrame::current  => ThreadFrame
+ * 
+ *  Returns a ThreadFrame object for the currently executing thread.
+ */
 static VALUE
 thread_frame_s_current(VALUE klass)
 {
@@ -62,10 +97,7 @@ thread_frame_s_current(VALUE klass)
  *     tf.binding   => binding
  *
  *  Returns a binding for a given thread frame.
- *
- *     ThreadFrame::current.binding   #=> #<Binding:0x0000000223a648>
  */
-
 static VALUE
 thread_frame_binding(VALUE klass)
 {
@@ -83,21 +115,7 @@ thread_frame_##FIELD(VALUE klass)		\
     return tf->cfp->FIELD;			\
 }
 
-/*
- *  call-seq:
- *     tf.flag           => Fixnum
- *     tf.method_class   => Module
- *     tf.method_class   => false | proc ?
- *
- *  Returns an binding for a given thread frame.
- *
- *     ThreadFrame::current.flag          => 72
- *     ThreadFrame::current.method_class  => Comparable (?)
- *     ThreadFrame::current.proc          => false
- *     ThreadFrame::current.self          => 'main'
- */
-
-THREAD_FRAME_FIELD_METHOD(flag) ;
+THREAD_FRAME_FIELD_METHOD(flag)
 THREAD_FRAME_FIELD_METHOD(method_class) ;
 THREAD_FRAME_FIELD_METHOD(proc) ;
 THREAD_FRAME_FIELD_METHOD(self) ;
@@ -150,7 +168,7 @@ thread_frame_prev(VALUE klass)
 
 /*
  *  call-seq:
- *     ThreadFrame.prev1(thread)     => ThreadFrame
+ *     tf.prev1(thread)     => ThreadFrame
  *
  *  Returns a ThreadFrame for the frame prior to the
  *  ThreadFrame object passed or nil if there is none.
@@ -166,12 +184,13 @@ thread_frame_prev1(VALUE klass, VALUE thval)
     return thread_frame_prev_common(prev_cfp, th);
 }
 
+#if INCLUDE_DISASM
 /*
  *  call-seq:
- *     tf.prev           => ThreadFrame
+ *     tf.disasm           => String
  *
- *  Returns a ThreadFrame for the frame prior to the
- *  ThreadFrame object or nil if there is none.
+ *  Returns a string disassembly of an instruction sequence inside tf.
+ *  DEPRECATED: use tf.iseq.disasm instead.
  *
  */
 static VALUE
@@ -181,6 +200,32 @@ thread_frame_disasm(VALUE klass)
     Data_Get_Struct(klass, thread_frame_t, tf);
     return rb_iseq_disasm_internal(tf->cfp->iseq);
 }
+#endif
+
+extern VALUE iseq_alloc_shared(VALUE klass);
+extern VALUE rb_cISeq;
+
+/*
+ *  call-seq:
+ *     tf.iseq           => ISeq
+ *
+ *  Creates an instruction sequence object from the instruction sequence
+ *  found inside the ThreadFrame object or nil if there is none.
+ *
+ */
+static VALUE
+thread_frame_iseq(VALUE klass)
+{
+    thread_frame_t *tf;
+    rb_iseq_t *iseq;
+    VALUE rb_iseq;
+    Data_Get_Struct(klass, thread_frame_t, tf);
+    iseq = tf->cfp->iseq;
+    if (!iseq) return Qnil;
+    rb_iseq = iseq_alloc_shared(rb_cISeq);
+    RDATA(rb_iseq)->data = iseq;
+    return rb_iseq;
+}
 
 #define RB_DEFINE_FIELD_METHOD(FIELD) \
     rb_define_method(rb_cThreadFrame, #FIELD, thread_frame_##FIELD, 0);
@@ -189,11 +234,15 @@ void
 Init_thread_frame(void)
 {
   rb_cThreadFrame = rb_define_class("ThreadFrame", rb_cObject);
+  rb_define_const(rb_cThreadFrame, "VERSION", rb_str_new2(THREADFRAME_VERSION));
   rb_define_alloc_func(rb_cThreadFrame, thread_frame_alloc);
   rb_define_method(rb_cThreadFrame, "initialize", thread_frame_init, 0);
   rb_define_singleton_method(rb_cThreadFrame, "current", thread_frame_s_current,
 			     0);
+#if INCLUDE_DISASM
   rb_define_method(rb_cThreadFrame, "disasm", thread_frame_disasm, 0);
+#endif
+  rb_define_method(rb_cThreadFrame, "iseq", thread_frame_iseq, 0);
   rb_define_singleton_method(rb_cThreadFrame, "prev1", thread_frame_prev1, 1);
   RB_DEFINE_FIELD_METHOD(binding);
   /*RB_DEFINE_FIELD_METHOD(bp);*/
@@ -207,8 +256,8 @@ Init_thread_frame(void)
   RB_DEFINE_FIELD_METHOD(self);
   /*RB_DEFINE_FIELD_METHOD(sp);*/
 
+  /* Just a test to pull in a second C source file. */
   rb_define_singleton_method(rb_cThread, "ni", 
 			     thread_extra_ni, 0);
 
 }
-
