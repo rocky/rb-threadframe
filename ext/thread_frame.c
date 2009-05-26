@@ -168,14 +168,14 @@ thread_frame_prev(VALUE klass)
 
 /*
  *  call-seq:
- *     tf.prev1(thread)     => ThreadFrame
+ *     ThreadFrame.prev(thread)     => ThreadFrame
  *
  *  Returns a ThreadFrame for the frame prior to the
- *  ThreadFrame object passed or nil if there is none.
+ *  Thread object passed or nil if there is none.
  *
  */
 static VALUE
-thread_frame_prev1(VALUE klass, VALUE thval)
+thread_frame_thread_prev(VALUE klass, VALUE thval)
 {
     rb_control_frame_t *prev_cfp;
     rb_thread_t *th;
@@ -184,24 +184,6 @@ thread_frame_prev1(VALUE klass, VALUE thval)
     return thread_frame_prev_common(prev_cfp, th);
 }
 
-#if INCLUDE_DISASM
-/*
- *  call-seq:
- *     tf.disasm           => String
- *
- *  Returns a string disassembly of an instruction sequence inside tf.
- *  DEPRECATED: use tf.iseq.disasm instead.
- *
- */
-static VALUE
-thread_frame_disasm(VALUE klass)
-{
-    thread_frame_t *tf;
-    Data_Get_Struct(klass, thread_frame_t, tf);
-    return rb_iseq_disasm_internal(tf->cfp->iseq);
-}
-#endif
-
 extern VALUE iseq_alloc_shared(VALUE klass);
 extern VALUE rb_cISeq;
 
@@ -209,7 +191,7 @@ extern VALUE rb_cISeq;
  *  call-seq:
  *     tf.iseq           => ISeq
  *
- *  Creates an instruction sequence object from the instruction sequence
+ *  Returns an instruction sequence object from the instruction sequence
  *  found inside the ThreadFrame object or nil if there is none.
  *
  */
@@ -239,11 +221,10 @@ Init_thread_frame(void)
   rb_define_method(rb_cThreadFrame, "initialize", thread_frame_init, 0);
   rb_define_singleton_method(rb_cThreadFrame, "current", thread_frame_s_current,
 			     0);
-#if INCLUDE_DISASM
-  rb_define_method(rb_cThreadFrame, "disasm", thread_frame_disasm, 0);
-#endif
   rb_define_method(rb_cThreadFrame, "iseq", thread_frame_iseq, 0);
-  rb_define_singleton_method(rb_cThreadFrame, "prev1", thread_frame_prev1, 1);
+  rb_define_method(rb_cThreadFrame, "prev", thread_frame_prev, 1);
+  rb_define_singleton_method(rb_cThreadFrame, "prev", 
+			     thread_frame_thread_prev, 1);
   RB_DEFINE_FIELD_METHOD(binding);
   /*RB_DEFINE_FIELD_METHOD(bp);*/
   RB_DEFINE_FIELD_METHOD(dfp);
