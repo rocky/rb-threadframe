@@ -88,8 +88,18 @@
 # and will be +nil+ as well.
 #
 #
-# === RubyVM::tf.instruction_offset
-#  tf.source_location() -> Array 
+# === RubyVM::ThreadFrame#instruction_offset
+#  tf.instruction_offset -> Fixnum
+# Offset inside ISeq of instruction that the frame is currently on.
+#
+# === RubyVM::ThreadFrame#instruction_offset=
+#
+#  tf.instruction_offset=(Fixnum)
+# Sets the threadframe to a new offset. Some restrictions may apply, e.g.
+# the offset will have to refer to a valid offset location and the scope
+# and block level has to be the same.
+#
+# <em>Don't need to implement initially.</em>
 #
 # === RubyVM::ThreadFrame#return_changed?
 #   tf.return_changed?() -> boolean
@@ -99,3 +109,4 @@
 # seen in the source code. Koichi says this is too difficult to do in
 # YARV.
 #
+# <em>Don't need to implement initially.</em>
