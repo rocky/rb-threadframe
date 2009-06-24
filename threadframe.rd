@@ -1,55 +1,67 @@
 # = NAME  
-# +ThreadFrame+ and +RubyVM+::+ThreadFrame+
+# +Thread+::+Frame+ and +RubyVM+::+ThreadFrame+
 #
 # = SYNOPSES 
 #
-# The +ThreadFrame+ and +RubyVM+::+ThreadFrame+ class gives call-stack
+# The +Thread+::+Frame+ and +RubyVM+::+ThreadFrame+ class gives call-stack
 # frame information (controlled access to +rb_control_frame_t+)
 #
 # The +ThreadFrame+ class is proposed for all Ruby 1.9 implementations
-# +RubyVM+::+ThreadFrame+ contains routines in the YARV 1.9 implementation.
+# while +RubyVM+::+ThreadFrame+ contains routines in the YARV 1.9 implementation.
 # Other implementations may or may not also implement some of these.
-# So +RubyVM+::+ThreadFrame+ is a subclass of +ThreadFrame+. In code:
+# So +RubyVM+::+ThreadFrame+ is a subclass of +Thread+::+Frame+. In code:
 #
-#   class ThreadFrame  # In all 1.9 implementations
-#      def prev
-#         # implementation of prev
-#      end
-#      # ...
+#   class Thread
+#     class Frame  # In all 1.9 implementations
+#        def initialize(thread_object)
+#          # implementation-specific code
+#        end    
+#        def prev
+#          # implementation of prev
+#        end
+#        # ...
+#     end
+#     def threadframe        
+#        Frame.new(self) # or RubyVM::ThreadFrame.new(self)
+#     end
 #   end
-#   class RubyVM::ThreadFrame < ThreadFrame # In YARV 
+#           
+#   class RubyVM::ThreadFrame < Thread::Frame # In YARV 
+#     def initialize(thread_object)
+#       # implementation-specific code
+#     end    
 #     def iseq
 #       # implementation of iseq
 #     end 
 #     # ...  
 #   end
 #
-# A +ThreadFrame+ contains information from a frame running +Thread+
+# A +Thread+::+Frame+ contains information from a frame running +Thread+
 # object, and the information may change or disappear in the course of
 # running that thread. Therefore, it is advisable ensure that the
 # threads of the ThreadFrame objects are blocked.
 #
-# Although +ThreadFrame+ and +RubyVM+::+ThreadFrame+ are classes, you
-# probably will not have need to ever use a +new+ constructor, and
-# possibly such constructor methods will not exist. Instead,
-# +ThreadFrame+ objects get created in other ways such as through the
-# +Thread+#+threadframe+ instance method.
 #
+# === Thread::Frame::new(thread_object)
+# Creates a thread-frame object for the given thread object.
 #
 # === Thread#threadframe
 #   tf = Thread::current.threadframe() 
-# Returns thread frame of currently executed program.
 #
-# == ThreadFrame Instance Methods
+# Creates a thread-frame object for the given thread object.
+# Note:
+#  Thread::current.threadframe() == Thread::Frame.new(Thread::current)
+#
+# == Thread::Frame Instance Methods
 # 
-# === ThreadFrame#prev
+# === Thread::Frame#prev
 #   tf.prev() -> tf or nil
 #
 # Returns the previous control frame. If tail recursion has removed
 # frames as seen in the source, deal with it. ;-) +nil+ can be
 # returned if there is no previous frame or if tf is no longer exists.
 #
-# === ThreadFrame#exist?
+# === Thread::Frame#exist?
 #   tf.exist?() -> boolean
 #
 # Returns true if tf is still a currently active frame. Beware: if the
@@ -58,16 +70,23 @@
 # of the program causes the frame to no longer exist. 
 # 
 #
-# === ThreadFrame#thread
+# === Thread::Frame#thread
 #   tf.thread() -> Thread
-#   RubyVM::ThreadFrame.current().thread == Thread.current
+#   Thread::Frame.current().thread == Thread.current
 #
-# === ThreadFrame#type
+# === Thread::Frame#type
 #   tf.type() -> 'C' or 'Ruby'
 #
 # Indicates whether the frame is implemented in C or Ruby.
 #
-# === tf.source_location
+# === Thread::Frame#source_container
+#  tf.source_container() -> [Type, String]
+#
+# Returns a tuple representing kind of container, e.g. file
+# eval'd string object, and the name of the container. If file,
+# it would be a file name. If an eval'd string it might be the string.
+# 
+# === Thread::Frame#source_location
 #  tf.source_location() -> Array 
 #
 # Returns an array of source location positions that match
@@ -75,8 +94,22 @@
 # implementation dependent. It could be line number, a line number
 # and start and end column, or a start line number, start column, end
 # line number, end column.
-# 
-# == RubyVM::ThreadFrame Instance Methods
+
+# === Thread::Frame#binding
+#  tf.binding() -> binding
+#
+#
+# If the frame is still valid, a binding that is in effect for the
+# scope of the frame is created. As with all bindings, over the
+# execution of the program, variables may spring into existence and
+# values may change.
+
+# == RubyVM::ThreadFrame 
+#
+# === RubyVM::new(thread_object)
+
+# Like Thread::Frame.new(thread_object), but has additional information
+# available.
 #
 # === RubyVM::ThreadFrame#iseq
 #   tf.iseq() -> ISeq
