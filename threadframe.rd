@@ -143,3 +143,6 @@
 # YARV.
 #
 # <em>Don't need to implement initially.</em>
+#
+# = THANKS
+# Martin Davis for suggesting ThreadFrame->Thread::Frame and Thread::Frame#new == Thread::current.threadframe
