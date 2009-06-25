@@ -1,13 +1,13 @@
 require_relative File.join('ext', 'thread_frame')
 a = 5
-th = ThreadFrame.current
+th = Thread::Frame.current
 # puts th.disasm
 puts th.iseq
 puts th.iseq.disasm
 p th, th.prev, th.self, th.binding, eval('a', th.binding), '-' * 10
 def foo()
   a = 6
-  th = ThreadFrame.current
+  th = Thread::Frame.current
   puts th.iseq.disasm
   while th do
     p th, th.prev, th.self, th.binding, eval('a', th.binding), '-' * 10

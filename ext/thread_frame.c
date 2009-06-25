@@ -4,7 +4,7 @@
  */
 
 /* What release we got? */
-#define THREADFRAME_VERSION "0.1"  
+#define THREADFRAME_VERSION "0.2"  
 
 #include <string.h>
 #include "thread_extra.h"  /* Pulls in ruby.h */
@@ -27,7 +27,7 @@ extern VALUE rb_iseq_disasm_internal(rb_iseq_t *iseqdat);
 VALUE rb_cThreadFrame;  /* ThreadFrame class */
 
 /* 
-   Allocate a ThreadFrame used in new. Less common than
+   Allocate a Thread::Frame used by new. Less common than
    thread_frame_t_alloc().
  */
 static VALUE
@@ -37,7 +37,7 @@ thread_frame_alloc(VALUE klass)
 }
 
 /* 
-   Allocate a ThreadFrame and set its threadframe structure.
+   Allocate a Thread::Frame and set its threadframe structure.
    This is the more common allocate routine since one normally doesn't
    create a threadframe without <i>first</i> having seomthing to put in it.
  */
@@ -52,9 +52,9 @@ thread_frame_t_alloc(VALUE tfval)
 
 /*
  *  call-seq:
- *     ThreadFrame.new()           => ThreadFrame
+ *     Thread::Frame.new()           => ThreadFrame
  *
- *  Returns an ThreadFrame object which can contains dynamic frame
+ *  Returns an Thread::Frame object which can contains dynamic frame
  *  information. Don't use this directly. Instead use one of the 
  *  class methods.
  *
@@ -79,9 +79,9 @@ rb_thread_frame_new()
 
 /*
  *  call-seq:
- *     ThreadFrame::current  => ThreadFrame
+ *     Thread::Frame::current  => thread_frame_object
  * 
- *  Returns a ThreadFrame object for the currently executing thread.
+ *  Returns a Thread::Frame object for the currently executing thread.
  */
 static VALUE
 thread_frame_s_current(VALUE klass)
@@ -94,7 +94,7 @@ thread_frame_s_current(VALUE klass)
 
 /*
  *  call-seq:
- *     tf.binding   => binding
+ *     Thread::Frame#binding   => binding
  *
  *  Returns a binding for a given thread frame.
  */
@@ -150,7 +150,7 @@ thread_frame_prev_common(rb_control_frame_t *prev_cfp, rb_thread_t *th)
 
 /*
  *  call-seq:
- *     tf.prev           => ThreadFrame
+ *     Thread::Frame#prev           => threadframe_object
  *
  *  Returns a ThreadFrame for the frame prior to the
  *  ThreadFrame object or nil if there is none.
@@ -168,9 +168,9 @@ thread_frame_prev(VALUE klass)
 
 /*
  *  call-seq:
- *     ThreadFrame.prev(thread)     => ThreadFrame
+ *     Thread::Frame#prev(thread)     => threadframe_object
  *
- *  Returns a ThreadFrame for the frame prior to the
+ *  Returns a Thread::Frame for the frame prior to the
  *  Thread object passed or nil if there is none.
  *
  */
@@ -212,33 +212,35 @@ thread_frame_iseq(VALUE klass)
 #define RB_DEFINE_FIELD_METHOD(FIELD) \
     rb_define_method(rb_cThreadFrame, #FIELD, thread_frame_##FIELD, 0);
 
+extern VALUE rb_cThread;
+
 void
 Init_thread_frame(void)
 {
-  rb_cThreadFrame = rb_define_class("ThreadFrame", rb_cObject);
-  rb_define_const(rb_cThreadFrame, "VERSION", rb_str_new2(THREADFRAME_VERSION));
-  rb_define_alloc_func(rb_cThreadFrame, thread_frame_alloc);
-  rb_define_method(rb_cThreadFrame, "initialize", thread_frame_init, 0);
-  rb_define_singleton_method(rb_cThreadFrame, "current", thread_frame_s_current,
-			     0);
-  rb_define_method(rb_cThreadFrame, "iseq", thread_frame_iseq, 0);
-  rb_define_method(rb_cThreadFrame, "prev", thread_frame_prev, 1);
-  rb_define_singleton_method(rb_cThreadFrame, "prev", 
-			     thread_frame_thread_prev, 1);
-  RB_DEFINE_FIELD_METHOD(binding);
-  /*RB_DEFINE_FIELD_METHOD(bp);*/
-  RB_DEFINE_FIELD_METHOD(dfp);
-  RB_DEFINE_FIELD_METHOD(flag);
-  RB_DEFINE_FIELD_METHOD(lfp);
-  RB_DEFINE_FIELD_METHOD(method_class);
-  /*RB_DEFINE_FIELD_METHOD(pc);*/
-  RB_DEFINE_FIELD_METHOD(prev);
-  RB_DEFINE_FIELD_METHOD(proc);
-  RB_DEFINE_FIELD_METHOD(self);
-  /*RB_DEFINE_FIELD_METHOD(sp);*/
-
-  /* Just a test to pull in a second C source file. */
-  rb_define_singleton_method(rb_cThread, "ni", 
-			     thread_extra_ni, 0);
+    rb_cThreadFrame = rb_define_class_under(rb_cThread, "Frame", rb_cObject);
+    rb_define_const(rb_cThreadFrame, "VERSION", rb_str_new2(THREADFRAME_VERSION));
+    rb_define_alloc_func(rb_cThreadFrame, thread_frame_alloc);
+    rb_define_method(rb_cThreadFrame, "initialize", thread_frame_init, 0);
+    rb_define_singleton_method(rb_cThreadFrame, "current", thread_frame_s_current,
+			       0);
+    rb_define_method(rb_cThreadFrame, "iseq", thread_frame_iseq, 0);
+    rb_define_method(rb_cThreadFrame, "prev", thread_frame_prev, 1);
+    rb_define_singleton_method(rb_cThreadFrame, "prev", 
+			       thread_frame_thread_prev, 1);
+    RB_DEFINE_FIELD_METHOD(binding);
+    /*RB_DEFINE_FIELD_METHOD(bp);*/
+    RB_DEFINE_FIELD_METHOD(dfp);
+    RB_DEFINE_FIELD_METHOD(flag);
+    RB_DEFINE_FIELD_METHOD(lfp);
+    RB_DEFINE_FIELD_METHOD(method_class);
+    /*RB_DEFINE_FIELD_METHOD(pc);*/
+    RB_DEFINE_FIELD_METHOD(prev);
+    RB_DEFINE_FIELD_METHOD(proc);
+    RB_DEFINE_FIELD_METHOD(self);
+    /*RB_DEFINE_FIELD_METHOD(sp);*/
+    
+    /* Just a test to pull in a second C source file. */
+    rb_define_singleton_method(rb_cThread, "ni", 
+			       thread_extra_ni, 0);
 
 }
