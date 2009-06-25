@@ -52,7 +52,7 @@ thread_frame_t_alloc(VALUE tfval)
 
 /*
  *  call-seq:
- *     Thread::Frame.new()           => ThreadFrame
+ *     Thread::Frame.new(thread)          => thread_frame_object
  *
  *  Returns an Thread::Frame object which can contains dynamic frame
  *  information. Don't use this directly. Instead use one of the 
@@ -65,16 +65,17 @@ thread_frame_t_alloc(VALUE tfval)
  *     ThreadFrame::current.self          => 'main'
  */
 static VALUE
-thread_frame_init(VALUE tfval)
+thread_frame_init(VALUE tfval, VALUE thread)
 {
-    thread_frame_t_alloc(tfval);
-    return tfval;
-}
+    thread_frame_t *tf = thread_frame_t_alloc(tfval);
+    rb_thread_t *th;
 
-VALUE
-rb_thread_frame_new()
-{
-    return thread_frame_init(thread_frame_alloc(rb_cThreadFrame));
+    GetThreadPtr(thread, th);
+    memset(tf, 0, sizeof(thread_frame_t));
+    DATA_PTR(tfval) = tf;
+    tf->th = th;
+    tf->cfp = thread_context_frame(th);
+    return tfval;
 }
 
 /*
@@ -104,6 +105,20 @@ thread_frame_binding(VALUE klass)
     thread_frame_t *tf;
     Data_Get_Struct(klass, thread_frame_t, tf);
     return rb_binding_frame_new(tf->th, tf->cfp);
+}
+
+/*
+ *  call-seq:
+ *     Thread::Frame#thread   => thread
+ *
+ *  Returns the thread object for the thread frame.
+ */
+static VALUE
+thread_frame_thread(VALUE klass)
+{
+    thread_frame_t *tf;
+    Data_Get_Struct(klass, thread_frame_t, tf);
+    return tf->th->self;
 }
 
 #define THREAD_FRAME_FIELD_METHOD(FIELD)	\
@@ -139,8 +154,9 @@ static VALUE
 thread_frame_prev_common(rb_control_frame_t *prev_cfp, rb_thread_t *th)
 {
     if (prev_cfp->iseq) {
-        VALUE prev = rb_thread_frame_new();
         thread_frame_t *tf_prev;
+        VALUE prev = thread_frame_alloc(rb_cThreadFrame);
+	thread_frame_t_alloc(prev);
         Data_Get_Struct(prev, thread_frame_t, tf_prev);
         tf_prev->cfp = prev_cfp;
         tf_prev->th = th;
@@ -150,9 +166,9 @@ thread_frame_prev_common(rb_control_frame_t *prev_cfp, rb_thread_t *th)
 
 /*
  *  call-seq:
- *     Thread::Frame#prev           => threadframe_object
+ *     Thread::Frame#prev           => thread_frame_object
  *
- *  Returns a ThreadFrame for the frame prior to the
+ *  Returns a Thread::Frame object for the frame prior to the
  *  ThreadFrame object or nil if there is none.
  *
  */
@@ -189,7 +205,7 @@ extern VALUE rb_cISeq;
 
 /*
  *  call-seq:
- *     tf.iseq           => ISeq
+ *     Thread::Frame#iseq           => ISeq
  *
  *  Returns an instruction sequence object from the instruction sequence
  *  found inside the ThreadFrame object or nil if there is none.
@@ -220,11 +236,13 @@ Init_thread_frame(void)
     rb_cThreadFrame = rb_define_class_under(rb_cThread, "Frame", rb_cObject);
     rb_define_const(rb_cThreadFrame, "VERSION", rb_str_new2(THREADFRAME_VERSION));
     rb_define_alloc_func(rb_cThreadFrame, thread_frame_alloc);
-    rb_define_method(rb_cThreadFrame, "initialize", thread_frame_init, 0);
+    rb_define_method(rb_cThreadFrame, "initialize", thread_frame_init, 1);
     rb_define_singleton_method(rb_cThreadFrame, "current", thread_frame_s_current,
 			       0);
     rb_define_method(rb_cThreadFrame, "iseq", thread_frame_iseq, 0);
     rb_define_method(rb_cThreadFrame, "prev", thread_frame_prev, 1);
+    rb_define_method(rb_cThreadFrame, "thread", thread_frame_thread,
+			       0);
     rb_define_singleton_method(rb_cThreadFrame, "prev", 
 			       thread_frame_thread_prev, 1);
     RB_DEFINE_FIELD_METHOD(binding);

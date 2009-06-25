@@ -27,39 +27,55 @@ task :ext do
   end
 end
 
-desc "Remove built files"
+desc 'Remove built files'
 task :clean do
-  cd "ext" do
-    if File.exists?("Makefile")
-      sh "make clean"
-      rm  "Makefile"
+  cd 'ext' do
+    if File.exists?('Makefile')
+      sh 'make clean'
+      rm  'Makefile'
     end
-    derived_files = Dir.glob(".o") + Dir.glob("*.so")
+    derived_files = Dir.glob('.o') + Dir.glob('*.so')
     rm derived_files unless derived_files.empty?
   end
 end
 
 task :default => [:test]
 
-desc "Test everything."
-task :test => [:ext] do 
-  Rake::TestTask.new(:test) do |t|
+desc 'Test units - the smaller tests'
+task :'test:unit' => [:ext] do |t|
+  Rake::TestTask.new(:'test:unit') do |t|
     t.libs << './ext'
-    t.test_files = TEST_FILES
+    t.test_files = FileList['test/unit/**/*.rb']
+    # t.pattern = 'test/**/*test-*.rb' # instead of above
     t.verbose = true
   end
+end
+
+desc 'Test everything - unit tests for now.'
+task :test do
+  exceptions = ['test:unit'].collect do |task|
+    begin
+      Rake::Task[task].invoke
+      nil
+    rescue => e
+      e
+    end
+  end.compact
+  
+  exceptions.each {|e| puts e;puts e.backtrace }
+  raise "Test failures" unless exceptions.empty?
 end
 
 desc "Test everything - same as test."
 task :check => :test
 
 # ---------  RDoc Documentation ------
-desc "Generate rdoc documentation"
-Rake::RDocTask.new("rdoc") do |rdoc|
+desc 'Generate rdoc documentation'
+Rake::RDocTask.new('rdoc') do |rdoc|
   rdoc.rdoc_dir = 'doc/rdoc'
-  rdoc.title    = "rb-threadframe"
+  rdoc.title    = 'rb-threadframe'
   # Show source inline with line numbers
-  rdoc.options << "--inline-source" << "--line-numbers"
+  rdoc.options << '--inline-source' << '--line-numbers'
   # Make the readme file the start page for the generated html
   rdoc.options << '--main' << 'README'
   rdoc.rdoc_files.include('ext/**/thread_frame.c',
