@@ -2,7 +2,7 @@ require 'test/unit'
 require_relative File.join('..', '..', 'ext', 'thread_frame')
 
 def outside(a)
-    return eval('a', Thread::Frame.current.binding)
+    return eval('a', Thread::Frame.new(Thread::current).binding)
 end
 
 $a = 10
@@ -10,25 +10,31 @@ $a = 10
 class TestBinding < Test::Unit::TestCase
   def test_basic
     a = 1
-    b = 0
+    c = 0
     assert_equal(5, outside(5))
-    assert_equal(1, eval('a', Thread::Frame.current.binding))
-    assert_equal(10, eval('$a', Thread::Frame.current.binding))
-    assert_equal(self, Thread::Frame.current.self)
+    tf = Thread::Frame.new(Thread::current)
+    b  = tf.binding
+    assert_equal(1, eval('a', b))
+    assert_equal(10, eval('$a', b))
+    assert_equal(self, tf.self)
     1.times do |a| 
+      tf2 = Thread::current.threadframe()
+      b2  = tf2.binding
       a = 2
-      assert_equal(2, eval('a', Thread::Frame.current.binding))
-      assert_equal(0, eval('b', Thread::Frame.current.binding))
+      assert_equal(2, eval('a', b2))
+      assert_equal(0, eval('c', b2))
       # FIXME? 
       # assert_equal(1, eval('a', Thread::Frame.current.prev.binding))
     end
     def inner(a)
+      tf3 = Thread::current.threadframe()
+      b3  = tf3.binding
       if a == 4
-        assert_equal(4, eval('a', Thread::Frame.current.binding))
+        assert_equal(4, eval('a', b3))
         inner(a-1)
       else
-        assert_equal(3, eval('a', Thread::Frame.current.binding))
-        assert_equal(4, eval('a', Thread::Frame.current.prev.binding))
+        assert_equal(3, eval('a', b3))
+        assert_equal(4, eval('a', tf3.prev.binding))
       end
     end
     inner(4)

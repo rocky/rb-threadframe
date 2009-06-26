@@ -80,17 +80,20 @@ thread_frame_init(VALUE tfval, VALUE thread)
 
 /*
  *  call-seq:
- *     Thread::Frame::current  => thread_frame_object
+ *     Thread#threadframe  => thread_frame_object
  * 
- *  Returns a Thread::Frame object for the currently executing thread.
+ *  Returns a Thread::Frame object for the given thread.
  */
 static VALUE
-thread_frame_s_current(VALUE klass)
+thread_frame_threadframe(VALUE thval)
 {
-    thread_frame_t *tf = thread_frame_t_alloc(klass);
-    tf->th = ruby_current_thread;
+    thread_frame_t *tf = ALLOC(thread_frame_t);
+    rb_thread_t *th;
+    memset(tf, 0, sizeof(thread_frame_t));
+    GetThreadPtr(thval, th);
+    tf->th = th;
     tf->cfp = thread_context_frame(tf->th);
-    return Data_Wrap_Struct(klass, NULL, xfree, tf);
+    return Data_Wrap_Struct(rb_cThreadFrame, NULL, xfree, tf);
 }
 
 /*
@@ -233,12 +236,14 @@ extern VALUE rb_cThread;
 void
 Init_thread_frame(void)
 {
+    /* Additions to Thread */
     rb_cThreadFrame = rb_define_class_under(rb_cThread, "Frame", rb_cObject);
+    rb_define_method(rb_cThread, "threadframe", thread_frame_threadframe, 0);
+
+    /* Thread:Frame */
     rb_define_const(rb_cThreadFrame, "VERSION", rb_str_new2(THREADFRAME_VERSION));
     rb_define_alloc_func(rb_cThreadFrame, thread_frame_alloc);
     rb_define_method(rb_cThreadFrame, "initialize", thread_frame_init, 1);
-    rb_define_singleton_method(rb_cThreadFrame, "current", thread_frame_s_current,
-			       0);
     rb_define_method(rb_cThreadFrame, "iseq", thread_frame_iseq, 0);
     rb_define_method(rb_cThreadFrame, "prev", thread_frame_prev, 1);
     rb_define_method(rb_cThreadFrame, "thread", thread_frame_thread,
