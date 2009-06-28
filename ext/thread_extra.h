@@ -31,7 +31,7 @@ typedef struct rb_thread_struct
     rb_vm_t *vm;
 
     /* execution information */
-    VALUE *stack;		/* must free, must mark */
+    VALUE *stack;		/* must free, must mark. rb: seems to be nil. */
     unsigned long stack_size;   /* Number of stack (or rb_control_frame_t) entries */
     rb_control_frame_t *cfp;
 

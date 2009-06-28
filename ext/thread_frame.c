@@ -98,6 +98,19 @@ thread_frame_threadframe(VALUE thval)
 
 /*
  *  call-seq:
+ *     Thread#stack  => ? 
+ * 
+ */
+static VALUE
+thread_stack(VALUE thval)
+{
+    rb_thread_t *th;
+    GetThreadPtr(thval, th);
+    return *(th->stack);
+}
+
+/*
+ *  call-seq:
  *     Thread::Frame::current  => thread_frame_object
  * 
  *  Returns a ThreadFrame object for the currently executing thread.
@@ -258,6 +271,7 @@ Init_thread_frame(void)
     /* Additions to Thread */
     rb_cThreadFrame = rb_define_class_under(rb_cThread, "Frame", rb_cObject);
     rb_define_method(rb_cThread, "threadframe", thread_frame_threadframe, 0);
+    rb_define_method(rb_cThread, "stack", thread_stack, 0);
 
     /* Thread:Frame */
     rb_define_const(rb_cThreadFrame, "VERSION", rb_str_new2(THREADFRAME_VERSION));
