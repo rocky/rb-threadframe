@@ -1,0 +1,22 @@
+/* From vm_core.h: */
+
+/* Frame information: */
+#define VM_FRAME_MAGIC_METHOD 0x11
+#define VM_FRAME_MAGIC_BLOCK  0x21
+#define VM_FRAME_MAGIC_CLASS  0x31
+#define VM_FRAME_MAGIC_TOP    0x41
+#define VM_FRAME_MAGIC_FINISH 0x51
+#define VM_FRAME_MAGIC_CFUNC  0x61
+#define VM_FRAME_MAGIC_PROC   0x71
+#define VM_FRAME_MAGIC_IFUNC  0x81
+#define VM_FRAME_MAGIC_EVAL   0x91
+#define VM_FRAME_MAGIC_LAMBDA 0xa1
+#define VM_FRAME_MAGIC_MASK_BITS   8
+#define VM_FRAME_MAGIC_MASK   (~(~0<<VM_FRAME_MAGIC_MASK_BITS))
+
+#define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)
+
+#define RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp) (cfp+1)
+#define RUBYVM_CFUNC_FRAME_P(cfp) \
+  (VM_FRAME_TYPE(cfp) == VM_FRAME_MAGIC_CFUNC)
+

@@ -8,6 +8,7 @@
 
 #include <string.h>
 #include "thread_extra.h"  /* Pulls in ruby.h */
+#include "vm_core_mini.h"  /* Part of vm_core we need. */
 
 /* Frames can't be detached from the control frame they live in.
    So we create a structure to contain the pair. */
@@ -17,11 +18,10 @@ typedef struct
     rb_control_frame_t *cfp;
 } thread_frame_t;
   
-/* From vm_core.h: */
-#define RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp) (cfp+1)
-
 extern rb_control_frame_t * thread_context_frame(void *);
 extern rb_thread_t *ruby_current_thread;
+extern rb_control_frame_t * rb_vm_get_ruby_level_next_cfp(rb_thread_t *th, rb_control_frame_t *cfp);
+
 extern VALUE rb_iseq_disasm_internal(rb_iseq_t *iseqdat);
 
 VALUE rb_cThreadFrame;  /* ThreadFrame class */
@@ -98,6 +98,22 @@ thread_frame_threadframe(VALUE thval)
 
 /*
  *  call-seq:
+ *     Thread::Frame::current  => thread_frame_object
+ * 
+ *  Returns a ThreadFrame object for the currently executing thread.
+ *  Same as: Thread::Frame.new(Thread::current)
+ */
+static VALUE
+thread_frame_s_current(VALUE klass)
+{
+    thread_frame_t *tf = thread_frame_t_alloc(klass);
+    tf->th = ruby_current_thread;
+    tf->cfp = thread_context_frame(tf->th);
+    return Data_Wrap_Struct(klass, NULL, xfree, tf);
+}
+
+/*
+ *  call-seq:
  *     Thread::Frame#binding   => binding
  *
  *  Returns a binding for a given thread frame.
@@ -156,7 +172,7 @@ THREAD_FRAME_PTR_FIELD_METHOD(lfp) ;
 static VALUE
 thread_frame_prev_common(rb_control_frame_t *prev_cfp, rb_thread_t *th)
 {
-    if (prev_cfp->iseq) {
+    if (prev_cfp) {
         thread_frame_t *tf_prev;
         VALUE prev = thread_frame_alloc(rb_cThreadFrame);
 	thread_frame_t_alloc(prev);
@@ -164,7 +180,9 @@ thread_frame_prev_common(rb_control_frame_t *prev_cfp, rb_thread_t *th)
         tf_prev->cfp = prev_cfp;
         tf_prev->th = th;
         return prev;
-    } else return Qnil;
+    } else {
+	return Qnil;
+    }
 }
 
 /*
@@ -182,6 +200,7 @@ thread_frame_prev(VALUE klass)
     thread_frame_t *tf;
     Data_Get_Struct(klass, thread_frame_t, tf);
     prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(tf->cfp);
+    prev_cfp = rb_vm_get_ruby_level_next_cfp(tf->th, prev_cfp);
     return thread_frame_prev_common(prev_cfp, tf->th);
 }
 
@@ -250,6 +269,8 @@ Init_thread_frame(void)
 			       0);
     rb_define_singleton_method(rb_cThreadFrame, "prev", 
 			       thread_frame_thread_prev, 1);
+    rb_define_singleton_method(rb_cThreadFrame, "current", 
+			       thread_frame_s_current,   0);
     RB_DEFINE_FIELD_METHOD(binding);
     /*RB_DEFINE_FIELD_METHOD(bp);*/
     RB_DEFINE_FIELD_METHOD(dfp);

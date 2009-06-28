@@ -32,7 +32,7 @@ typedef struct rb_thread_struct
 
     /* execution information */
     VALUE *stack;		/* must free, must mark */
-    unsigned long stack_size;
+    unsigned long stack_size;   /* Number of stack (or rb_control_frame_t) entries */
     rb_control_frame_t *cfp;
 
     int safe_level;

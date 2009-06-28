@@ -1,18 +1,21 @@
 require_relative File.join('ext', 'thread_frame')
 a = 5
-th = Thread::Frame.current
+tf = Thread::Frame.new(Thread::current) # Same as Thread::Frame.current
 # puts th.disasm
-puts th.iseq
-puts th.iseq.disasm
-p th, th.prev, th.self, th.binding, eval('a', th.binding), '-' * 10
+puts tf.iseq
+puts tf.iseq.disasm
+p tf, tf.prev, tf.self, tf.binding, eval('a', tf.binding), '-' * 10
 def foo()
   a = 6
-  th = Thread::Frame.current
-  puts th.iseq.disasm
-  while th do
-    p th, th.prev, th.self, th.binding, eval('a', th.binding), '-' * 10
-    th = th.prev
+  tf = Thread::Frame.current
+  puts tf.iseq.disasm
+  while tf do
+    begin
+      p tf, tf.prev, tf.self, tf.binding, eval('a', tf.binding), '-' * 10
+    rescue
+    end
+    tf = tf.prev
   end
 end
 foo
-p th, th.prev, th.self, th.binding, eval('a', th.binding), '-' * 10
+p tf, tf.prev, tf.self, tf.binding, eval('a', tf.binding), '-' * 10
