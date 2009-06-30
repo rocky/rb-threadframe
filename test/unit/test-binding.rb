@@ -2,7 +2,7 @@ require 'test/unit'
 require_relative File.join('..', '..', 'ext', 'thread_frame')
 
 def outside(a)
-    return eval('a', Thread::Frame.new(Thread::current).binding)
+    return eval('a', RubyVM::ThreadFrame.new(Thread::current).binding)
 end
 
 $a = 10
@@ -12,7 +12,7 @@ class TestBinding < Test::Unit::TestCase
     a = 1
     c = 0
     assert_equal(5, outside(5))
-    tf = Thread::Frame.new(Thread::current)
+    tf = RubyVM::ThreadFrame.new(Thread::current)
     b  = tf.binding
     assert_equal(1, eval('a', b))
     assert_equal(10, eval('$a', b))

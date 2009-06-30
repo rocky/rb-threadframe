@@ -24,10 +24,11 @@ extern rb_control_frame_t * rb_vm_get_ruby_level_next_cfp(rb_thread_t *th, rb_co
 
 extern VALUE rb_iseq_disasm_internal(rb_iseq_t *iseqdat);
 
+extern VALUE rb_cRubyVM;  /* RubyVM class */
 VALUE rb_cThreadFrame;  /* ThreadFrame class */
 
 /* 
-   Allocate a Thread::Frame used by new. Less common than
+   Allocate a RubyVM::ThreadFrame used by new. Less common than
    thread_frame_t_alloc().
  */
 static VALUE
@@ -37,7 +38,7 @@ thread_frame_alloc(VALUE klass)
 }
 
 /* 
-   Allocate a Thread::Frame and set its threadframe structure.
+   Allocate a RubyVM::ThreadFrame and set its threadframe structure.
    This is the more common allocate routine since one normally doesn't
    create a threadframe without <i>first</i> having seomthing to put in it.
  */
@@ -52,9 +53,9 @@ thread_frame_t_alloc(VALUE tfval)
 
 /*
  *  call-seq:
- *     Thread::Frame.new(thread)          => thread_frame_object
+ *     RubyVM::ThreadFrame.new(thread)          => thread_frame_object
  *
- *  Returns an Thread::Frame object which can contains dynamic frame
+ *  Returns an RubyVM::ThreadFrame object which can contains dynamic frame
  *  information. Don't use this directly. Instead use one of the 
  *  class methods.
  *
@@ -82,7 +83,7 @@ thread_frame_init(VALUE tfval, VALUE thread)
  *  call-seq:
  *     Thread#threadframe  => thread_frame_object
  * 
- *  Returns a Thread::Frame object for the given thread.
+ *  Returns a RubyVM::ThreadFrame object for the given thread.
  */
 static VALUE
 thread_frame_threadframe(VALUE thval)
@@ -111,10 +112,10 @@ thread_stack(VALUE thval)
 
 /*
  *  call-seq:
- *     Thread::Frame::current  => thread_frame_object
+ *     RubyVM::ThreadFrame::current  => thread_frame_object
  * 
  *  Returns a ThreadFrame object for the currently executing thread.
- *  Same as: Thread::Frame.new(Thread::current)
+ *  Same as: RubyVM::ThreadFrame.new(Thread::current)
  */
 static VALUE
 thread_frame_s_current(VALUE klass)
@@ -127,7 +128,7 @@ thread_frame_s_current(VALUE klass)
 
 /*
  *  call-seq:
- *     Thread::Frame#binding   => binding
+ *     RubyVM::ThreadFrame#binding   => binding
  *
  *  Returns a binding for a given thread frame.
  */
@@ -141,7 +142,7 @@ thread_frame_binding(VALUE klass)
 
 /*
  *  call-seq:
- *     Thread::Frame#thread   => thread
+ *     RubyVM::ThreadFrame#thread   => thread
  *
  *  Returns the thread object for the thread frame.
  */
@@ -200,9 +201,9 @@ thread_frame_prev_common(rb_control_frame_t *prev_cfp, rb_thread_t *th)
 
 /*
  *  call-seq:
- *     Thread::Frame#prev           => thread_frame_object
+ *     RubyVM::ThreadFrame#prev           => thread_frame_object
  *
- *  Returns a Thread::Frame object for the frame prior to the
+ *  Returns a RubyVM::ThreadFrame object for the frame prior to the
  *  ThreadFrame object or nil if there is none.
  *
  */
@@ -219,9 +220,9 @@ thread_frame_prev(VALUE klass)
 
 /*
  *  call-seq:
- *     Thread::Frame#prev(thread)     => threadframe_object
+ *     RubyVM::ThreadFrame#prev(thread)     => threadframe_object
  *
- *  Returns a Thread::Frame for the frame prior to the
+ *  Returns a RubyVM::ThreadFrame for the frame prior to the
  *  Thread object passed or nil if there is none.
  *
  */
@@ -240,7 +241,7 @@ extern VALUE rb_cISeq;
 
 /*
  *  call-seq:
- *     Thread::Frame#iseq           => ISeq
+ *     RubyVM::ThreadFrame#iseq           => ISeq
  *
  *  Returns an instruction sequence object from the instruction sequence
  *  found inside the ThreadFrame object or nil if there is none.
@@ -268,8 +269,9 @@ extern VALUE rb_cThread;
 void
 Init_thread_frame(void)
 {
-    /* Additions to Thread */
-    rb_cThreadFrame = rb_define_class_under(rb_cThread, "Frame", rb_cObject);
+    /* Additions to RubyVM */
+    rb_cThreadFrame = rb_define_class_under(rb_cRubyVM, "ThreadFrame", 
+					    rb_cObject);
     rb_define_method(rb_cThread, "threadframe", thread_frame_threadframe, 0);
     rb_define_method(rb_cThread, "stack", thread_stack, 0);
 

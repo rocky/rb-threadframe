@@ -1,13 +1,13 @@
 require_relative File.join('ext', 'thread_frame')
 a = 5
-tf = Thread::Frame.new(Thread::current) # Same as Thread::Frame.current
+tf = RubyVM::ThreadFrame.new(Thread::current) # Same as RubyVM::ThreadFrame.current
 # puts th.disasm
 puts tf.iseq
 puts tf.iseq.disasm
 p tf, tf.prev, tf.self, tf.binding, eval('a', tf.binding), '-' * 10
 def foo()
   a = 6
-  tf = Thread::Frame.current
+  tf = RubyVM::ThreadFrame.current
   puts tf.iseq.disasm
   while tf do
     begin
