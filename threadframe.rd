@@ -1,5 +1,5 @@
 # = NAME  
-# +Thread+::+Frame+ and +RubyVM+::+ThreadFrame+
+# +RubyVM+::+ThreadFrame+
 #
 # = SYNOPSES 
 #

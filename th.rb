@@ -1,7 +1,7 @@
 require_relative File.join('ext', 'thread_frame')
 a = 5
 tf = RubyVM::ThreadFrame.new(Thread::current) # Same as RubyVM::ThreadFrame.current
-# puts th.disasm
+puts tf.source_location.inspect
 puts tf.iseq
 puts tf.iseq.disasm
 p tf, tf.prev, tf.self, tf.binding, eval('a', tf.binding), '-' * 10

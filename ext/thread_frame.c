@@ -17,14 +17,15 @@ typedef struct
     rb_thread_t *th;
     rb_control_frame_t *cfp;
 } thread_frame_t;
-  
+
+/** FIXME: Move into a header file */  
 extern rb_control_frame_t * thread_context_frame(void *);
 extern rb_thread_t *ruby_current_thread;
 extern rb_control_frame_t * rb_vm_get_ruby_level_next_cfp(rb_thread_t *th, rb_control_frame_t *cfp);
-
+extern int rb_vm_get_sourceline(const rb_control_frame_t *cfp);
 extern VALUE rb_iseq_disasm_internal(rb_iseq_t *iseqdat);
-
 extern VALUE rb_cRubyVM;  /* RubyVM class */
+
 VALUE rb_cThreadFrame;  /* ThreadFrame class */
 
 /* 
@@ -261,6 +262,20 @@ thread_frame_iseq(VALUE klass)
     return rb_iseq;
 }
 
+static VALUE
+thread_frame_source_location(VALUE klass)
+{
+    thread_frame_t *tf;
+    Data_Get_Struct(klass, thread_frame_t, tf);
+
+    if (!tf->cfp->iseq) {
+	/* FIXME: try harder... */
+	return Qnil;
+    } 
+    /* FIXME: wrap inside an array. */
+    return INT2FIX(rb_vm_get_sourceline(tf->cfp));
+}
+
 #define RB_DEFINE_FIELD_METHOD(FIELD) \
     rb_define_method(rb_cThreadFrame, #FIELD, thread_frame_##FIELD, 0);
 
@@ -281,8 +296,9 @@ Init_thread_frame(void)
     rb_define_method(rb_cThreadFrame, "initialize", thread_frame_init, 1);
     rb_define_method(rb_cThreadFrame, "iseq", thread_frame_iseq, 0);
     rb_define_method(rb_cThreadFrame, "prev", thread_frame_prev, 1);
-    rb_define_method(rb_cThreadFrame, "thread", thread_frame_thread,
-			       0);
+    rb_define_method(rb_cThreadFrame, "source_location", 
+		     thread_frame_source_location, 0);
+    rb_define_method(rb_cThreadFrame, "thread", thread_frame_thread, 0);
     rb_define_singleton_method(rb_cThreadFrame, "prev", 
 			       thread_frame_thread_prev, 1);
     rb_define_singleton_method(rb_cThreadFrame, "current", 
