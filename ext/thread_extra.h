@@ -2,10 +2,7 @@
    method prototypes for extensions to the Thread class.
 */
 #include <ruby.h>
-
-/* For now, rb_iseq_t can be opaque. Later we will
-   need to fill it in. */
-typedef struct rb_iseq_struct rb_iseq_t;
+#include "vm_core_mini.h"
 
 /* This is copied verbatim from vm_core.h */
 typedef struct {

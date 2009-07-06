@@ -8,7 +8,6 @@
 
 #include <string.h>
 #include "thread_extra.h"  /* Pulls in ruby.h */
-#include "vm_core_mini.h"  /* Part of vm_core we need. */
 
 /* Frames can't be detached from the control frame they live in.
    So we create a structure to contain the pair. */
@@ -18,13 +17,7 @@ typedef struct
     rb_control_frame_t *cfp;
 } thread_frame_t;
 
-/** FIXME: Move into a header file */  
-extern rb_control_frame_t * thread_context_frame(void *);
-extern rb_thread_t *ruby_current_thread;
-extern rb_control_frame_t * rb_vm_get_ruby_level_next_cfp(rb_thread_t *th, rb_control_frame_t *cfp);
-extern int rb_vm_get_sourceline(const rb_control_frame_t *cfp);
-extern VALUE rb_iseq_disasm_internal(rb_iseq_t *iseqdat);
-extern VALUE rb_cRubyVM;  /* RubyVM class */
+#include "ruby19_externs.h"
 
 VALUE rb_cThreadFrame;  /* ThreadFrame class */
 
@@ -262,6 +255,39 @@ thread_frame_iseq(VALUE klass)
     return rb_iseq;
 }
 
+/*
+ * call-seq:
+ *    RubyVM::ThreadFrame#source_container() -> [Type, String]
+ *
+ * Returns a tuple representing kind of container, e.g. file
+ * eval'd string object, and the name of the container. If file,
+ * it would be a file name. If an eval'd string it might be the string.
+ */
+static VALUE
+thread_frame_source_container(VALUE klass)
+{
+    thread_frame_t *tf;
+    Data_Get_Struct(klass, thread_frame_t, tf);
+
+    if (!tf->cfp->iseq) {
+	/* FIXME: try harder... */
+	return Qnil;
+    } 
+
+    /* FIXME: As Ruby 1.9 improves, so should this. */
+    return rb_ary_new3(2, rb_str_new2("file"), tf->cfp->iseq->filename);
+}
+
+/*
+ * call-seq:
+ *    RubyVM::ThreadFrame#source_location() -> Array 
+ *
+ *  Returns an array of source location positions that match
+ * +tf.instruction_offset+. A source location position is left
+ * implementation dependent. It could be line number, a line number
+ * and start and end column, or a start line number, start column, end
+ * line number, end column.
+ */
 static VALUE
 thread_frame_source_location(VALUE klass)
 {
@@ -272,8 +298,11 @@ thread_frame_source_location(VALUE klass)
 	/* FIXME: try harder... */
 	return Qnil;
     } 
-    /* FIXME: wrap inside an array. */
-    return INT2FIX(rb_vm_get_sourceline(tf->cfp));
+    /* NOTE: for now sourceline returns a single int. In the
+       future it might return an array of ints.
+     */
+
+    return rb_ary_new3(1, INT2FIX(rb_vm_get_sourceline(tf->cfp)));
 }
 
 #define RB_DEFINE_FIELD_METHOD(FIELD) \
@@ -296,6 +325,8 @@ Init_thread_frame(void)
     rb_define_method(rb_cThreadFrame, "initialize", thread_frame_init, 1);
     rb_define_method(rb_cThreadFrame, "iseq", thread_frame_iseq, 0);
     rb_define_method(rb_cThreadFrame, "prev", thread_frame_prev, 1);
+    rb_define_method(rb_cThreadFrame, "source_container", 
+		     thread_frame_source_container, 0);
     rb_define_method(rb_cThreadFrame, "source_location", 
 		     thread_frame_source_location, 0);
     rb_define_method(rb_cThreadFrame, "thread", thread_frame_thread, 0);

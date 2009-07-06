@@ -80,14 +80,14 @@
 # Indicates whether the frame is implemented in C or Ruby.
 #
 # === RubyVM::ThreadFrame#source_container
-#  tf.source_container() -> [Type, String]
+#  RubyVM::Threadframe#source_container() -> [Type, String]
 #
 # Returns a tuple representing kind of container, e.g. file
 # eval'd string object, and the name of the container. If file,
 # it would be a file name. If an eval'd string it might be the string.
 # 
 # === RubyVM::ThreadFrame#source_location
-#  tf.source_location() -> Array 
+#  RubyVM::ThreadFrame#.source_location() -> Array 
 #
 # Returns an array of source location positions that match
 # +tf.instruction_offset+. A source location position is left
