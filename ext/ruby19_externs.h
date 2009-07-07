@@ -11,3 +11,7 @@ extern rb_control_frame_t * rb_vm_get_ruby_level_next_cfp(rb_thread_t *th, rb_co
 extern int rb_vm_get_sourceline(const rb_control_frame_t *cfp);
 extern VALUE rb_iseq_disasm_internal(rb_iseq_t *iseqdat);
 extern VALUE rb_cRubyVM;  /* RubyVM class */
+
+/* From iseq */
+extern VALUE iseq_alloc_shared(VALUE klass);
+extern VALUE rb_cISeq;

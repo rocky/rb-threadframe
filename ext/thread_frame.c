@@ -230,9 +230,6 @@ thread_frame_thread_prev(VALUE klass, VALUE thval)
     return thread_frame_prev_common(prev_cfp, th);
 }
 
-extern VALUE iseq_alloc_shared(VALUE klass);
-extern VALUE rb_cISeq;
-
 /*
  *  call-seq:
  *     RubyVM::ThreadFrame#iseq           => ISeq
@@ -310,6 +307,8 @@ thread_frame_source_location(VALUE klass)
 
 extern VALUE rb_cThread;
 
+extern VALUE proc_iseq(VALUE self);
+
 void
 Init_thread_frame(void)
 {
@@ -347,7 +346,5 @@ Init_thread_frame(void)
     /*RB_DEFINE_FIELD_METHOD(sp);*/
     
     /* Just a test to pull in a second C source file. */
-    rb_define_singleton_method(rb_cThread, "ni", 
-			       thread_extra_ni, 0);
-
+    rb_define_method(rb_cProc, "iseq", proc_iseq, 0);
 }

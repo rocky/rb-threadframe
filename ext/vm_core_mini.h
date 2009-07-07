@@ -117,3 +117,32 @@ typedef struct rb_iseq_struct {
     struct iseq_compile_data *compile_data;
 #endif
 } rb_iseq_t;
+
+typedef struct rb_block_struct {
+    VALUE self;			/* share with method frame if it's only block */
+    VALUE *lfp;			/* share with method frame if it's only block */
+    VALUE *dfp;			/* share with method frame if it's only block */
+    rb_iseq_t *iseq;
+    VALUE proc;
+} rb_block_t;
+
+#if 1
+#define GetCoreDataFromValue(obj, type, ptr) do { \
+    ptr = (type*)DATA_PTR(obj); \
+} while (0)
+#else
+#define GetCoreDataFromValue(obj, type, ptr) Data_Get_Struct(obj, type, ptr)
+#endif
+
+#define GetProcPtr(obj, ptr) \
+  GetCoreDataFromValue(obj, rb_proc_t, ptr)
+
+typedef struct {
+    rb_block_t block;
+
+    VALUE envval;		/* for GC mark */
+    VALUE blockprocval;
+    int safe_level;
+    int is_from_method;
+    int is_lambda;
+} rb_proc_t;
