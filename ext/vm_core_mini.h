@@ -20,6 +20,10 @@
 #define RUBYVM_CFUNC_FRAME_P(cfp) \
   (VM_FRAME_TYPE(cfp) == VM_FRAME_MAGIC_CFUNC)
 
+#define RUBY_VM_IFUNC_P(ptr)        (BUILTIN_TYPE(ptr) == T_NODE)
+#define RUBY_VM_NORMAL_ISEQ_P(ptr) \
+  (ptr && !RUBY_VM_IFUNC_P(ptr))
+
 
 /* Instruction sequence */
 typedef struct rb_iseq_struct {

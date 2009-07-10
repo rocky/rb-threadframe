@@ -12,7 +12,13 @@ proc_iseq(VALUE self)
     VALUE rb_iseq;
     GetProcPtr(self, proc);
     iseq = proc->block.iseq;
-    if (!iseq) return Qnil;
+    if (!iseq 
+#if 0
+	/* Our iseq struct isn't complete enough to contain self. */
+	|| !RUBY_VM_NORMAL_ISEQ_P(iseq->self)
+#endif
+	)
+	return Qnil;
     rb_iseq = iseq_alloc_shared(rb_cISeq);
     RDATA(rb_iseq)->data = iseq;
     return rb_iseq;
