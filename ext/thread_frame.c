@@ -171,7 +171,7 @@ thread_frame_##FIELD(VALUE klass)		\
     return *(tf->cfp->FIELD);			\
 }
 
-/*THREAD_FRAME_PTR_FIELD_METHOD(bp) ;*/
+THREAD_FRAME_PTR_FIELD_METHOD(bp) ;
 THREAD_FRAME_PTR_FIELD_METHOD(dfp) ;
 THREAD_FRAME_PTR_FIELD_METHOD(lfp) ;
 /*THREAD_FRAME_PTR_FIELD_METHOD(pc) ;*/
@@ -334,7 +334,7 @@ Init_thread_frame(void)
     rb_define_singleton_method(rb_cThreadFrame, "current", 
 			       thread_frame_s_current,   0);
     RB_DEFINE_FIELD_METHOD(binding);
-    /*RB_DEFINE_FIELD_METHOD(bp);*/
+    RB_DEFINE_FIELD_METHOD(bp);
     RB_DEFINE_FIELD_METHOD(dfp);
     RB_DEFINE_FIELD_METHOD(flag);
     RB_DEFINE_FIELD_METHOD(lfp);
