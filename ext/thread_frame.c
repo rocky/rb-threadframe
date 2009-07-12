@@ -7,7 +7,7 @@
 #define THREADFRAME_VERSION "0.2"  
 
 #include <string.h>
-#include "thread_extra.h"  /* Pulls in ruby.h */
+#include "vm_core_mini.h"  /* Pulls in ruby.h */
 
 /* Frames can't be detached from the control frame they live in.
    So we create a structure to contain the pair. 
@@ -176,6 +176,29 @@ thread_frame_##FIELD(VALUE klass)		\
     Data_Get_Struct(klass, thread_frame_t, tf); \
     return tf->cfp->FIELD;			\
 }
+
+/*
+ *  call-seq:
+ *     Thread#pc_offset  => Fixnum
+ * 
+ * Returns the offset inside the iseq or "program-counter offset" or -1
+ * If invalid/unstarted. ThreadFrameError can be raised if the threadframe
+ * object is no longer valid.
+ */
+static VALUE
+thread_frame_pc_offset(VALUE klass)
+{
+    thread_frame_t *tf;
+    int pc = -1;
+    Data_Get_Struct(klass, thread_frame_t, tf);
+    if (Qtrue == thread_frame_invalid_internal(tf))
+	rb_raise(rb_eThreadFrameError, "invalid frame");
+    if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
+	pc = tf->cfp->pc - tf->cfp->iseq->iseq_encoded;
+    }
+    return INT2FIX(pc);
+}
+
 
 THREAD_FRAME_FIELD_METHOD(flag)
 THREAD_FRAME_FIELD_METHOD(method_class) ;
@@ -403,7 +426,7 @@ Init_thread_frame(void)
     RB_DEFINE_FIELD_METHOD(flag);
     RB_DEFINE_FIELD_METHOD(lfp);
     RB_DEFINE_FIELD_METHOD(method_class);
-    /*RB_DEFINE_FIELD_METHOD(pc);*/
+    RB_DEFINE_FIELD_METHOD(pc_offset);
     RB_DEFINE_FIELD_METHOD(prev);
     RB_DEFINE_FIELD_METHOD(proc);
     RB_DEFINE_FIELD_METHOD(self);
