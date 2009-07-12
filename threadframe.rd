@@ -61,13 +61,17 @@
 # frames as seen in the source, deal with it. ;-) +nil+ can be
 # returned if there is no previous frame or if tf is no longer exists.
 #
-# === RubyVM::ThreadFrame#exist?
-#   tf.exist?() -> boolean
+# === RubyVM::ThreadFrame#invalid?
+#   tf.invalid?() -> boolean
 #
-# Returns true if tf is still a currently active frame. Beware: if the
-# tf.thread is not blocked, it is possible that between the time the
-# frame was created and when it is subsequently used in execution
-# of the program causes the frame to no longer exist. 
+# Returns true if the frame is no longer valid. On the other hand,
+# since the test we use is weak, returning false might not mean the
+# frame is valid, just that we can't disprove that it is not invalid.
+# 
+# It is suggested that frames are used in a way that ensures they will
+# be valid. In particular frames should have local scope and frames to 
+# threads other than the running one should be stopped while the frame 
+# variable is active.
 # 
 #
 # === RubyVM::ThreadFrame#thread

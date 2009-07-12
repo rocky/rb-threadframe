@@ -19,6 +19,13 @@
 #define RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp) (cfp+1)
 #define RUBYVM_CFUNC_FRAME_P(cfp) \
   (VM_FRAME_TYPE(cfp) == VM_FRAME_MAGIC_CFUNC)
+#define RUBY_VM_NEXT_CONTROL_FRAME(cfp) (cfp-1)
+#define RUBY_VM_END_CONTROL_FRAME(th) \
+  ((rb_control_frame_t *)((th)->stack + (th)->stack_size))
+#define RUBY_VM_VALID_CONTROL_FRAME_P(cfp, ecfp) \
+  ((void *)(ecfp) > (void *)(cfp))
+#define RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, cfp) \
+  (!RUBY_VM_VALID_CONTROL_FRAME_P((cfp), RUBY_VM_END_CONTROL_FRAME(th)))
 
 #define RUBY_VM_IFUNC_P(ptr)        (BUILTIN_TYPE(ptr) == T_NODE)
 #define RUBY_VM_NORMAL_ISEQ_P(ptr) \

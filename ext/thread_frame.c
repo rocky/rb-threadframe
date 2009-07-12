@@ -10,16 +10,28 @@
 #include "thread_extra.h"  /* Pulls in ruby.h */
 
 /* Frames can't be detached from the control frame they live in.
-   So we create a structure to contain the pair. */
+   So we create a structure to contain the pair. 
+
+   The signature fields are used to weakly verify the validity of cfp.
+   it stores to contents of fields in cfp on allocation.  This, the
+   validity of "th" pointing to a valid thread, and cfp pointing to valid
+   location inside the frame area we use to check that this structure
+   is valid. */
+
 typedef struct 
 {
     rb_thread_t *th;
     rb_control_frame_t *cfp;
+    VALUE *signature1[3]; /* iseq, flag, self */
+    VALUE *signature2[3]; /* proc, method_id, method_class */
 } thread_frame_t;
 
 #include "ruby19_externs.h"
 
-VALUE rb_cThreadFrame;  /* ThreadFrame class */
+VALUE rb_cThreadFrame;       /* ThreadFrame class */
+VALUE rb_eThreadFrameError;  /* Error raised on invalid frames. */
+
+static VALUE thread_frame_invalid_internal(thread_frame_t *tf);
 
 /* 
    Allocate a RubyVM::ThreadFrame used by new. Less common than
@@ -45,6 +57,12 @@ thread_frame_t_alloc(VALUE tfval)
     return tf;
 }
 
+#define SAVE_FRAME(TF, TH)						\
+    tf->th = TH;							\
+    tf->cfp = thread_context_frame(tf->th);				\
+    memcpy(tf->signature1, &(tf->cfp->iseq), sizeof(tf->signature1));	\
+    memcpy(tf->signature2, &(tf->cfp->proc), sizeof(tf->signature2)) 
+
 /*
  *  call-seq:
  *     RubyVM::ThreadFrame.new(thread)          => thread_frame_object
@@ -68,8 +86,7 @@ thread_frame_init(VALUE tfval, VALUE thread)
     GetThreadPtr(thread, th);
     memset(tf, 0, sizeof(thread_frame_t));
     DATA_PTR(tfval) = tf;
-    tf->th = th;
-    tf->cfp = thread_context_frame(th);
+    SAVE_FRAME(tf, th) ;
     return tfval;
 }
 
@@ -86,8 +103,7 @@ thread_frame_threadframe(VALUE thval)
     rb_thread_t *th;
     memset(tf, 0, sizeof(thread_frame_t));
     GetThreadPtr(thval, th);
-    tf->th = th;
-    tf->cfp = thread_context_frame(tf->th);
+    SAVE_FRAME(tf, th) ;
     return Data_Wrap_Struct(rb_cThreadFrame, NULL, xfree, tf);
 }
 
@@ -115,8 +131,7 @@ static VALUE
 thread_frame_s_current(VALUE klass)
 {
     thread_frame_t *tf = thread_frame_t_alloc(klass);
-    tf->th = ruby_current_thread;
-    tf->cfp = thread_context_frame(tf->th);
+    SAVE_FRAME(tf, ruby_current_thread) ;
     return Data_Wrap_Struct(klass, NULL, xfree, tf);
 }
 
@@ -131,7 +146,12 @@ thread_frame_binding(VALUE klass)
 {
     thread_frame_t *tf;
     Data_Get_Struct(klass, thread_frame_t, tf);
-    return rb_binding_frame_new(tf->th, tf->cfp);
+    if (Qtrue == thread_frame_invalid_internal(tf))
+	rb_raise(rb_eThreadFrameError, "invalid frame");
+    else
+	return rb_binding_frame_new(tf->th, tf->cfp);
+    /* NOTREACHED */
+    return Qnil;
 }
 
 /*
@@ -181,12 +201,14 @@ static VALUE
 thread_frame_prev_common(rb_control_frame_t *prev_cfp, rb_thread_t *th)
 {
     if (prev_cfp) {
-        thread_frame_t *tf_prev;
+        thread_frame_t *tf;
         VALUE prev = thread_frame_alloc(rb_cThreadFrame);
 	thread_frame_t_alloc(prev);
-        Data_Get_Struct(prev, thread_frame_t, tf_prev);
-        tf_prev->cfp = prev_cfp;
-        tf_prev->th = th;
+        Data_Get_Struct(prev, thread_frame_t, tf);
+        tf->th = th;
+        tf->cfp = prev_cfp;
+	memcpy(tf->signature1, &(tf->cfp->iseq), sizeof(tf->signature1)); 
+	memcpy(tf->signature2, &(tf->cfp->proc), sizeof(tf->signature2));
         return prev;
     } else {
 	return Qnil;
@@ -302,6 +324,41 @@ thread_frame_source_location(VALUE klass)
     return rb_ary_new3(1, INT2FIX(rb_vm_get_sourceline(tf->cfp)));
 }
 
+/*
+ * call-seq:
+ *    RubyVM::ThreadFrame#invalid? -> Boolean
+ *
+ * Returns true if the frame is no longer valid. On the other hand,
+ * since the test we use is weak, returning false might not mean the
+ * frame is valid, just that we can't disprove that it is not invalid.
+ * 
+ * It is suggested that frames are used in a way that ensures they will
+ * be valid. In particular frames should have local scope and frames to 
+ * threads other than the running one should be stopped while the frame 
+ * variable is active.
+ */
+static VALUE
+thread_frame_invalid(VALUE klass)
+{
+    thread_frame_t *tf;
+    Data_Get_Struct(klass, thread_frame_t, tf);
+    return thread_frame_invalid_internal(tf);
+}
+
+static VALUE
+thread_frame_invalid_internal(thread_frame_t *tf)
+{
+    int cmp;
+    if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, tf->cfp))
+	return Qtrue;
+    cmp = (0 == memcmp(tf->signature1, &(tf->cfp->iseq), 
+		       sizeof(tf->signature1)) &&
+	   0 == memcmp(tf->signature2, &(tf->cfp->proc), 
+		       sizeof(tf->signature2)));
+    return cmp ? Qfalse : Qtrue;
+}
+    
+
 #define RB_DEFINE_FIELD_METHOD(FIELD) \
     rb_define_method(rb_cThreadFrame, #FIELD, thread_frame_##FIELD, 0);
 
@@ -321,6 +378,7 @@ Init_thread_frame(void)
     /* Thread:Frame */
     rb_define_const(rb_cThreadFrame, "VERSION", rb_str_new2(THREADFRAME_VERSION));
     rb_define_alloc_func(rb_cThreadFrame, thread_frame_alloc);
+
     rb_define_method(rb_cThreadFrame, "initialize", thread_frame_init, 1);
     rb_define_method(rb_cThreadFrame, "iseq", thread_frame_iseq, 0);
     rb_define_method(rb_cThreadFrame, "prev", thread_frame_prev, 1);
@@ -329,10 +387,16 @@ Init_thread_frame(void)
     rb_define_method(rb_cThreadFrame, "source_location", 
 		     thread_frame_source_location, 0);
     rb_define_method(rb_cThreadFrame, "thread", thread_frame_thread, 0);
+    rb_define_method(rb_cThreadFrame, "invalid?", thread_frame_invalid, 0);
+
+    rb_eThreadFrameError = rb_define_class("ThreadFrameError", 
+					   rb_eStandardError);
+
     rb_define_singleton_method(rb_cThreadFrame, "prev", 
 			       thread_frame_thread_prev, 1);
     rb_define_singleton_method(rb_cThreadFrame, "current", 
 			       thread_frame_s_current,   0);
+
     RB_DEFINE_FIELD_METHOD(binding);
     RB_DEFINE_FIELD_METHOD(bp);
     RB_DEFINE_FIELD_METHOD(dfp);
