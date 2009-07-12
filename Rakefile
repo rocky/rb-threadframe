@@ -7,7 +7,7 @@ require 'rake/testtask'
 
 SO_NAME = "thread_frame.so"
 
-THREADREAME_VERSION = open("ext/thread_frame.c") do |f| 
+PACKAGE_VERSION = open("ext/thread_frame.c") do |f| 
   f.grep(/^#define THREADFRAME_VERSION/).first[/"(.+)"/,1]
 end
 
@@ -80,4 +80,36 @@ Rake::RDocTask.new('rdoc') do |rdoc|
   rdoc.options << '--main' << 'README'
   rdoc.rdoc_files.include('ext/**/thread_frame.c',
                           'README')
+end
+
+# Base GEM Specification
+default_spec = Gem::Specification.new do |spec|
+  spec.name = "rb-threadframe"
+  
+  spec.homepage = "http://github.com/rocky/rb-threadframe/tree/master"
+  spec.summary = "Frame introspection"
+  spec.description = <<-EOF
+
+rb-threadframe gives introspection access for frames of a thread.
+EOF
+
+  spec.version = PACKAGE_VERSION
+
+  spec.author = "R. Bernstein"
+  spec.email = "rocky@gnu.org"
+  spec.platform = Gem::Platform::RUBY
+  spec.files = ALL_FILES.to_a  
+
+  spec.required_ruby_version = '>= 1.9.1'
+  spec.date = Time.now
+  # spec.rubyforge_project = 'rocky-hacks'
+  
+  # rdoc
+  spec.has_rdoc = true
+  spec.extra_rdoc_files = ['README', 'threadframe.rd']
+end
+
+# Rake task to build the default package
+Rake::GemPackageTask.new(default_spec) do |pkg|
+  pkg.need_tar = true
 end
