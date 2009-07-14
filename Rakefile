@@ -11,6 +11,7 @@ PACKAGE_VERSION = open("ext/thread_frame.c") do |f|
   f.grep(/^#define THREADFRAME_VERSION/).first[/"(.+)"/,1]
 end
 
+EXT_FILES  = FileList['ext/*.c', 'ext/*.h']
 TEST_FILES = FileList['test/**/*.rb']
 
 COMMON_FILES = FileList[
@@ -18,7 +19,7 @@ COMMON_FILES = FileList[
   'Rakefile',
 ]                        
 
-ALL_FILES = COMMON_FILES + TEST_FILES
+ALL_FILES = COMMON_FILES + TEST_FILES + EXT_FILES
 
 desc "Create the core ruby-debug shared library extension"
 task :ext do
@@ -94,6 +95,7 @@ rb-threadframe gives introspection access for frames of a thread.
 EOF
 
   spec.version = PACKAGE_VERSION
+  spec.extensions = ['ext/extconf.rb']
 
   spec.author = "R. Bernstein"
   spec.email = "rocky@gnu.org"
