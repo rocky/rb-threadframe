@@ -200,6 +200,34 @@ thread_frame_pc_offset(VALUE klass)
 }
 
 
+#ifdef NO_reg_pc
+/*
+ *  call-seq:
+ *     Thread#pc_offset=
+ * 
+ * Sets pc to the offset given. 
+ * WARNING, this is pretty dangerous. You need to set this to a valid
+ # instruction offset since little checking is done.
+ */
+static VALUE
+thread_frame_set_pc_offset(VALUE klass, VALUE offset_val)
+{
+    thread_frame_t *tf;
+    int offset;
+    Data_Get_Struct(klass, thread_frame_t, tf);
+    if (Qtrue == thread_frame_invalid_internal(tf))
+	rb_raise(rb_eThreadFrameError, "invalid frame");
+    if (!FIXNUM_P(offset_val))
+	return Qfalse;
+    offset = FIX2INT(offset_val);
+    if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
+	tf->cfp->pc = tf->cfp->iseq->iseq_encoded + offset;
+    }
+    return Qtrue;
+}
+#endif
+
+
 THREAD_FRAME_FIELD_METHOD(flag)
 THREAD_FRAME_FIELD_METHOD(method_class) ;
 THREAD_FRAME_FIELD_METHOD(proc) ;
@@ -403,14 +431,18 @@ Init_thread_frame(void)
     rb_define_alloc_func(rb_cThreadFrame, thread_frame_alloc);
 
     rb_define_method(rb_cThreadFrame, "initialize", thread_frame_init, 1);
+    rb_define_method(rb_cThreadFrame, "invalid?", thread_frame_invalid, 0);
     rb_define_method(rb_cThreadFrame, "iseq", thread_frame_iseq, 0);
+#ifdef NO_reg_pc
+    rb_define_method(rb_cThreadFrame, "pc_offset=", 
+		     thread_frame_set_pc_offset, 1);
+#endif
     rb_define_method(rb_cThreadFrame, "prev", thread_frame_prev, 1);
     rb_define_method(rb_cThreadFrame, "source_container", 
 		     thread_frame_source_container, 0);
     rb_define_method(rb_cThreadFrame, "source_location", 
 		     thread_frame_source_location, 0);
     rb_define_method(rb_cThreadFrame, "thread", thread_frame_thread, 0);
-    rb_define_method(rb_cThreadFrame, "invalid?", thread_frame_invalid, 0);
 
     rb_eThreadFrameError = rb_define_class("ThreadFrameError", 
 					   rb_eStandardError);
