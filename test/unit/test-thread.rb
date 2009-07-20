@@ -36,7 +36,7 @@ class TestThread < Test::Unit::TestCase
       tup[1] = File.basename(tup[1])
       assert_equal(['file', 'test-thread.rb'], tup)
       assert_equal('block in test_fields', tf.method)
-      p tf.prev.method
+      assert_equal('test_fields', tf.prev.method)
     end
 
   end
