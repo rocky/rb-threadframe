@@ -78,7 +78,7 @@ thread_frame_t_alloc(VALUE tfval)
  *     ThreadFrame::current.self          => 'main'
  */
 static VALUE
-thread_frame_init(VALUE tfval, VALUE thread)
+thread_frame_initialize(VALUE tfval, VALUE thread)
 {
     thread_frame_t *tf = thread_frame_t_alloc(tfval);
     rb_thread_t *th;
@@ -422,7 +422,7 @@ extern VALUE rb_cThread;
 
 extern VALUE proc_iseq(VALUE self);
 
-#define RB_DEFINE_METHOD(FIELD, ARGC)					\
+#define RB_DEFINE_FRAME_METHOD(FIELD, ARGC)					\
     rb_define_method(rb_cThreadFrame, #FIELD, thread_frame_##FIELD, ARGC);
 
 void
@@ -439,21 +439,21 @@ Init_thread_frame(void)
 		    rb_str_new2(THREADFRAME_VERSION));
     rb_define_alloc_func(rb_cThreadFrame, thread_frame_alloc);
 
-    rb_define_method(rb_cThreadFrame, "initialize", thread_frame_init, 1);
     rb_define_method(rb_cThreadFrame, "invalid?", thread_frame_invalid, 0);
 
-    RB_DEFINE_METHOD(binding, 0);
-    RB_DEFINE_METHOD(flag, 0);
-    RB_DEFINE_METHOD(iseq, 0);
-    RB_DEFINE_METHOD(method, 0);
-    RB_DEFINE_METHOD(method_class, 0);
-    RB_DEFINE_METHOD(pc_offset, 0);
-    RB_DEFINE_METHOD(prev, 0);
-    RB_DEFINE_METHOD(proc, 0);
-    RB_DEFINE_METHOD(self, 0);
-    RB_DEFINE_METHOD(source_container, 0);
-    RB_DEFINE_METHOD(source_location, 0);
-    RB_DEFINE_METHOD(thread, 0);
+    RB_DEFINE_FRAME_METHOD(binding, 0);
+    RB_DEFINE_FRAME_METHOD(flag, 0);
+    RB_DEFINE_FRAME_METHOD(iseq, 0);
+    RB_DEFINE_FRAME_METHOD(initialize, 1);
+    RB_DEFINE_FRAME_METHOD(method, 0);
+    RB_DEFINE_FRAME_METHOD(method_class, 0);
+    RB_DEFINE_FRAME_METHOD(pc_offset, 0);
+    RB_DEFINE_FRAME_METHOD(prev, 0);
+    RB_DEFINE_FRAME_METHOD(proc, 0);
+    RB_DEFINE_FRAME_METHOD(self, 0);
+    RB_DEFINE_FRAME_METHOD(source_container, 0);
+    RB_DEFINE_FRAME_METHOD(source_location, 0);
+    RB_DEFINE_FRAME_METHOD(thread, 0);
 
 #ifdef NO_reg_pc
     rb_define_method(rb_cThreadFrame, "pc_offset=", 
