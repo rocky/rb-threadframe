@@ -135,6 +135,10 @@ thread_frame_s_current(VALUE klass)
     return Data_Wrap_Struct(klass, NULL, xfree, tf);
 }
 
+#define THREAD_FRAME_SETUP \
+    thread_frame_t *tf; \
+    Data_Get_Struct(klass, thread_frame_t, tf)
+
 /*
  *  call-seq:
  *     RubyVM::ThreadFrame#binding   => binding
@@ -144,8 +148,7 @@ thread_frame_s_current(VALUE klass)
 static VALUE
 thread_frame_binding(VALUE klass)
 {
-    thread_frame_t *tf;
-    Data_Get_Struct(klass, thread_frame_t, tf);
+    THREAD_FRAME_SETUP ;
     if (Qtrue == thread_frame_invalid_internal(tf))
 	rb_raise(rb_eThreadFrameError, "invalid frame");
     else
@@ -163,8 +166,7 @@ thread_frame_binding(VALUE klass)
 static VALUE
 thread_frame_thread(VALUE klass)
 {
-    thread_frame_t *tf;
-    Data_Get_Struct(klass, thread_frame_t, tf);
+    THREAD_FRAME_SETUP ;
     return tf->th->self;
 }
 
@@ -172,8 +174,7 @@ thread_frame_thread(VALUE klass)
 static VALUE					\
 thread_frame_##FIELD(VALUE klass)		\
 {						\
-    thread_frame_t *tf;				\
-    Data_Get_Struct(klass, thread_frame_t, tf); \
+    THREAD_FRAME_SETUP ;			\
     return tf->cfp->FIELD;			\
 }
 
@@ -188,8 +189,7 @@ thread_frame_##FIELD(VALUE klass)		\
 static VALUE
 thread_frame_method(VALUE klass)
 {
-    thread_frame_t *tf;
-    Data_Get_Struct(klass, thread_frame_t, tf);
+    THREAD_FRAME_SETUP ;			\
     if (Qtrue == thread_frame_invalid_internal(tf))
 	rb_raise(rb_eThreadFrameError, "invalid frame");
     if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) 
@@ -211,9 +211,8 @@ thread_frame_method(VALUE klass)
 static VALUE
 thread_frame_pc_offset(VALUE klass)
 {
-    thread_frame_t *tf;
     int pc = -1;
-    Data_Get_Struct(klass, thread_frame_t, tf);
+    THREAD_FRAME_SETUP ;
     if (Qtrue == thread_frame_invalid_internal(tf))
 	rb_raise(rb_eThreadFrameError, "invalid frame");
     if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
@@ -235,9 +234,8 @@ thread_frame_pc_offset(VALUE klass)
 static VALUE
 thread_frame_set_pc_offset(VALUE klass, VALUE offset_val)
 {
-    thread_frame_t *tf;
     int offset;
-    Data_Get_Struct(klass, thread_frame_t, tf);
+    THREAD_FRAME_SETUP ;
     if (Qtrue == thread_frame_invalid_internal(tf))
 	rb_raise(rb_eThreadFrameError, "invalid frame");
     if (!FIXNUM_P(offset_val))
@@ -260,8 +258,7 @@ THREAD_FRAME_FIELD_METHOD(self) ;
 static VALUE					\
 thread_frame_##FIELD(VALUE klass)		\
 {						\
-    thread_frame_t *tf;				\
-    Data_Get_Struct(klass, thread_frame_t, tf); \
+    THREAD_FRAME_SETUP ;			\
     return *(tf->cfp->FIELD);			\
 }
 
@@ -301,8 +298,7 @@ static VALUE
 thread_frame_prev(VALUE klass)
 {
     rb_control_frame_t *prev_cfp;
-    thread_frame_t *tf;
-    Data_Get_Struct(klass, thread_frame_t, tf);
+    THREAD_FRAME_SETUP ;
     prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(tf->cfp);
     prev_cfp = rb_vm_get_ruby_level_next_cfp(tf->th, prev_cfp);
     return thread_frame_prev_common(prev_cfp, tf->th);
@@ -337,10 +333,9 @@ thread_frame_thread_prev(VALUE klass, VALUE thval)
 static VALUE
 thread_frame_iseq(VALUE klass)
 {
-    thread_frame_t *tf;
     rb_iseq_t *iseq;
     VALUE rb_iseq;
-    Data_Get_Struct(klass, thread_frame_t, tf);
+    THREAD_FRAME_SETUP ;
     iseq = tf->cfp->iseq;
     if (!iseq) return Qnil;
     rb_iseq = iseq_alloc_shared(rb_cISeq);
@@ -359,8 +354,7 @@ thread_frame_iseq(VALUE klass)
 static VALUE
 thread_frame_source_container(VALUE klass)
 {
-    thread_frame_t *tf;
-    Data_Get_Struct(klass, thread_frame_t, tf);
+    THREAD_FRAME_SETUP ;
 
     if (!tf->cfp->iseq) {
 	/* FIXME: try harder... */
@@ -384,8 +378,7 @@ thread_frame_source_container(VALUE klass)
 static VALUE
 thread_frame_source_location(VALUE klass)
 {
-    thread_frame_t *tf;
-    Data_Get_Struct(klass, thread_frame_t, tf);
+    THREAD_FRAME_SETUP ;
 
     if (!tf->cfp->iseq) {
 	/* FIXME: try harder... */
@@ -414,8 +407,7 @@ thread_frame_source_location(VALUE klass)
 static VALUE
 thread_frame_invalid(VALUE klass)
 {
-    thread_frame_t *tf;
-    Data_Get_Struct(klass, thread_frame_t, tf);
+    THREAD_FRAME_SETUP ;
     return thread_frame_invalid_internal(tf);
 }
 
