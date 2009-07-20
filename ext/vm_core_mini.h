@@ -2,6 +2,8 @@
    method prototypes for extensions to the Thread class.
 */
 #include <ruby.h>
+#include <signal.h>
+#include "thread_pthread.h"
 
 /* From vm_core.h: */
 
@@ -165,13 +167,69 @@ typedef struct rb_block_struct {
     VALUE proc;
 } rb_block_t;
 
+enum ruby_special_exceptions {
+    ruby_error_reenter,
+    ruby_error_nomemory,
+    ruby_error_sysstack,
+    ruby_special_error_count
+};
+
 #define GetThreadPtr(obj, ptr) \
   GetCoreDataFromValue(obj, rb_thread_t, ptr)
 
 #define GetProcPtr(obj, ptr) \
   GetCoreDataFromValue(obj, rb_proc_t, ptr)
 
-typedef void rb_vm_t;
+#ifndef NSIG
+# define NSIG (_SIGMAX + 1)      /* For QNX */
+#endif
+
+#define RUBY_NSIG NSIG
+typedef struct rb_vm_struct {
+    VALUE self;
+
+    rb_thread_lock_t global_vm_lock;
+
+    struct rb_thread_struct *main_thread;
+    struct rb_thread_struct *running_thread;
+
+    st_table *living_threads;
+    VALUE thgroup_default;
+
+    int running;
+    int thread_abort_on_exception;
+    unsigned long trace_flag;
+    volatile int sleeper;
+
+    /* object management */
+    VALUE mark_object_ary;
+
+    VALUE special_exceptions[ruby_special_error_count];
+
+    /* load */
+    VALUE top_self;
+    VALUE load_path;
+    VALUE loaded_features;
+    struct st_table *loading_table;
+
+    /* signal */
+    struct {
+	VALUE cmd;
+	int safe;
+    } trap_list[RUBY_NSIG];
+
+    /* hook */
+    rb_event_hook_t *event_hooks;
+
+    int src_encoding_index;
+
+    VALUE verbose, debug, progname;
+    VALUE coverages;
+
+#if defined(ENABLE_VM_OBJSPACE) && ENABLE_VM_OBJSPACE
+    struct rb_objspace *objspace;
+#endif
+} rb_vm_t;
 
 typedef struct rb_thread_struct
 {

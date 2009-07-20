@@ -29,5 +29,15 @@ class TestThread < Test::Unit::TestCase
     tup[1] = File.basename(tup[1])
     assert_equal(['file',  'unit.rb'], tup)
     assert_equal('run', tf_prev.method)
+
+    1.times do 
+      tf = RubyVM::ThreadFrame::current
+      tup = tf.source_container
+      tup[1] = File.basename(tup[1])
+      assert_equal(['file', 'test-thread.rb'], tup)
+      assert_equal('block in test_fields', tf.method)
+      p tf.prev.method
+    end
+
   end
 end

@@ -249,7 +249,7 @@ thread_frame_set_pc_offset(VALUE klass, VALUE offset_val)
 }
 #endif
 
-THREAD_FRAME_FIELD_METHOD(flag)
+THREAD_FRAME_FIELD_METHOD(flag) ;
 THREAD_FRAME_FIELD_METHOD(method_class) ;
 THREAD_FRAME_FIELD_METHOD(proc) ;
 THREAD_FRAME_FIELD_METHOD(self) ;
@@ -339,15 +339,20 @@ thread_frame_iseq(VALUE klass)
 static VALUE
 thread_frame_source_container(VALUE klass)
 {
+    VALUE file;
+
     THREAD_FRAME_SETUP ;
 
     if (!tf->cfp->iseq) {
-	/* FIXME: try harder... */
-	return Qnil;
-    } 
+	if (tf->th->vm->progname) 
+	    file = tf->th->vm->progname;
+	else
+	    return Qnil;
+    } else 
+	file = tf->cfp->iseq->filename;
 
     /* FIXME: As Ruby 1.9 improves, so should this. */
-    return rb_ary_new3(2, rb_str_new2("file"), tf->cfp->iseq->filename);
+    return rb_ary_new3(2, rb_str_new2("file"), file);
 }
 
 /*
