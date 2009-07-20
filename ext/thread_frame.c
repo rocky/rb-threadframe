@@ -248,7 +248,6 @@ thread_frame_set_pc_offset(VALUE klass, VALUE offset_val)
 }
 #endif
 
-
 THREAD_FRAME_FIELD_METHOD(flag)
 THREAD_FRAME_FIELD_METHOD(method_class) ;
 THREAD_FRAME_FIELD_METHOD(proc) ;
@@ -261,12 +260,6 @@ thread_frame_##FIELD(VALUE klass)		\
     THREAD_FRAME_SETUP ;			\
     return *(tf->cfp->FIELD);			\
 }
-
-THREAD_FRAME_PTR_FIELD_METHOD(bp) ;
-THREAD_FRAME_PTR_FIELD_METHOD(dfp) ;
-THREAD_FRAME_PTR_FIELD_METHOD(lfp) ;
-/*THREAD_FRAME_PTR_FIELD_METHOD(pc) ;*/
-/*THREAD_FRAME_PTR_FIELD_METHOD(sp) ;*/
 
 static VALUE
 thread_frame_prev_common(rb_control_frame_t *prev_cfp, rb_thread_t *th)
@@ -425,12 +418,12 @@ thread_frame_invalid_internal(thread_frame_t *tf)
 }
     
 
-#define RB_DEFINE_FIELD_METHOD(FIELD) \
-    rb_define_method(rb_cThreadFrame, #FIELD, thread_frame_##FIELD, 0);
-
 extern VALUE rb_cThread;
 
 extern VALUE proc_iseq(VALUE self);
+
+#define RB_DEFINE_METHOD(FIELD, ARGC)					\
+    rb_define_method(rb_cThreadFrame, #FIELD, thread_frame_##FIELD, ARGC);
 
 void
 Init_thread_frame(void)
@@ -442,22 +435,31 @@ Init_thread_frame(void)
     rb_define_method(rb_cThread, "stack", thread_stack, 0);
 
     /* Thread:Frame */
-    rb_define_const(rb_cThreadFrame, "VERSION", rb_str_new2(THREADFRAME_VERSION));
+    rb_define_const(rb_cThreadFrame, "VERSION", 
+		    rb_str_new2(THREADFRAME_VERSION));
     rb_define_alloc_func(rb_cThreadFrame, thread_frame_alloc);
 
     rb_define_method(rb_cThreadFrame, "initialize", thread_frame_init, 1);
     rb_define_method(rb_cThreadFrame, "invalid?", thread_frame_invalid, 0);
-    rb_define_method(rb_cThreadFrame, "iseq", thread_frame_iseq, 0);
+
+    RB_DEFINE_METHOD(binding, 0);
+    RB_DEFINE_METHOD(flag, 0);
+    RB_DEFINE_METHOD(iseq, 0);
+    RB_DEFINE_METHOD(method, 0);
+    RB_DEFINE_METHOD(method_class, 0);
+    RB_DEFINE_METHOD(pc_offset, 0);
+    RB_DEFINE_METHOD(prev, 0);
+    RB_DEFINE_METHOD(proc, 0);
+    RB_DEFINE_METHOD(self, 0);
+    RB_DEFINE_METHOD(source_container, 0);
+    RB_DEFINE_METHOD(source_location, 0);
+    RB_DEFINE_METHOD(thread, 0);
+
 #ifdef NO_reg_pc
     rb_define_method(rb_cThreadFrame, "pc_offset=", 
 		     thread_frame_set_pc_offset, 1);
 #endif
-    rb_define_method(rb_cThreadFrame, "prev", thread_frame_prev, 1);
-    rb_define_method(rb_cThreadFrame, "source_container", 
-		     thread_frame_source_container, 0);
-    rb_define_method(rb_cThreadFrame, "source_location", 
-		     thread_frame_source_location, 0);
-    rb_define_method(rb_cThreadFrame, "thread", thread_frame_thread, 0);
+
 
     rb_eThreadFrameError = rb_define_class("ThreadFrameError", 
 					   rb_eStandardError);
@@ -467,19 +469,7 @@ Init_thread_frame(void)
     rb_define_singleton_method(rb_cThreadFrame, "current", 
 			       thread_frame_s_current,   0);
 
-    RB_DEFINE_FIELD_METHOD(binding);
-    RB_DEFINE_FIELD_METHOD(bp);
-    RB_DEFINE_FIELD_METHOD(dfp);
-    RB_DEFINE_FIELD_METHOD(flag);
-    RB_DEFINE_FIELD_METHOD(lfp);
-    RB_DEFINE_FIELD_METHOD(method);
-    RB_DEFINE_FIELD_METHOD(method_class);
-    RB_DEFINE_FIELD_METHOD(pc_offset);
-    RB_DEFINE_FIELD_METHOD(prev);
-    RB_DEFINE_FIELD_METHOD(proc);
-    RB_DEFINE_FIELD_METHOD(self);
-    /*RB_DEFINE_FIELD_METHOD(sp);*/
     
-    /* Just a test to pull in a second C source file. */
+    /* Pull in a second C source file. */
     rb_define_method(rb_cProc, "iseq", proc_iseq, 0);
 }
