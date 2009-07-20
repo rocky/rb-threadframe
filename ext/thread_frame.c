@@ -63,6 +63,11 @@ thread_frame_t_alloc(VALUE tfval)
     memcpy(tf->signature1, &(tf->cfp->iseq), sizeof(tf->signature1));	\
     memcpy(tf->signature2, &(tf->cfp->proc), sizeof(tf->signature2)) 
 
+#define GET_THREAD_PTR \
+    rb_thread_t *th; \
+    GetThreadPtr(thval, th)
+
+
 /*
  *  call-seq:
  *     RubyVM::ThreadFrame.new(thread)          => thread_frame_object
@@ -78,12 +83,10 @@ thread_frame_t_alloc(VALUE tfval)
  *     ThreadFrame::current.self          => 'main'
  */
 static VALUE
-thread_frame_initialize(VALUE tfval, VALUE thread)
+thread_frame_initialize(VALUE tfval, VALUE thval)
 {
     thread_frame_t *tf = thread_frame_t_alloc(tfval);
-    rb_thread_t *th;
-
-    GetThreadPtr(thread, th);
+    GET_THREAD_PTR ;
     memset(tf, 0, sizeof(thread_frame_t));
     DATA_PTR(tfval) = tf;
     SAVE_FRAME(tf, th) ;
@@ -100,9 +103,8 @@ static VALUE
 thread_frame_threadframe(VALUE thval)
 {
     thread_frame_t *tf = ALLOC(thread_frame_t);
-    rb_thread_t *th;
+    GET_THREAD_PTR;
     memset(tf, 0, sizeof(thread_frame_t));
-    GetThreadPtr(thval, th);
     SAVE_FRAME(tf, th) ;
     return Data_Wrap_Struct(rb_cThreadFrame, NULL, xfree, tf);
 }
@@ -115,8 +117,7 @@ thread_frame_threadframe(VALUE thval)
 static VALUE
 thread_stack(VALUE thval)
 {
-    rb_thread_t *th;
-    GetThreadPtr(thval, th);
+    GET_THREAD_PTR ;
     return *(th->stack);
 }
 
@@ -253,14 +254,6 @@ THREAD_FRAME_FIELD_METHOD(method_class) ;
 THREAD_FRAME_FIELD_METHOD(proc) ;
 THREAD_FRAME_FIELD_METHOD(self) ;
 
-#define THREAD_FRAME_PTR_FIELD_METHOD(FIELD)	\
-static VALUE					\
-thread_frame_##FIELD(VALUE klass)		\
-{						\
-    THREAD_FRAME_SETUP ;			\
-    return *(tf->cfp->FIELD);			\
-}
-
 static VALUE
 thread_frame_prev_common(rb_control_frame_t *prev_cfp, rb_thread_t *th)
 {
@@ -309,8 +302,7 @@ static VALUE
 thread_frame_thread_prev(VALUE klass, VALUE thval)
 {
     rb_control_frame_t *prev_cfp;
-    rb_thread_t *th;
-    GetThreadPtr(thval, th);
+    GET_THREAD_PTR ;
     prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
     return thread_frame_prev_common(prev_cfp, th);
 }
