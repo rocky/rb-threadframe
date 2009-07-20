@@ -179,6 +179,29 @@ thread_frame_##FIELD(VALUE klass)		\
 
 /*
  *  call-seq:
+ *     Thread#method  => String
+ * 
+ * Returns the method associated with the frame or nil of none.
+ * ThreadFrameError can be raised if the threadframe
+ * object is no longer valid.
+ */
+static VALUE
+thread_frame_method(VALUE klass)
+{
+    thread_frame_t *tf;
+    Data_Get_Struct(klass, thread_frame_t, tf);
+    if (Qtrue == thread_frame_invalid_internal(tf))
+	rb_raise(rb_eThreadFrameError, "invalid frame");
+    if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) 
+	return tf->cfp->iseq->name;
+    else if (RUBYVM_CFUNC_FRAME_P(tf->cfp))
+	return rb_str_new2(rb_id2name(tf->cfp->method_id));
+    return Qnil;
+}
+
+
+/*
+ *  call-seq:
  *     Thread#pc_offset  => Fixnum
  * 
  * Returns the offset inside the iseq or "program-counter offset" or -1
@@ -457,6 +480,7 @@ Init_thread_frame(void)
     RB_DEFINE_FIELD_METHOD(dfp);
     RB_DEFINE_FIELD_METHOD(flag);
     RB_DEFINE_FIELD_METHOD(lfp);
+    RB_DEFINE_FIELD_METHOD(method);
     RB_DEFINE_FIELD_METHOD(method_class);
     RB_DEFINE_FIELD_METHOD(pc_offset);
     RB_DEFINE_FIELD_METHOD(prev);
