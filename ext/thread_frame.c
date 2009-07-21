@@ -61,11 +61,18 @@ thread_frame_invalid_internal(thread_frame_t *tf)
     int cmp;
     if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, tf->cfp))
 	return Qtrue;
-    cmp = (0 == memcmp(tf->signature1, &(tf->cfp->iseq), 
-		       sizeof(tf->signature1)) &&
-	   0 == memcmp(tf->signature2, &(tf->cfp->proc), 
-		       sizeof(tf->signature2)));
-    return cmp ? Qfalse : Qtrue;
+    if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
+	cmp = (0 == memcmp(tf->signature1, &(tf->cfp->iseq), 
+			   sizeof(tf->signature1)) &&
+	       0 == memcmp(tf->signature2, &(tf->cfp->proc), 
+			   sizeof(tf->signature2)));
+	return cmp ? Qfalse : Qtrue;
+    } else {
+	/* FIXME: figure out what to do here. Probably more work is
+	 * needed in thread_frame_prev_common.
+	 */
+	return Qnil;
+    }
 }
     
 #define SAVE_FRAME(TF, TH)						\
@@ -163,7 +170,8 @@ thread_frame_set_pc_offset(VALUE klass, VALUE offset_val)
 THREAD_FRAME_FIELD_METHOD(flag) ;
 
 static VALUE
-thread_frame_prev_common(rb_control_frame_t *prev_cfp, rb_thread_t *th)
+thread_frame_prev_common(rb_control_frame_t *cfp, rb_control_frame_t *prev_cfp, 
+			 rb_thread_t *th)
 {
     if (prev_cfp) {
         thread_frame_t *tf;
@@ -172,8 +180,14 @@ thread_frame_prev_common(rb_control_frame_t *prev_cfp, rb_thread_t *th)
         Data_Get_Struct(prev, thread_frame_t, tf);
         tf->th = th;
         tf->cfp = prev_cfp;
-	memcpy(tf->signature1, &(tf->cfp->iseq), sizeof(tf->signature1)); 
-	memcpy(tf->signature2, &(tf->cfp->proc), sizeof(tf->signature2));
+	if (RUBY_VM_NORMAL_ISEQ_P(prev_cfp->iseq)) {
+	    memcpy(tf->signature1, &(tf->cfp->iseq), sizeof(tf->signature1)); 
+	    memcpy(tf->signature2, &(tf->cfp->proc), sizeof(tf->signature2));
+	} else if (RUBYVM_CFUNC_FRAME_P(prev_cfp)) {
+	    /* FIXME: This probabably not complete*/
+	    memcpy(tf->signature1, &(cfp->iseq), sizeof(tf->signature1)); 
+	    memcpy(tf->signature2, &(cfp->proc), sizeof(tf->signature2));
+	}
         return prev;
     } else {
 	return Qnil;
@@ -194,7 +208,7 @@ thread_frame_thread_prev(VALUE klass, VALUE thval)
     rb_control_frame_t *prev_cfp;
     GET_THREAD_PTR ;
     prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
-    return thread_frame_prev_common(prev_cfp, th);
+    return thread_frame_prev_common(th->cfp, prev_cfp, th);
 }
 
 /*
@@ -341,9 +355,7 @@ thread_frame_prev(VALUE klass)
     rb_control_frame_t *prev_cfp;
     THREAD_FRAME_SETUP ;
     prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(tf->cfp);
-    /* FIXME: deal with C frames. */
-    prev_cfp = rb_vm_get_ruby_level_next_cfp(tf->th, prev_cfp);
-    return thread_frame_prev_common(prev_cfp, tf->th);
+    return thread_frame_prev_common(tf->cfp, prev_cfp, tf->th);
 }
 
 THREAD_FRAME_FIELD_METHOD(proc) ;
