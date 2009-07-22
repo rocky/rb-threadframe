@@ -179,11 +179,15 @@ thread_frame_prev_common(rb_control_frame_t *cfp, rb_control_frame_t *prev_cfp,
 	thread_frame_t_alloc(prev);
         Data_Get_Struct(prev, thread_frame_t, tf);
         tf->th = th;
-        tf->cfp = prev_cfp;
-	if (RUBY_VM_NORMAL_ISEQ_P(prev_cfp->iseq)) {
+	if (VM_FRAME_TYPE(prev_cfp) == VM_FRAME_MAGIC_FINISH)
+	    tf->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(prev_cfp);
+	else
+	    tf->cfp = prev_cfp;
+	
+	if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
 	    memcpy(tf->signature1, &(tf->cfp->iseq), sizeof(tf->signature1)); 
 	    memcpy(tf->signature2, &(tf->cfp->proc), sizeof(tf->signature2));
-	} else if (RUBYVM_CFUNC_FRAME_P(prev_cfp)) {
+	} else if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
 	    /* FIXME: This probabably not complete*/
 	    memcpy(tf->signature1, &(cfp->iseq), sizeof(tf->signature1)); 
 	    memcpy(tf->signature2, &(cfp->proc), sizeof(tf->signature2));
@@ -427,6 +431,41 @@ thread_frame_thread(VALUE klass)
     return tf->th->self;
 }
 
+/* Extracted from vm_dump.c. Would be nice to have this routine put there
+   and used in both places. */
+static const char *
+frame_magic2str(rb_control_frame_t *cfp) 
+{
+    switch (VM_FRAME_TYPE(cfp)) {
+      case VM_FRAME_MAGIC_TOP:
+	return "TOP";
+      case VM_FRAME_MAGIC_METHOD:
+	return "METHOD";
+      case VM_FRAME_MAGIC_CLASS:
+	return "CLASS";
+      case VM_FRAME_MAGIC_BLOCK:
+	return "BLOCK";
+      case VM_FRAME_MAGIC_FINISH:
+	return "FINISH";
+      case VM_FRAME_MAGIC_CFUNC:
+	return "CFUNC";
+      case VM_FRAME_MAGIC_PROC:
+	return "PROC";
+      case VM_FRAME_MAGIC_LAMBDA:
+	return "LAMBDA";
+      case VM_FRAME_MAGIC_IFUNC:
+	return "IFUNC";
+      case VM_FRAME_MAGIC_EVAL:
+	return "EVAL";
+      case 0:
+	return "------";
+      default:
+	return "(none)";
+    }
+    /* NOTREACHED */
+    return "?";
+}
+
 /*
  *  call-seq:
  *     Thread#type  => String one of: "C", "Ruby", or "unknown"
@@ -439,44 +478,11 @@ thread_frame_type(VALUE klass)
     THREAD_FRAME_SETUP ;			
     if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) 
 	return rb_str_new2("Ruby");
-    else {
-	const char * str;
-	switch (VM_FRAME_TYPE(tf->cfp)) {
-	  case VM_FRAME_MAGIC_METHOD:
-	    str = "method";
-	    break;
-	  case VM_FRAME_MAGIC_BLOCK:
-	    str = "block";
-	    break;
-	  case VM_FRAME_MAGIC_CLASS:
-	    str = "class";
-	    break;
-	  case VM_FRAME_MAGIC_TOP:
-	    str = "top";
-	  case VM_FRAME_MAGIC_FINISH:
-	    str = "finish";
-	    break;
-	  case VM_FRAME_MAGIC_CFUNC:
-	    str = "C";
-	    break;
-	  case VM_FRAME_MAGIC_PROC:
-	    str = "C";
-	    break;
-	  case VM_FRAME_MAGIC_IFUNC:
-	    str = "ifunc";
-	    break;
-	  case VM_FRAME_MAGIC_LAMBDA:
-	    str = "lambda";
-	    break;
-	  default:
-	    str = "unknown";
-	}
-	return rb_str_new2(str);
-    }
+    else 
+	return rb_str_new2(frame_magic2str(tf->cfp));
     /* NOTREACHED */
     return Qnil;
 }
-
 
 extern VALUE rb_cThread;
 extern VALUE proc_iseq(VALUE self);

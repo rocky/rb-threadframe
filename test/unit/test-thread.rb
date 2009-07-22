@@ -37,12 +37,9 @@ class TestThread < Test::Unit::TestCase
       tup[1] = File.basename(tup[1])
       assert_equal(['file', 'test-thread.rb'], tup)
       assert_equal('block in test_fields', tf.method)
-      # FIXME
-      assert_equal('finish', tf.prev.type)
-      # FIXME:
-      # assert_equal('test_fields', tf.prev.method)
-      assert_equal('C', tf.prev.prev.type) # Should this just be tf.prev ? 
-      assert_equal('times', tf.prev.prev.method)  # Should this be just tf.prev ? 
+      assert_equal('CFUNC', tf.prev.type)
+      assert_equal('times', tf.prev.method) 
+      assert_equal('test_fields', tf.prev.prev.method) 
     end
 
   end
