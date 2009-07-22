@@ -436,13 +436,43 @@ thread_frame_thread(VALUE klass)
 static VALUE
 thread_frame_type(VALUE klass)
 {
-    THREAD_FRAME_SETUP ;			\
+    THREAD_FRAME_SETUP ;			
     if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) 
 	return rb_str_new2("Ruby");
-    else if (RUBYVM_CFUNC_FRAME_P(tf->cfp))
-	return rb_str_new2("C");
-    else
-	return rb_str_new2("unknown");
+    else {
+	const char * str;
+	switch (VM_FRAME_TYPE(tf->cfp)) {
+	  case VM_FRAME_MAGIC_METHOD:
+	    str = "method";
+	    break;
+	  case VM_FRAME_MAGIC_BLOCK:
+	    str = "block";
+	    break;
+	  case VM_FRAME_MAGIC_CLASS:
+	    str = "class";
+	    break;
+	  case VM_FRAME_MAGIC_TOP:
+	    str = "top";
+	  case VM_FRAME_MAGIC_FINISH:
+	    str = "finish";
+	    break;
+	  case VM_FRAME_MAGIC_CFUNC:
+	    str = "C";
+	    break;
+	  case VM_FRAME_MAGIC_PROC:
+	    str = "C";
+	    break;
+	  case VM_FRAME_MAGIC_IFUNC:
+	    str = "ifunc";
+	    break;
+	  case VM_FRAME_MAGIC_LAMBDA:
+	    str = "lambda";
+	    break;
+	  default:
+	    str = "unknown";
+	}
+	return rb_str_new2(str);
+    }
     /* NOTREACHED */
     return Qnil;
 }

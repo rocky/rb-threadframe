@@ -38,7 +38,7 @@ class TestThread < Test::Unit::TestCase
       assert_equal(['file', 'test-thread.rb'], tup)
       assert_equal('block in test_fields', tf.method)
       # FIXME
-      # p tf.prev.type == 'unknown?!'
+      assert_equal('finish', tf.prev.type)
       # FIXME:
       # assert_equal('test_fields', tf.prev.method)
       assert_equal('C', tf.prev.prev.type) # Should this just be tf.prev ? 
