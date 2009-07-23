@@ -31,6 +31,8 @@ typedef struct
 VALUE rb_cThreadFrame;       /* ThreadFrame class */
 VALUE rb_eThreadFrameError;  /* Error raised on invalid frames. */
 
+static VALUE thread_frame_type(VALUE klass);
+
 /* 
    Allocate a RubyVM::ThreadFrame used by new. Less common than
    thread_frame_t_alloc().
@@ -179,10 +181,12 @@ thread_frame_prev_common(rb_control_frame_t *cfp, rb_control_frame_t *prev_cfp,
 	thread_frame_t_alloc(prev);
         Data_Get_Struct(prev, thread_frame_t, tf);
         tf->th = th;
-	if (VM_FRAME_TYPE(prev_cfp) == VM_FRAME_MAGIC_FINISH)
+	if (VM_FRAME_TYPE(prev_cfp) == VM_FRAME_MAGIC_FINISH) {
 	    tf->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(prev_cfp);
-	else
+	} else
 	    tf->cfp = prev_cfp;
+	if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, tf->cfp))
+	    return Qnil;
 	
 	if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
 	    memcpy(tf->signature1, &(tf->cfp->iseq), sizeof(tf->signature1)); 
@@ -292,13 +296,24 @@ thread_frame_method(VALUE klass)
     THREAD_FRAME_SETUP ;			\
     if (Qtrue == thread_frame_invalid_internal(tf))
 	rb_raise(rb_eThreadFrameError, "invalid frame");
-    if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) 
-	return tf->cfp->iseq->name;
-    else if (RUBYVM_CFUNC_FRAME_P(tf->cfp))
+    switch (VM_FRAME_TYPE(tf->cfp)) {
+      case VM_FRAME_MAGIC_METHOD:
+      case VM_FRAME_MAGIC_BLOCK:
+      case VM_FRAME_MAGIC_EVAL:
+      case VM_FRAME_MAGIC_TOP:
+	if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) 
+	    return tf->cfp->iseq->name;
+	else
+	    return rb_str_new2("unknown");
+      case VM_FRAME_MAGIC_CFUNC:
 	return rb_str_new2(rb_id2name(tf->cfp->method_id));
+      default:
+	/* FIXME */
+	return thread_frame_type(klass);
+    }
+    /* NOTREACHED */
     return Qnil;
 }
-
 
 THREAD_FRAME_FIELD_METHOD(method_class) ;
 
@@ -476,12 +491,7 @@ static VALUE
 thread_frame_type(VALUE klass)
 {
     THREAD_FRAME_SETUP ;			
-    if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) 
-	return rb_str_new2("Ruby");
-    else 
-	return rb_str_new2(frame_magic2str(tf->cfp));
-    /* NOTREACHED */
-    return Qnil;
+    return rb_str_new2(frame_magic2str(tf->cfp));
 }
 
 extern VALUE rb_cThread;
