@@ -20,9 +20,10 @@ class TestThread < Test::Unit::TestCase
     assert_equal( __LINE__, tf.source_location[0])
     assert_equal(['file',  __FILE__], tf.source_container)
     assert_equal('test_fields', tf.method)
+    assert_equal(0, tf.arity)
 
     tf_prev = tf.prev
-    assert(tf_prev.pc_offset > 0, "Should valid PC offset for prev")
+    assert(tf_prev.pc_offset > 0, "Should be valid PC offset for prev")
 
     # Is this too specific to test/unit.rb implementation details? 
     tup = tf_prev.source_container
@@ -40,12 +41,14 @@ class TestThread < Test::Unit::TestCase
       assert_equal('CFUNC', tf.prev.type)
       assert_equal('times', tf.prev.method) 
       assert_equal('test_fields', tf.prev.prev.method) 
+      assert_equal(0, tf.arity)
     end
 
     x  = lambda do |x,y| 
       frame = RubyVM::ThreadFrame::current
       assert_equal('block in test_fields', frame.method)
       assert_equal('LAMBDA', frame.type)
+      assert_equal(2, frame.arity)
     end
     x.call(1,2)
 

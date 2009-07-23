@@ -8,6 +8,8 @@
 
 #include <string.h>
 #include "vm_core_mini.h"  /* Pulls in ruby.h */
+#include "iseq_extra.h"
+#include "proc_extra.h"
 
 /* Frames can't be detached from the control frame they live in.
    So we create a structure to contain the pair. 
@@ -217,6 +219,21 @@ thread_frame_thread_prev(VALUE klass, VALUE thval)
     GET_THREAD_PTR ;
     prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
     return thread_frame_prev_common(th->cfp, prev_cfp, th);
+}
+
+/*
+ *  call-seq:
+ *     RubyVM::ThreadFrame#iseq           => ISeq
+ *
+ *  Returns an instruction sequence object from the instruction sequence
+ *  found inside the ThreadFrame object or nil if there is none.
+ *
+ */
+static VALUE
+thread_frame_arity(VALUE klass)
+{
+    THREAD_FRAME_SETUP ;
+    return iseq_arity(tf->cfp->iseq);
 }
 
 /*
@@ -496,7 +513,6 @@ thread_frame_type(VALUE klass)
 }
 
 extern VALUE rb_cThread;
-extern VALUE proc_iseq(VALUE self);
 
 #define RB_DEFINE_FRAME_METHOD(FIELD, ARGC)					\
     rb_define_method(rb_cThreadFrame, #FIELD, thread_frame_##FIELD, ARGC);
@@ -517,6 +533,7 @@ Init_thread_frame(void)
 
     rb_define_method(rb_cThreadFrame, "invalid?", thread_frame_invalid, 0);
 
+    RB_DEFINE_FRAME_METHOD(arity, 0);
     RB_DEFINE_FRAME_METHOD(binding, 0);
     RB_DEFINE_FRAME_METHOD(flag, 0);
     RB_DEFINE_FRAME_METHOD(iseq, 0);
@@ -547,6 +564,7 @@ Init_thread_frame(void)
 			       thread_frame_s_current,   0);
 
     
-    /* Pull in a second C source file. */
-    rb_define_method(rb_cProc, "iseq", proc_iseq, 0);
+    /* Pull in a other C source files. */
+    rb_define_method(rb_cProc, "iseq",  proc_iseq, 0);
+    rb_define_method(rb_cISeq, "arity", iseq_arity, 0);
 }

@@ -15,3 +15,6 @@ extern VALUE rb_cRubyVM;  /* RubyVM class */
 /* From iseq */
 extern VALUE iseq_alloc_shared(VALUE klass);
 extern VALUE rb_cISeq;
+
+/* From proc.c */
+extern int method_arity(VALUE method);
