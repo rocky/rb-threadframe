@@ -42,5 +42,19 @@ class TestThread < Test::Unit::TestCase
       assert_equal('test_fields', tf.prev.prev.method) 
     end
 
+    x  = lambda do |x,y| 
+      frame = RubyVM::ThreadFrame::current
+      assert_equal('block in test_fields', frame.method)
+      assert_equal('LAMBDA', frame.type)
+    end
+    x.call(1,2)
+
+    x  = Proc.new do
+      frame = RubyVM::ThreadFrame::current
+      assert_equal('block in test_fields', frame.method)
+      assert_equal('BLOCK', frame.type)
+    end
+    x.call(1,2)
+
   end
 end

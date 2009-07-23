@@ -297,9 +297,10 @@ thread_frame_method(VALUE klass)
     if (Qtrue == thread_frame_invalid_internal(tf))
 	rb_raise(rb_eThreadFrameError, "invalid frame");
     switch (VM_FRAME_TYPE(tf->cfp)) {
-      case VM_FRAME_MAGIC_METHOD:
       case VM_FRAME_MAGIC_BLOCK:
       case VM_FRAME_MAGIC_EVAL:
+      case VM_FRAME_MAGIC_LAMBDA:
+      case VM_FRAME_MAGIC_METHOD:
       case VM_FRAME_MAGIC_TOP:
 	if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) 
 	    return tf->cfp->iseq->name;
