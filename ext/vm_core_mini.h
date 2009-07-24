@@ -47,6 +47,9 @@
 #define GetCoreDataFromValue(obj, type, ptr) Data_Get_Struct(obj, type, ptr)
 #endif
 
+#define GetISeqPtr(obj, ptr) \
+  GetCoreDataFromValue(obj, rb_iseq_t, ptr)
+
 /* Instruction sequence */
 typedef struct rb_iseq_struct {
     /***************/
@@ -63,7 +66,6 @@ typedef struct rb_iseq_struct {
     VALUE coverage;     /* coverage array */
 
     /* .... */
-#if 0
     /* insn info, must be freed */
     struct iseq_insn_info_entry *insn_info_table;
     unsigned long insn_info_size;
@@ -109,6 +111,7 @@ typedef struct rb_iseq_struct {
 
     int stack_max; /* for stack overflow check */
 
+#if 0
     /* catch table */
     struct iseq_catch_table_entry *catch_table;
     int catch_table_size;

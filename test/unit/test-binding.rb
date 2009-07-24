@@ -1,5 +1,5 @@
 require 'test/unit'
-require_relative File.join('..', '..', 'ext', 'thread_frame')
+require_relative File.join(%w(.. .. ext thread_frame))
 
 def outside(a)
     return eval('a', RubyVM::ThreadFrame.new(Thread::current).binding)

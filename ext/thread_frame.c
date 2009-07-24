@@ -8,8 +8,8 @@
 
 #include <string.h>
 #include "vm_core_mini.h"  /* Pulls in ruby.h */
-#include "iseq_extra.h"
 #include "proc_extra.h"
+#include "iseq_extra.h"
 
 /* Frames can't be detached from the control frame they live in.
    So we create a structure to contain the pair. 
@@ -33,6 +33,7 @@ typedef struct
 VALUE rb_cThreadFrame;       /* ThreadFrame class */
 VALUE rb_eThreadFrameError;  /* Error raised on invalid frames. */
 
+static VALUE thread_frame_iseq(VALUE klass);
 static VALUE thread_frame_type(VALUE klass);
 
 /* 
@@ -232,8 +233,7 @@ thread_frame_thread_prev(VALUE klass, VALUE thval)
 static VALUE
 thread_frame_arity(VALUE klass)
 {
-    THREAD_FRAME_SETUP ;
-    return iseq_arity(tf->cfp->iseq);
+    return iseq_arity(thread_frame_iseq(klass));
 }
 
 /*
@@ -501,9 +501,10 @@ frame_magic2str(rb_control_frame_t *cfp)
 
 /*
  *  call-seq:
- *     Thread#type  => String one of: "C", "Ruby", or "unknown"
+ *     Thread#type  => String 
  * 
- * Returns the kind of frame. Is either "C", "Ruby" or "unknown".
+ * Returns the kind of frame. Basically interprets VM_FRAME_MAGIC for
+ * tf->cfp->flag
  */
 static VALUE
 thread_frame_type(VALUE klass)
@@ -566,5 +567,5 @@ Init_thread_frame(void)
     
     /* Pull in a other C source files. */
     rb_define_method(rb_cProc, "iseq",  proc_iseq, 0);
-    rb_define_method(rb_cISeq, "arity", iseq_arity, 0);
+    Init_iseq_extra();
 }
