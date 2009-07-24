@@ -24,3 +24,8 @@ proc_iseq(VALUE self)
     return rb_iseq;
 }
 
+void
+Init_proc_extra(void)
+{
+    rb_define_method(rb_cProc, "iseq",  proc_iseq, 0);
+}

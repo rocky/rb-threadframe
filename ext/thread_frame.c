@@ -565,7 +565,7 @@ Init_thread_frame(void)
 			       thread_frame_s_current,   0);
 
     
-    /* Pull in a other C source files. */
-    rb_define_method(rb_cProc, "iseq",  proc_iseq, 0);
+    /* Perform the other C extension initializations. */
     Init_iseq_extra();
+    Init_proc_extra();
 }
