@@ -224,10 +224,10 @@ thread_frame_thread_prev(VALUE klass, VALUE thval)
 
 /*
  *  call-seq:
- *     RubyVM::ThreadFrame#iseq           => ISeq
+ *     RubyVM::ThreadFrame#arity => Fixnum
  *
- *  Returns an instruction sequence object from the instruction sequence
- *  found inside the ThreadFrame object or nil if there is none.
+ *  Returns the number of arguments that would not be ignored.
+ *  See Ruby 1.9 proc_arity of proc.c
  *
  */
 static VALUE

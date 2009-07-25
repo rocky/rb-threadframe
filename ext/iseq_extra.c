@@ -4,7 +4,12 @@ extern VALUE rb_cISeq;
 extern int get_iseq_arity(rb_iseq_t *iseq);
 
 /* 
-   RubyVM::InstructionSequence#arity - arity of an instruction sequence
+ * call-seq:
+ *     RubyVM::InstructionSequence#arity => Fixnum
+ *  sequence or nil is we can't get one.
+ *
+ *  Returns the number of arguments that would not be ignored.
+ *  See Ruby 1.9 proc_arity of proc.c
  */
 VALUE
 iseq_arity(VALUE iseqval)
@@ -16,7 +21,12 @@ iseq_arity(VALUE iseqval)
 }
 
 /* 
-   RubyVM::InstructionSequence#arity - arity of an instruction sequence
+ * call-seq:
+ *     RubyVM::InstructionSequence#local_name(i) - String
+ * 
+ *  Returns the string name of local variable in i'th position
+ *  of the instruction sequence local table, or nil if i is
+ * out of range.
  */
 VALUE
 iseq_local_name(VALUE iseqval, VALUE val)
@@ -24,7 +34,7 @@ iseq_local_name(VALUE iseqval, VALUE val)
     rb_iseq_t *iseq;
     int i = FIX2INT(val);
     GetISeqPtr(iseqval, iseq);
-    return (i < iseq->local_table_size) 
+    return (i < iseq->local_table_size && i >= 0) 
 	? rb_str_new2(rb_id2name(iseq->local_table[i]))
 	: Qnil;
 }
