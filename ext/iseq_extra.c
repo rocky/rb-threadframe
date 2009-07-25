@@ -10,6 +10,7 @@ VALUE
 iseq_arity(VALUE iseqval)
 {
     rb_iseq_t *iseq;
+    if (Qnil == iseqval) return Qnil;
     GetISeqPtr(iseqval, iseq);
     return (iseq) ? INT2FIX(get_iseq_arity(iseq)) : Qnil;
 }
