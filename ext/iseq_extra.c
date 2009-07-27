@@ -1,7 +1,5 @@
 #include "vm_core_mini.h"  /* Pulls in ruby.h */
-
-extern VALUE rb_cISeq;
-extern int get_iseq_arity(rb_iseq_t *iseq);
+#include "ruby19_externs.h"
 
 /* 
  * call-seq:

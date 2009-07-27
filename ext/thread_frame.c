@@ -219,6 +219,9 @@ thread_frame_thread_prev(VALUE klass, VALUE thval)
     rb_control_frame_t *prev_cfp;
     GET_THREAD_PTR ;
     prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
+    if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, prev_cfp))
+	return Qnil;
+
     return thread_frame_prev_common(th->cfp, prev_cfp, th);
 }
 
@@ -324,7 +327,7 @@ thread_frame_method(VALUE klass)
 	else
 	    return rb_str_new2("unknown");
       case VM_FRAME_MAGIC_CFUNC:
-	return rb_str_new2(rb_id2name(tf->cfp->method_id));
+	return rb_str_new2(rb_id2name(tf->cfp->me->original_id));
       default:
 	/* FIXME */
 	return thread_frame_type(klass);
@@ -332,8 +335,6 @@ thread_frame_method(VALUE klass)
     /* NOTREACHED */
     return Qnil;
 }
-
-THREAD_FRAME_FIELD_METHOD(method_class) ;
 
 /*
  *  call-seq:
@@ -540,7 +541,6 @@ Init_thread_frame(void)
     RB_DEFINE_FRAME_METHOD(iseq, 0);
     RB_DEFINE_FRAME_METHOD(initialize, 1);
     RB_DEFINE_FRAME_METHOD(method, 0);
-    RB_DEFINE_FRAME_METHOD(method_class, 0);
     RB_DEFINE_FRAME_METHOD(pc_offset, 0);
     RB_DEFINE_FRAME_METHOD(prev, 0);
     RB_DEFINE_FRAME_METHOD(proc, 0);

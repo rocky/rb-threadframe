@@ -64,17 +64,20 @@ typedef struct rb_iseq_struct {
     unsigned long iseq_size;
     VALUE mark_ary;	/* Array: includes operands which should be GC marked */
     VALUE coverage;     /* coverage array */
+    unsigned short line_no;
 
-    /* .... */
     /* insn info, must be freed */
     struct iseq_insn_info_entry *insn_info_table;
-    unsigned long insn_info_size;
+    size_t insn_info_size;
 
     ID *local_table;		/* must free */
     int local_table_size;
 
     /* method, class frame: sizeof(vars) + 1, block frame: sizeof(vars) */
     int local_size;
+
+    struct iseq_inline_cache_entry *ic_entries;
+    int ic_size;
 
     /**
      * argument information
@@ -109,7 +112,7 @@ typedef struct rb_iseq_struct {
     int arg_size;
     VALUE *arg_opt_table;
 
-    int stack_max; /* for stack overflow check */
+    size_t stack_max; /* for stack overflow check */
 
 #if 0
     /* catch table */
@@ -147,6 +150,8 @@ typedef struct rb_iseq_struct {
 #endif
 } rb_iseq_t;
 
+#include "method_mini.h"
+
 typedef struct {
     VALUE *pc;			/* cfp[0] */
     VALUE *sp;			/* cfp[1] */
@@ -158,8 +163,7 @@ typedef struct {
     VALUE *dfp;			/* cfp[7] / block[2] */
     rb_iseq_t *block_iseq;	/* cfp[8] / block[3] */
     VALUE proc;			/* cfp[9] / block[4] */
-    ID method_id;               /* cfp[10] saved in special case */
-    VALUE method_class;         /* cfp[11] saved in special case */
+    const rb_method_entry_t *me;/* cfp[10] */
 } rb_control_frame_t;
 
 typedef struct rb_block_struct {
@@ -263,3 +267,7 @@ typedef struct {
     int is_from_method;
     int is_lambda;
 } rb_proc_t;
+
+extern rb_thread_t *ruby_current_thread;
+
+
