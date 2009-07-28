@@ -236,7 +236,13 @@ thread_frame_thread_prev(VALUE klass, VALUE thval)
 static VALUE
 thread_frame_arity(VALUE klass)
 {
-    return iseq_arity(thread_frame_iseq(klass));
+    THREAD_FRAME_SETUP ;
+    if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
+	return iseq_arity(thread_frame_iseq(klass));
+    } else if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
+	return INT2FIX(tf->cfp->me->body.cfunc.argc);
+    } else
+	return Qnil;
 }
 
 /*
@@ -334,6 +340,21 @@ thread_frame_method(VALUE klass)
     }
     /* NOTREACHED */
     return Qnil;
+}
+
+/*
+ *  call-seq:
+ *     Thread#method_class  => class
+ * 
+ * Returns the method class associated with the frame or nil of none.
+ * ThreadFrameError can be raised if the threadframe
+ * object is no longer valid.
+ */
+static VALUE
+thread_frame_method_class(VALUE klass)
+{
+    THREAD_FRAME_SETUP ;			\
+    return tf->cfp->me->klass;
 }
 
 /*
@@ -541,6 +562,7 @@ Init_thread_frame(void)
     RB_DEFINE_FRAME_METHOD(iseq, 0);
     RB_DEFINE_FRAME_METHOD(initialize, 1);
     RB_DEFINE_FRAME_METHOD(method, 0);
+    RB_DEFINE_FRAME_METHOD(method_class, 0);
     RB_DEFINE_FRAME_METHOD(pc_offset, 0);
     RB_DEFINE_FRAME_METHOD(prev, 0);
     RB_DEFINE_FRAME_METHOD(proc, 0);

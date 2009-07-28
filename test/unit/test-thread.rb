@@ -20,11 +20,12 @@ class TestThread < Test::Unit::TestCase
     assert_equal( __LINE__, tf.source_location[0])
     assert_equal(['file',  __FILE__], tf.source_container)
     assert_equal('test_fields', tf.method)
+    assert_equal(self, tf.self)
     assert_equal(0, tf.arity)
 
     tf_prev = tf.prev
     assert(tf_prev.pc_offset > 0, "Should be valid PC offset for prev")
-
+  
     # Is this too specific to test/unit.rb implementation details? 
     tup = tf_prev.source_container
     tup[1] = File.basename(tup[1])
@@ -40,25 +41,38 @@ class TestThread < Test::Unit::TestCase
       assert_equal('block in test_fields', tf.method)
       assert_equal('CFUNC', tf.prev.type)
       assert_equal('times', tf.prev.method) 
-      assert_equal(nil, tf.prev.arity)
+      assert_equal(Integer, tf.prev.method_class)
+      assert_equal(self, tf.self)
+      assert_equal(0, tf.prev.arity, 'C arity should work nowadays' )
       assert_equal('test_fields', tf.prev.prev.method) 
       assert_equal(0, tf.arity)
+    end
+
+    # 1.upto also creates a C frame.
+    1.upto(1) do 
+      tf = RubyVM::ThreadFrame::current.prev
+      assert_equal('CFUNC', tf.type)
+      assert_equal(1, tf.arity, 'C arity should work nowadays' )
     end
 
     x  = lambda do |x,y| 
       frame = RubyVM::ThreadFrame::current
       assert_equal('block in test_fields', frame.method)
       assert_equal('LAMBDA', frame.type)
+      assert_equal(x, tf.self)
+      assert_equal(x.class, tf.method_class)
       assert_equal(2, frame.arity)
     end
-    x.call(1,2)
+    x.call(x,2)
 
-    x  = Proc.new do
+    x  = Proc.new do |x, y|
       frame = RubyVM::ThreadFrame::current
       assert_equal('block in test_fields', frame.method)
+      assert_equal(x, tf.self)
+      assert_equal(x.class, tf.method_class)
       assert_equal('BLOCK', frame.type)
     end
-    x.call(1,2)
+    x.call(x,2)
 
   end
 end
