@@ -353,8 +353,11 @@ thread_frame_method(VALUE klass)
 static VALUE
 thread_frame_method_class(VALUE klass)
 {
-    THREAD_FRAME_SETUP ;			\
-    return tf->cfp->me->klass;
+    THREAD_FRAME_SETUP ;
+    if (tf->cfp->me)
+	return tf->cfp->me->klass;
+    else
+	return Qnil;
 }
 
 /*
