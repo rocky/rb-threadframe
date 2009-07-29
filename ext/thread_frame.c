@@ -405,10 +405,12 @@ thread_frame_iseq(VALUE klass)
 
 /*
  *  call-seq:
+ *     RubyVM::ThreadFrame#prev(n)        => thread_frame_object
  *     RubyVM::ThreadFrame#prev           => thread_frame_object
  *
  *  Returns a RubyVM::ThreadFrame object for the frame prior to the
- *  ThreadFrame object or nil if there is none.
+ *  ThreadFrame object or nil if there is none. The default value for n is
+ *  1. Negative counts or counts exceeding the stack will return nil.
  *
  */
 static VALUE
@@ -419,8 +421,9 @@ thread_frame_prev(int argc, VALUE *argv, VALUE klass)
     rb_control_frame_t *prev_cfp, *cfp;
 
     THREAD_FRAME_SETUP ;
+    cfp = tf->cfp;
     rb_scan_args(argc, argv, "01", &nv);
-    prev_cfp = tf->cfp;
+    prev_cfp = cfp;
     n = (Qnil != nv) ? FIX2INT(nv) : 1;
     if (n < 0) return Qnil;
     for (; n > 0; n--) {
@@ -432,7 +435,7 @@ thread_frame_prev(int argc, VALUE *argv, VALUE klass)
 	if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, prev_cfp))
 	    return Qnil;
     }
-    return thread_frame_prev_common(tf->cfp, prev_cfp, tf->th);
+    return thread_frame_prev_common(cfp, prev_cfp, tf->th);
 }
 
 THREAD_FRAME_FIELD_METHOD(proc) ;
