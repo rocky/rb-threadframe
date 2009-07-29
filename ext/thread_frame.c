@@ -412,11 +412,26 @@ thread_frame_iseq(VALUE klass)
  *
  */
 static VALUE
-thread_frame_prev(VALUE klass)
+thread_frame_prev(int argc, VALUE *argv, VALUE klass)
 {
-    rb_control_frame_t *prev_cfp;
+    VALUE nv;
+    int n;
+    rb_control_frame_t *prev_cfp, *cfp;
+
     THREAD_FRAME_SETUP ;
-    prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(tf->cfp);
+    rb_scan_args(argc, argv, "01", &nv);
+    prev_cfp = tf->cfp;
+    n = (Qnil != nv) ? FIX2INT(nv) : 1;
+    if (n < 0) return Qnil;
+    for (; n > 0; n--) {
+	cfp = prev_cfp;
+	prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
+	if (VM_FRAME_TYPE(prev_cfp) == VM_FRAME_MAGIC_FINISH) {
+	    prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(prev_cfp);
+	}
+	if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, prev_cfp))
+	    return Qnil;
+    }
     return thread_frame_prev_common(tf->cfp, prev_cfp, tf->th);
 }
 
@@ -567,7 +582,7 @@ Init_thread_frame(void)
     RB_DEFINE_FRAME_METHOD(method, 0);
     RB_DEFINE_FRAME_METHOD(method_class, 0);
     RB_DEFINE_FRAME_METHOD(pc_offset, 0);
-    RB_DEFINE_FRAME_METHOD(prev, 0);
+    RB_DEFINE_FRAME_METHOD(prev, -1);
     RB_DEFINE_FRAME_METHOD(proc, 0);
     RB_DEFINE_FRAME_METHOD(self, 0);
     RB_DEFINE_FRAME_METHOD(source_container, 0);

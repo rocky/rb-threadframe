@@ -32,6 +32,11 @@ class TestThread < Test::Unit::TestCase
     assert_equal(['file',  'unit.rb'], tup)
     assert_equal('run', tf_prev.method)
 
+    # Test prev with an argument count
+    assert tf.prev(2)
+    assert_equal(nil, tf.prev(-1))
+    assert_equal(nil, tf.prev(1000))
+
     # 1.times creates a C frame.
     1.times do 
       tf = RubyVM::ThreadFrame::current
