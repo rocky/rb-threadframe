@@ -25,7 +25,7 @@ typedef struct
     rb_thread_t *th;
     rb_control_frame_t *cfp;
     VALUE *signature1[3]; /* iseq, flag, self */
-    VALUE *signature2[3]; /* proc, method_id, method_class */
+    VALUE *signature2[1]; /* proc */
 } thread_frame_t;
 
 #include "ruby19_externs.h"

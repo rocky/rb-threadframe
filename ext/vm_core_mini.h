@@ -50,6 +50,9 @@
 #define GetISeqPtr(obj, ptr) \
   GetCoreDataFromValue(obj, rb_iseq_t, ptr)
 
+typedef struct iseq_catch_table_entry iseq_catch_table_entry_t;
+typedef struct node NODE;
+
 /* Instruction sequence */
 typedef struct rb_iseq_struct {
     /***************/
@@ -114,9 +117,8 @@ typedef struct rb_iseq_struct {
 
     size_t stack_max; /* for stack overflow check */
 
-#if 0
     /* catch table */
-    struct iseq_catch_table_entry *catch_table;
+    iseq_catch_table_entry_t *catch_table;
     int catch_table_size;
 
     /* for child iseq */
@@ -145,6 +147,7 @@ typedef struct rb_iseq_struct {
     /* misc */
     ID defined_method_id;	/* for define_method */
 
+#if 0
     /* used at compile time */
     struct iseq_compile_data *compile_data;
 #endif

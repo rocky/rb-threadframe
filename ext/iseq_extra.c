@@ -37,6 +37,18 @@ iseq_local_name(VALUE iseqval, VALUE val)
 	: Qnil;
 }
 
+#define ISEQ_FIELD_METHOD(FIELD)		\
+static VALUE					\
+iseq_##FIELD(VALUE iseqval)			\
+{						\
+  rb_iseq_t *iseq;				\
+  GetISeqPtr(iseqval, iseq);			\
+  return iseq->FIELD;				\
+}
+
+ISEQ_FIELD_METHOD(self) ;
+ISEQ_FIELD_METHOD(orig) ;
+
 #define ISEQ_INT_FIELD_METHOD(FIELD)		\
 static VALUE					\
 iseq_##FIELD(VALUE iseqval)			\
@@ -52,8 +64,10 @@ ISEQ_INT_FIELD_METHOD(arg_post_len) ;
 ISEQ_INT_FIELD_METHOD(arg_rest) ;
 ISEQ_INT_FIELD_METHOD(arg_simple) ;
 ISEQ_INT_FIELD_METHOD(argc) ;
+ISEQ_INT_FIELD_METHOD(klass) ;
 ISEQ_INT_FIELD_METHOD(local_size) ;
 ISEQ_INT_FIELD_METHOD(local_table_size) ;
+
 
 #define RB_DEFINE_ISEQ_METHOD(FIELD, ARGC) \
     rb_define_method(rb_cISeq, #FIELD, iseq_##FIELD, ARGC);
@@ -68,8 +82,11 @@ Init_iseq_extra(void)
     RB_DEFINE_ISEQ_METHOD(arg_rest, 0) ;
     RB_DEFINE_ISEQ_METHOD(arg_simple, 0) ;
     RB_DEFINE_ISEQ_METHOD(argc, 0) ;
+    RB_DEFINE_ISEQ_METHOD(klass, 0) ;
     RB_DEFINE_ISEQ_METHOD(local_name, 1) ;
     RB_DEFINE_ISEQ_METHOD(local_size, 0) ;
     RB_DEFINE_ISEQ_METHOD(local_table_size, 0) ;
+    RB_DEFINE_ISEQ_METHOD(orig, 0) ;
+    RB_DEFINE_ISEQ_METHOD(self, 0) ;
 }
 
