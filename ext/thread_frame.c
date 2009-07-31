@@ -123,21 +123,6 @@ thread_stack(VALUE thval)
     thread_frame_t *tf; \
     Data_Get_Struct(klass, thread_frame_t, tf)
 
-/*
- *  call-seq:
- *     RubyVM::ThreadFrame::current  => thread_frame_object
- * 
- *  Returns a ThreadFrame object for the currently executing thread.
- *  Same as: RubyVM::ThreadFrame.new(Thread::current)
- */
-static VALUE
-thread_frame_s_current(VALUE klass)
-{
-    thread_frame_t *tf = thread_frame_t_alloc(klass);
-    SAVE_FRAME(tf, ruby_current_thread) ;
-    return Data_Wrap_Struct(klass, NULL, xfree, tf);
-}
-
 #define THREAD_FRAME_FIELD_METHOD(FIELD)	\
 static VALUE					\
 thread_frame_##FIELD(VALUE klass)		\
@@ -175,54 +160,38 @@ thread_frame_set_pc_offset(VALUE klass, VALUE offset_val)
 THREAD_FRAME_FIELD_METHOD(flag) ;
 
 static VALUE
-thread_frame_prev_common(rb_control_frame_t *cfp, rb_control_frame_t *prev_cfp, 
-			 rb_thread_t *th)
+thread_frame_prev_common(rb_control_frame_t *prev_cfp, rb_thread_t *th, int n)
 {
-    if (prev_cfp) {
-        thread_frame_t *tf;
-        VALUE prev = thread_frame_alloc(rb_cThreadFrame);
-	thread_frame_t_alloc(prev);
-        Data_Get_Struct(prev, thread_frame_t, tf);
-        tf->th = th;
-	if (VM_FRAME_TYPE(prev_cfp) == VM_FRAME_MAGIC_FINISH) {
-	    tf->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(prev_cfp);
-	} else
-	    tf->cfp = prev_cfp;
-	if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, tf->cfp))
-	    return Qnil;
-	
-	if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
-	    memcpy(tf->signature1, &(tf->cfp->iseq), sizeof(tf->signature1)); 
-	    memcpy(tf->signature2, &(tf->cfp->proc), sizeof(tf->signature2));
-	} else if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
-	    /* FIXME: This probabably not complete*/
-	    memcpy(tf->signature1, &(cfp->iseq), sizeof(tf->signature1)); 
-	    memcpy(tf->signature2, &(cfp->proc), sizeof(tf->signature2));
-	}
-        return prev;
-    } else {
-	return Qnil;
+  thread_frame_t *tf;
+  VALUE prev;
+  rb_control_frame_t *cfp;
+
+  if (n < 0) return Qnil;
+  for (; n > 0; n--) {
+    cfp = prev_cfp;
+    prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
+    if (VM_FRAME_TYPE(prev_cfp) == VM_FRAME_MAGIC_FINISH) {
+      prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(prev_cfp);
     }
-}
-
-/*
- *  call-seq:
- *     RubyVM::ThreadFrame#prev(thread)     => threadframe_object
- *
- *  Returns a RubyVM::ThreadFrame for the frame prior to the
- *  Thread object passed or nil if there is none.
- *
- */
-static VALUE
-thread_frame_thread_prev(VALUE klass, VALUE thval)
-{
-    rb_control_frame_t *prev_cfp;
-    GET_THREAD_PTR ;
-    prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
     if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, prev_cfp))
-	return Qnil;
+      return Qnil;
+  }
 
-    return thread_frame_prev_common(th->cfp, prev_cfp, th);
+  prev = thread_frame_alloc(rb_cThreadFrame);
+  thread_frame_t_alloc(prev);
+  Data_Get_Struct(prev, thread_frame_t, tf);
+  tf->th  = th;
+  tf->cfp = prev_cfp;
+  
+  if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
+    memcpy(tf->signature1, &(tf->cfp->iseq), sizeof(tf->signature1)); 
+    memcpy(tf->signature2, &(tf->cfp->proc), sizeof(tf->signature2));
+  } else if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
+    /* FIXME: This probabably not complete*/
+    memcpy(tf->signature1, &(cfp->iseq), sizeof(tf->signature1)); 
+    memcpy(tf->signature2, &(cfp->proc), sizeof(tf->signature2));
+  }
+  return prev;
 }
 
 /*
@@ -410,7 +379,8 @@ thread_frame_iseq(VALUE klass)
  *
  *  Returns a RubyVM::ThreadFrame object for the frame prior to the
  *  ThreadFrame object or nil if there is none. The default value for n is
- *  1. Negative counts or counts exceeding the stack will return nil.
+ *  1. 0 just returns the object passed.
+ *  Negative counts or counts exceeding the stack will return nil.
  *
  */
 static VALUE
@@ -418,28 +388,58 @@ thread_frame_prev(int argc, VALUE *argv, VALUE klass)
 {
     VALUE nv;
     int n;
-    rb_control_frame_t *prev_cfp, *cfp;
 
     THREAD_FRAME_SETUP ;
-    cfp = tf->cfp;
+
     rb_scan_args(argc, argv, "01", &nv);
-    prev_cfp = cfp;
     n = (Qnil != nv) ? FIX2INT(nv) : 1;
-    if (n < 0) return Qnil;
-    for (; n > 0; n--) {
-	cfp = prev_cfp;
-	prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
-	if (VM_FRAME_TYPE(prev_cfp) == VM_FRAME_MAGIC_FINISH) {
-	    prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(prev_cfp);
-	}
-	if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, prev_cfp))
-	    return Qnil;
-    }
-    return thread_frame_prev_common(cfp, prev_cfp, tf->th);
+    if (n == 0) return klass;
+    return thread_frame_prev_common(tf->cfp, tf->th, n);
 }
 
 THREAD_FRAME_FIELD_METHOD(proc) ;
 THREAD_FRAME_FIELD_METHOD(self) ;
+
+/*
+ *  call-seq:
+ *     RubyVM::ThreadFrame::current  => thread_frame_object
+ * 
+ *  Returns a ThreadFrame object for the currently executing thread.
+ *  Same as: RubyVM::ThreadFrame.new(Thread::current)
+ */
+static VALUE
+thread_frame_s_current(VALUE klass)
+{
+    thread_frame_t *tf = thread_frame_t_alloc(klass);
+    SAVE_FRAME(tf, ruby_current_thread) ;
+    return Data_Wrap_Struct(klass, NULL, xfree, tf);
+}
+
+/*
+ *  call-seq:
+ *     RubyVM::ThreadFrame#prev(thread)     => threadframe_object
+ *     RubyVM::ThreadFrame#prev(thread, n)   => threadframe_object
+ *
+ *  Returns a RubyVM::ThreadFrame for the frame prior to the
+ *  Thread object passed or nil if there is none. The default value for n
+ *  is 1. 0 just returns the object passed.
+ *  Negative counts or counts exceeding the stack will return nil.
+ */
+static VALUE
+thread_frame_s_prev(int argc, VALUE *argv, VALUE klass)
+{
+    VALUE thval;
+    VALUE nv;
+    int n;
+  
+    rb_scan_args(argc, argv, "11", &thval, &nv);
+
+    GET_THREAD_PTR ;
+    
+    n = (Qnil != nv) ? FIX2INT(nv) : 1;
+    if (n == 0) return klass;
+    return thread_frame_prev_common(th->cfp, th, n);
+}
 
 /*
  * call-seq:
@@ -635,7 +635,7 @@ Init_thread_frame(void)
 					   rb_eStandardError);
 
     rb_define_singleton_method(rb_cThreadFrame, "prev", 
-			       thread_frame_thread_prev, 1);
+			       thread_frame_s_prev, -1);
     rb_define_singleton_method(rb_cThreadFrame, "current", 
 			       thread_frame_s_current,   0);
 
