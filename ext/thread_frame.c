@@ -119,6 +119,10 @@ thread_stack(VALUE thval)
     return *(th->stack);
 }
 
+#define THREAD_FRAME_SETUP \
+    thread_frame_t *tf; \
+    Data_Get_Struct(klass, thread_frame_t, tf)
+
 /*
  *  call-seq:
  *     RubyVM::ThreadFrame::current  => thread_frame_object
@@ -133,10 +137,6 @@ thread_frame_s_current(VALUE klass)
     SAVE_FRAME(tf, ruby_current_thread) ;
     return Data_Wrap_Struct(klass, NULL, xfree, tf);
 }
-
-#define THREAD_FRAME_SETUP \
-    thread_frame_t *tf; \
-    Data_Get_Struct(klass, thread_frame_t, tf)
 
 #define THREAD_FRAME_FIELD_METHOD(FIELD)	\
 static VALUE					\
@@ -496,6 +496,37 @@ thread_frame_source_location(VALUE klass)
 
 /*
  *  call-seq:
+ *     ThreadFrame#stack_size  => Fixnum;
+ *
+ *  Returns a count of the number of frames including the current one. 
+ *  ThreadFrame#prev(ThreadFrame#stack_size) = nil
+ *  ThreadFrame#prev(ThreadFrame#stack_size-1) = top frame
+ *  
+ * 
+ */
+static VALUE
+thread_frame_stack_size(VALUE klass)
+{
+    int n = 0;
+    rb_control_frame_t *cfp;
+    THREAD_FRAME_SETUP ;
+
+    for (cfp = tf->cfp; 
+	 !RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, cfp);
+	 cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp)) {
+	n++;
+	if (VM_FRAME_TYPE(cfp) == VM_FRAME_MAGIC_FINISH) {
+	    cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
+	    if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, cfp))
+		break;
+	}
+    }
+    
+    return INT2FIX(n);
+}
+
+/*
+ *  call-seq:
  *     RubyVM::ThreadFrame#thread   => thread
  *
  *  Returns the thread object for the thread frame.
@@ -590,6 +621,7 @@ Init_thread_frame(void)
     RB_DEFINE_FRAME_METHOD(self, 0);
     RB_DEFINE_FRAME_METHOD(source_container, 0);
     RB_DEFINE_FRAME_METHOD(source_location, 0);
+    RB_DEFINE_FRAME_METHOD(stack_size, 0);
     RB_DEFINE_FRAME_METHOD(thread, 0);
     RB_DEFINE_FRAME_METHOD(type, 0);
 
