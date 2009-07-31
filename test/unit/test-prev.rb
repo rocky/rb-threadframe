@@ -16,15 +16,19 @@ class TestThread < Test::Unit::TestCase
   end
 
   def test_prev
-    [RubyVM::ThreadFrame::current.prev, 
-     RubyVM::ThreadFrame::prev(Thread::current)].each do |tf|
 
-      # Test prev with an argument count
-      assert tf.prev(2)
-      assert_equal(tf,  tf.prev(0), 
-                   'tf.prev(0) is defined as be tf')
-      assert_equal(nil, tf.prev(-1))
-      assert_equal(nil, tf.prev(1000))
-    end
+    assert RubyVM::ThreadFrame::prev(Thread::current, 0)
+    assert RubyVM::ThreadFrame::prev(Thread::current, 2)
+
+    assert_equal(nil, RubyVM::ThreadFrame::prev(Thread::current, -1))
+    assert_equal(nil, RubyVM::ThreadFrame::prev(Thread::current, 1000))
+
+    tf = RubyVM::ThreadFrame::current.prev
+
+    assert tf.prev(2)
+    assert_equal(tf,  tf.prev(0), 
+                 'tf.prev(0) is defined as be tf')
+    assert_equal(nil, tf.prev(-1))
+    assert_equal(nil, tf.prev(1000))
   end
 end
