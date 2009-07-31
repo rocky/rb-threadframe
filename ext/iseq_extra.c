@@ -30,11 +30,16 @@ VALUE
 iseq_local_name(VALUE iseqval, VALUE val)
 {
     rb_iseq_t *iseq;
-    int i = FIX2INT(val);
-    GetISeqPtr(iseqval, iseq);
-    return (i < iseq->local_table_size && i >= 0) 
+    if (FIXNUM_P(val)) {
+      int i = FIX2INT(val);
+      GetISeqPtr(iseqval, iseq);
+      return (i < iseq->local_table_size && i >= 0) 
 	? rb_str_new2(rb_id2name(iseq->local_table[i]))
 	: Qnil;
+    } else {
+      rb_raise(rb_eTypeError, "type mismatch: %s given, int >= 0 expected", 
+	       rb_class2name(CLASS_OF(val)));
+    }
 }
 
 #define ISEQ_FIELD_METHOD(FIELD)		\

@@ -52,7 +52,7 @@ class TestISeq < Test::Unit::TestCase
       end
       assert_equal(nil, iseq.local_name(100))
       assert_raises TypeError do 
-        iseq.local_name('a')
+        p iseq.local_name('a')
       end
     end
     x.call(1,2)
