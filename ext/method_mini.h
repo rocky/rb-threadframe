@@ -37,7 +37,10 @@ typedef struct rb_method_entry_struct {
     rb_method_type_t type; /* method type */
     ID called_id;
     ID original_id;
-    VALUE klass;                    /* should be mark */
+    VALUE klass;                    /* should be mark. This 
+				     field is guaranteed to set to the method
+				     caller only when the method type 
+				     is is CFUNC. */
     union {
 	rb_iseq_t *iseq;            /* should be mark */
 	rb_method_cfunc_t cfunc;

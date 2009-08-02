@@ -55,11 +55,15 @@
 # == RubyVM::ThreadFrame Instance Methods
 # 
 # === RubyVM::ThreadFrame#prev
-#   tf.prev() -> tf or nil
+#   tf.prev(n) -> tf or nil
+#   tf.prev() -> tf or nil  # same as tf.prev(1)
 #
 # Returns the previous control frame. If tail recursion has removed
 # frames as seen in the source, deal with it. ;-) +nil+ can be
 # returned if there is no previous frame or if tf is no longer exists.
+# If a number is passed go back that many frames. The value 0 gives back
+# tf. A negative number of a number greater than the number of frames
+# returns nil. 
 #
 # === RubyVM::ThreadFrame#invalid?
 #   tf.invalid?() -> boolean
@@ -98,7 +102,12 @@
 # implementation dependent. It could be line number, a line number
 # and start and end column, or a start line number, start column, end
 # line number, end column.
-
+#
+# === RubyVM::ThreadFrame#stack_size
+#  RubyVM::ThreadFrame#.stack_size -> Fixnum
+#
+#  Returns the number of entries 
+#
 # === RubyVM::ThreadFrame#binding
 #  tf.binding() -> binding
 #

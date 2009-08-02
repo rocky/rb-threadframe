@@ -242,7 +242,6 @@ thread_frame_binding(VALUE klass)
  *
  *     ThreadFrame::VERSION               => 0.1 
  *     ThreadFrame::current.flag          => 72
- *     ThreadFrame::current.method_class  => Comparable (?)
  *     ThreadFrame::current.proc          => false
  *     ThreadFrame::current.self          => 'main'
  */
@@ -309,24 +308,6 @@ thread_frame_method(VALUE klass)
     }
     /* NOTREACHED */
     return Qnil;
-}
-
-/*
- *  call-seq:
- *     Thread#method_class  => class
- * 
- * Returns the method class associated with the frame or nil of none.
- * ThreadFrameError can be raised if the threadframe
- * object is no longer valid.
- */
-static VALUE
-thread_frame_method_class(VALUE klass)
-{
-    THREAD_FRAME_SETUP ;
-    if (tf->cfp->me)
-	return tf->cfp->me->klass;
-    else
-	return Qnil;
 }
 
 /*
@@ -614,7 +595,6 @@ Init_thread_frame(void)
     RB_DEFINE_FRAME_METHOD(iseq, 0);
     RB_DEFINE_FRAME_METHOD(initialize, 1);
     RB_DEFINE_FRAME_METHOD(method, 0);
-    RB_DEFINE_FRAME_METHOD(method_class, 0);
     RB_DEFINE_FRAME_METHOD(pc_offset, 0);
     RB_DEFINE_FRAME_METHOD(prev, -1);
     RB_DEFINE_FRAME_METHOD(proc, 0);

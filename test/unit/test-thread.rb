@@ -41,8 +41,7 @@ class TestThread < Test::Unit::TestCase
       assert_equal('block in test_fields', tf.method)
       assert_equal('CFUNC', tf.prev.type)
       assert_equal('times', tf.prev.method) 
-      assert_equal(Integer, tf.prev.method_class)
-      assert_equal(self, tf.self)
+    assert_equal(self, tf.self)
       assert_equal(0, tf.prev.arity, 'C arity should work nowadays' )
       assert_equal('test_fields', tf.prev.prev.method) 
       assert_equal(0, tf.arity)
@@ -60,8 +59,7 @@ class TestThread < Test::Unit::TestCase
       assert_equal('block in test_fields', frame.method)
       assert_equal('LAMBDA', frame.type)
       assert_equal(x, tf.self)
-      assert_equal(x.class, tf.method_class)
-      assert_equal(2, frame.arity)
+    assert_equal(2, frame.arity)
     end
     x.call(x,2)
 
@@ -69,8 +67,7 @@ class TestThread < Test::Unit::TestCase
       frame = RubyVM::ThreadFrame::current
       assert_equal('block in test_fields', frame.method)
       assert_equal(x, tf.self)
-      assert_equal(x.class, tf.method_class)
-      assert_equal('BLOCK', frame.type)
+    assert_equal('BLOCK', frame.type)
     end
     x.call(x,2)
 
