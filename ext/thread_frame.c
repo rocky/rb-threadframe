@@ -33,8 +33,14 @@ typedef struct
 VALUE rb_cThreadFrame;       /* ThreadFrame class */
 VALUE rb_eThreadFrameError;  /* Error raised on invalid frames. */
 
+/* Static forward declarations */
 static VALUE thread_frame_iseq(VALUE klass);
+static VALUE thread_frame_prev_internal(rb_control_frame_t *prev_cfp, 
+					rb_thread_t *th, int n);
+static int   thread_frame_stack_size_internal(rb_control_frame_t *cfp, 
+					      rb_thread_t *th);
 static VALUE thread_frame_type(VALUE klass);
+
 
 /* 
    Allocate a RubyVM::ThreadFrame used by new. Less common than
@@ -74,7 +80,7 @@ thread_frame_invalid_internal(thread_frame_t *tf)
 	return cmp ? Qfalse : Qtrue;
     } else {
 	/* FIXME: figure out what to do here. Probably more work is
-	 * needed in thread_frame_prev_common.
+	 * needed in thread_frame_prev_internal.
 	 */
 	return Qnil;
     }
@@ -105,18 +111,6 @@ thread_frame_threadframe(VALUE thval)
     memset(tf, 0, sizeof(thread_frame_t));
     SAVE_FRAME(tf, th) ;
     return Data_Wrap_Struct(rb_cThreadFrame, NULL, xfree, tf);
-}
-
-/*
- *  call-seq:
- *     Thread#stack  => ? 
- * 
- */
-static VALUE
-thread_stack(VALUE thval)
-{
-    GET_THREAD_PTR ;
-    return *(th->stack);
 }
 
 #define THREAD_FRAME_SETUP \
@@ -158,41 +152,6 @@ thread_frame_set_pc_offset(VALUE klass, VALUE offset_val)
 #endif
 
 THREAD_FRAME_FIELD_METHOD(flag) ;
-
-static VALUE
-thread_frame_prev_common(rb_control_frame_t *prev_cfp, rb_thread_t *th, int n)
-{
-  thread_frame_t *tf;
-  VALUE prev;
-  rb_control_frame_t *cfp;
-
-  if (n < 0) return Qnil;
-  for (; n > 0; n--) {
-    cfp = prev_cfp;
-    prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
-    if (VM_FRAME_TYPE(prev_cfp) == VM_FRAME_MAGIC_FINISH) {
-      prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(prev_cfp);
-    }
-    if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, prev_cfp))
-      return Qnil;
-  }
-
-  prev = thread_frame_alloc(rb_cThreadFrame);
-  thread_frame_t_alloc(prev);
-  Data_Get_Struct(prev, thread_frame_t, tf);
-  tf->th  = th;
-  tf->cfp = prev_cfp;
-  
-  if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
-    memcpy(tf->signature1, &(tf->cfp->iseq), sizeof(tf->signature1)); 
-    memcpy(tf->signature2, &(tf->cfp->proc), sizeof(tf->signature2));
-  } else if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
-    /* FIXME: This probabably not complete*/
-    memcpy(tf->signature1, &(cfp->iseq), sizeof(tf->signature1)); 
-    memcpy(tf->signature2, &(cfp->proc), sizeof(tf->signature2));
-  }
-  return prev;
-}
 
 /*
  *  call-seq:
@@ -361,7 +320,9 @@ thread_frame_iseq(VALUE klass)
  *  Returns a RubyVM::ThreadFrame object for the frame prior to the
  *  ThreadFrame object or nil if there is none. The default value for n is
  *  1. 0 just returns the object passed.
- *  Negative counts or counts exceeding the stack will return nil.
+ *  A negative starts from the end. So prev(-1) is the top frame.
+ *  Counts outside of the range -stack_size .. stack_size-1 exceed the
+ *  the range of the stack and return nil.
  *
  */
 static VALUE
@@ -373,9 +334,59 @@ thread_frame_prev(int argc, VALUE *argv, VALUE klass)
     THREAD_FRAME_SETUP ;
 
     rb_scan_args(argc, argv, "01", &nv);
-    n = (Qnil != nv) ? FIX2INT(nv) : 1;
+
+    if (Qnil == nv)
+	n = 1;
+    else if (!FIXNUM_P(nv)) {
+	rb_raise(rb_eTypeError, "integer argument expected");
+    } else
+	n = FIX2INT(nv);
+    
+    if (n < 0) {
+      int stack_size = thread_frame_stack_size_internal(tf->cfp, tf->th);
+      if (-n > stack_size) return Qnil;
+      n = stack_size + n;
+    }
     if (n == 0) return klass;
-    return thread_frame_prev_common(tf->cfp, tf->th, n);
+    return thread_frame_prev_internal(tf->cfp, tf->th, n);
+}
+
+/* 
+   See the above thread_frame_prev comment for what's going on here.
+*/
+static VALUE
+thread_frame_prev_internal(rb_control_frame_t *prev_cfp, rb_thread_t *th, 
+			   int n)
+{
+  thread_frame_t *tf;
+  VALUE prev;
+  rb_control_frame_t *cfp;
+
+  for (; n > 0; n--) {
+    cfp = prev_cfp;
+    prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
+    if (VM_FRAME_TYPE(prev_cfp) == VM_FRAME_MAGIC_FINISH) {
+      prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(prev_cfp);
+    }
+    if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, prev_cfp))
+      return Qnil;
+  }
+
+  prev = thread_frame_alloc(rb_cThreadFrame);
+  thread_frame_t_alloc(prev);
+  Data_Get_Struct(prev, thread_frame_t, tf);
+  tf->th  = th;
+  tf->cfp = prev_cfp;
+  
+  if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
+    memcpy(tf->signature1, &(tf->cfp->iseq), sizeof(tf->signature1)); 
+    memcpy(tf->signature2, &(tf->cfp->proc), sizeof(tf->signature2));
+  } else if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
+    /* FIXME: This probabably not complete*/
+    memcpy(tf->signature1, &(cfp->iseq), sizeof(tf->signature1)); 
+    memcpy(tf->signature2, &(cfp->proc), sizeof(tf->signature2));
+  }
+  return prev;
 }
 
 THREAD_FRAME_FIELD_METHOD(proc) ;
@@ -415,11 +426,28 @@ thread_frame_s_prev(int argc, VALUE *argv, VALUE klass)
   
     rb_scan_args(argc, argv, "11", &thval, &nv);
 
+    if (Qfalse == rb_obj_is_kind_of(thval, rb_cThread))
+	rb_raise(rb_eTypeError, 
+		 "ThreadFrame object needed for first argument");
+
     GET_THREAD_PTR ;
     
-    n = (Qnil != nv) ? FIX2INT(nv) : 1;
-    if (n == 0) return klass;
-    return thread_frame_prev_common(th->cfp, th, n);
+    if (Qnil == nv)
+	n = 1;
+    else if (!FIXNUM_P(nv)) {
+	rb_raise(rb_eTypeError, "Fixnum needed for second argument");
+    } else
+	n = FIX2INT(nv);
+
+    if (n == 0) { 
+	return thread_frame_s_current(klass);
+    } else if (n < 0) {
+      int stack_size = thread_frame_stack_size_internal(th->cfp, th);
+      if (-n > stack_size) return Qnil;
+      n = stack_size + n;
+    }
+
+    return thread_frame_prev_internal(th->cfp, th, n);
 }
 
 /*
@@ -488,22 +516,28 @@ thread_frame_source_location(VALUE klass)
 static VALUE
 thread_frame_stack_size(VALUE klass)
 {
-    int n = 0;
-    rb_control_frame_t *cfp;
     THREAD_FRAME_SETUP ;
+    return INT2FIX(thread_frame_stack_size_internal(tf->cfp, tf->th));
+}
 
-    for (cfp = tf->cfp; 
-	 !RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, cfp);
-	 cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp)) {
+/* 
+   See the above thread_frame_stack_size comment for what's going on here.
+*/
+static int
+thread_frame_stack_size_internal(rb_control_frame_t *cfp, rb_thread_t *th)
+{
+    int n;
+    for ( n = 0; 
+	  !RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, cfp);
+	  cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp)) {
 	n++;
 	if (VM_FRAME_TYPE(cfp) == VM_FRAME_MAGIC_FINISH) {
 	    cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
-	    if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, cfp))
+	    if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, cfp))
 		break;
 	}
     }
-    
-    return INT2FIX(n);
+    return n;
 }
 
 /*
@@ -568,8 +602,6 @@ thread_frame_type(VALUE klass)
     return rb_str_new2(frame_magic2str(tf->cfp));
 }
 
-extern VALUE rb_cThread;
-
 #define RB_DEFINE_FRAME_METHOD(FIELD, ARGC)					\
     rb_define_method(rb_cThreadFrame, #FIELD, thread_frame_##FIELD, ARGC);
 
@@ -580,7 +612,6 @@ Init_thread_frame(void)
     rb_cThreadFrame = rb_define_class_under(rb_cRubyVM, "ThreadFrame", 
 					    rb_cObject);
     rb_define_method(rb_cThread, "threadframe", thread_frame_threadframe, 0);
-    rb_define_method(rb_cThread, "stack", thread_stack, 0);
 
     /* Thread:Frame */
     rb_define_const(rb_cThreadFrame, "VERSION", 

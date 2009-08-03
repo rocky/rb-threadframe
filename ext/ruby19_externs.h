@@ -21,6 +21,8 @@ extern VALUE rb_binding_frame_new(void *vth, void *vcfp);  /* new */
 
 /* From thread.c */
 extern rb_control_frame_t * thread_context_frame(void *); /* new */
+extern VALUE rb_cThread;  /* Thread class */
+
 
 extern VALUE rb_iseq_disasm_internal(rb_iseq_t *iseqdat); /* new */
 extern VALUE rb_cRubyVM;  /* RubyVM class */
