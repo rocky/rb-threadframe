@@ -462,6 +462,7 @@ static VALUE
 thread_frame_source_container(VALUE klass)
 {
     VALUE file;
+    const char *contain_type;
 
     THREAD_FRAME_SETUP ;
 
@@ -473,8 +474,13 @@ thread_frame_source_container(VALUE klass)
     } else 
 	file = tf->cfp->iseq->filename;
 
-    /* FIXME: As Ruby 1.9 improves, so should this. */
-    return rb_ary_new3(2, rb_str_new2("file"), file);
+    /* FIXME: Is this right? Do more? */
+    if (VM_FRAME_MAGIC_EVAL == VM_FRAME_TYPE(tf->cfp) &&
+	0 == strncmp(RSTRING_PTR(file), "(eval)", sizeof("(eval)")))
+	contain_type = "string";
+    else
+	contain_type = "file";
+    return rb_ary_new3(2, rb_str_new2(contain_type), file);
 }
 
 /*
