@@ -50,6 +50,7 @@
 #define GetISeqPtr(obj, ptr) \
   GetCoreDataFromValue(obj, rb_iseq_t, ptr)
 
+/* Opaque types (for now) */
 typedef struct iseq_catch_table_entry iseq_catch_table_entry_t;
 typedef struct node NODE;
 
@@ -203,7 +204,7 @@ typedef struct rb_vm_struct {
     struct rb_thread_struct *main_thread;
     struct rb_thread_struct *running_thread;
 
-    st_table *living_threads;
+    struct st_table *living_threads;
     VALUE thgroup_default;
 
     int running;
