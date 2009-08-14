@@ -72,4 +72,17 @@ class TestThread < Test::Unit::TestCase
     x.call(x,2)
 
   end
+
+  def test_threadframe_equal
+    tf = RubyVM::ThreadFrame.current
+    tf2 = RubyVM::ThreadFrame.current
+    assert_equal(true,  tf.equal?(tf))
+    assert_equal(true,  tf.equal?(tf2))
+    tf2 = tf2.prev 
+    assert_equal(false, tf.equal?(tf2))
+    assert_raises TypeError do
+      tf.equal?(tf.iseq)
+    end
+  end
+
 end

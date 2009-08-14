@@ -193,6 +193,42 @@ thread_frame_binding(VALUE klass)
 
 /*
  *  call-seq:
+ *     RubyVM::ThreadFrame#equal(tf)   => bool
+ *
+ *  Returns true if two thread frames are equal.
+ */
+static VALUE
+thread_frame_equal(VALUE klass, VALUE tfval2)
+{
+    THREAD_FRAME_SETUP ;
+    if (Qtrue == thread_frame_invalid_internal(tf))
+	rb_raise(rb_eThreadFrameError, "invalid frame");
+    else {
+	thread_frame_t *tf2;
+	if (!rb_obj_is_kind_of(tfval2, rb_cThreadFrame)) {
+	rb_raise(rb_eTypeError, 
+		 "comparison argument must be an instance of %s (is %s)",
+		 rb_obj_classname(klass), rb_obj_classname(tfval2));
+	}
+	Data_Get_Struct(tfval2, thread_frame_t, tf2);
+	if (Qtrue == thread_frame_invalid_internal(tf2))
+	    rb_raise(rb_eThreadFrameError, "invalid frame");
+
+	/* And just when you thought I'd never get around to the
+	   actual comparison... 
+
+	   Comparing cfp's should be enough, but we'll throw in the thread
+	   for good measure.
+	*/
+	return (tf->th == tf2->th && tf->cfp == tf2->cfp) 
+	    ? Qtrue : Qfalse;
+    }
+    /* NOTREACHED */
+    return Qnil;
+}
+
+/*
+ *  call-seq:
  *     RubyVM::ThreadFrame.new(thread)          => thread_frame_object
  *
  *  Returns an RubyVM::ThreadFrame object which can contains dynamic frame
@@ -641,6 +677,9 @@ Init_thread_frame(void)
     RB_DEFINE_FRAME_METHOD(stack_size, 0);
     RB_DEFINE_FRAME_METHOD(thread, 0);
     RB_DEFINE_FRAME_METHOD(type, 0);
+
+    rb_define_method(rb_cThreadFrame, "equal?", 
+		     thread_frame_equal, 1);
 
 #ifdef NO_reg_pc
     rb_define_method(rb_cThreadFrame, "pc_offset=", 
