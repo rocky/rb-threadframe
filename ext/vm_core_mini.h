@@ -46,10 +46,17 @@
 #else
 #define GetCoreDataFromValue(obj, type, ptr) Data_Get_Struct(obj, type, ptr)
 #endif
-
+#if 1
+#define GetCoreDataFromValue(obj, type, ptr) do { \
+    ptr = (type*)DATA_PTR(obj); \
+} while (0)
+#else
+#define GetCoreDataFromValue(obj, type, ptr) Data_Get_Struct(obj, type, ptr)
+#endif
 #define GetISeqPtr(obj, ptr) \
   GetCoreDataFromValue(obj, rb_iseq_t, ptr)
 
+/* Opaque types (for now at least) */
 typedef struct iseq_catch_table_entry iseq_catch_table_entry_t;
 typedef struct node NODE;
 

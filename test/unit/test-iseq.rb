@@ -58,4 +58,22 @@ class TestISeq < Test::Unit::TestCase
     x.call(1,2)
     C.new(self, 5)
   end
+
+  def test_iseq_equal
+    tf = RubyVM::ThreadFrame.current
+    tf2 = RubyVM::ThreadFrame.current
+    while !tf.iseq do
+      tf = tf.prev
+      tf2 = tf2.prev
+    end
+    assert_equal(true,  tf.iseq.equal?(tf.iseq))
+    assert_equal(true,  tf.iseq.equal?(tf2.iseq))
+    tf2 = tf2.prev 
+    while !tf2.iseq do tf2 = tf2.prev end
+    assert_equal(false, tf.iseq.equal?(tf2.iseq))
+    assert_raises TypeError do
+      tf.iseq.equal?(tf)
+    end
+  end
+
 end

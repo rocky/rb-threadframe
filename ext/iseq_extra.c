@@ -20,6 +20,37 @@ iseq_arity(VALUE iseqval)
 
 /* 
  * call-seq:
+ *     RubyVM::InstructionSequence#equal?(iseq2) => bool
+ *
+ *  Returns true if the instruction sequences are equal.
+ */
+VALUE 
+iseq_equal(VALUE iseqval1, VALUE iseqval2)
+{
+    rb_iseq_t *iseq1, *iseq2;
+
+    if (!rb_obj_is_kind_of(iseqval2, rb_cISeq)) {
+	rb_raise(rb_eTypeError, 
+		 "comparison argument must be an instance of %s (is %s)",
+		 rb_obj_classname(iseqval1), rb_obj_classname(iseqval2));
+    }
+    
+    if (iseqval1 == iseqval2) return Qtrue;
+    GetISeqPtr(iseqval1, iseq1);
+    GetISeqPtr(iseqval2, iseq2);
+
+    /* FIXME: the count 24 below  is bogus. I think this should be the fields
+       from "type" to  "mark_ary". 
+     */
+    if (0 == memcmp(iseq1, iseq2, 28))
+	return Qtrue;
+    else
+	return Qfalse;
+}
+
+
+/* 
+ * call-seq:
  *     RubyVM::InstructionSequence#local_name(i) - String
  * 
  *  Returns the string name of local variable in i'th position
@@ -93,5 +124,8 @@ Init_iseq_extra(void)
     RB_DEFINE_ISEQ_METHOD(local_table_size, 0) ;
     RB_DEFINE_ISEQ_METHOD(orig, 0) ;
     RB_DEFINE_ISEQ_METHOD(self, 0) ;
+
+    rb_define_method(rb_cISeq, "equal?", iseq_equal, 1) ;
+
 }
 
