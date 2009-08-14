@@ -5,25 +5,20 @@ require 'rake/gempackagetask'
 require 'rake/rdoctask'
 require 'rake/testtask'
 
-SO_NAME = "thread_frame.so"
+SO_NAME = 'thread_frame.so'
 
 PACKAGE_VERSION = open("ext/thread_frame.c") do |f| 
   f.grep(/^#define THREADFRAME_VERSION/).first[/"(.+)"/,1]
 end
 
-EXT_FILES  = FileList['ext/*.c', 'ext/*.h']
-TEST_FILES = FileList['test/**/*.rb']
+EXT_FILES    = FileList[%w(ext/*.c ext/*.h)]
+TEST_FILES   = FileList['test/**/*.rb']
+COMMON_FILES = FileList[%w(README Rakefile)]
+ALL_FILES    = COMMON_FILES + TEST_FILES + EXT_FILES
 
-COMMON_FILES = FileList[
-  'README',
-  'Rakefile',
-]                        
-
-ALL_FILES = COMMON_FILES + TEST_FILES + EXT_FILES
-
-desc "Create the core ruby-debug shared library extension"
+desc 'Create the core thread-frame shared library extension'
 task :ext do
-  Dir.chdir("ext") do
+  Dir.chdir('ext') do
     system("#{Gem.ruby} extconf.rb && make")
   end
 end
@@ -31,7 +26,7 @@ end
 desc 'Remove built files'
 task :clean do
   cd 'ext' do
-    if File.exists?('Makefile')
+    if File.exist?('Makefile')
       sh 'make clean'
       rm  'Makefile'
     end

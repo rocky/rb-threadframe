@@ -56,7 +56,11 @@
 #define GetISeqPtr(obj, ptr) \
   GetCoreDataFromValue(obj, rb_iseq_t, ptr)
 
+<<<<<<< HEAD:ext/vm_core_mini.h
 /* Opaque types (for now at least) */
+=======
+/* Opaque types (for now) */
+>>>>>>> 05185f1fd1999c92ecef9cab96ddd2944a8ceb2b:ext/vm_core_mini.h
 typedef struct iseq_catch_table_entry iseq_catch_table_entry_t;
 typedef struct node NODE;
 
@@ -210,7 +214,7 @@ typedef struct rb_vm_struct {
     struct rb_thread_struct *main_thread;
     struct rb_thread_struct *running_thread;
 
-    st_table *living_threads;
+    struct st_table *living_threads;
     VALUE thgroup_default;
 
     int running;
