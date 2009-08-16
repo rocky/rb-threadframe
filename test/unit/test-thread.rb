@@ -17,8 +17,6 @@ class TestThread < Test::Unit::TestCase
     # pc_offset is dynamic - it changes constantly
     pc2 = tf.pc_offset 
     assert(pc2 > pc1, 'PC offset should have changed (for the greater)')
-    assert_equal( __LINE__, tf.source_location[0])
-    assert_equal(['file',  __FILE__], tf.source_container)
     assert_equal('test_fields', tf.method)
     assert_equal(self, tf.self)
     assert_equal(0, tf.arity)
@@ -27,9 +25,6 @@ class TestThread < Test::Unit::TestCase
     assert(tf_prev.pc_offset > 0, "Should be valid PC offset for prev")
   
     # Is this too specific to test/unit.rb implementation details? 
-    tup = tf_prev.source_container
-    tup[1] = File.basename(tup[1])
-    assert_equal(['file',  'unit.rb'], tup)
     assert_equal('run', tf_prev.method)
 
   # 1.times creates a C frame.

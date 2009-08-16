@@ -532,17 +532,25 @@ thread_frame_source_container(VALUE klass)
 static VALUE
 thread_frame_source_location(VALUE klass)
 {
+    rb_control_frame_t *cfp;
     THREAD_FRAME_SETUP ;
 
-    if (!tf->cfp->iseq) {
-	/* FIXME: try harder... */
-	return Qnil;
-    } 
-    /* NOTE: for now sourceline returns a single int. In the
-       future it might return an array of ints.
-     */
-
-    return rb_ary_new3(1, INT2FIX(rb_vm_get_sourceline(tf->cfp)));
+    /* For now, it appears like we have line numbers only when there
+       is an instruction sequence. The heuristic that is used by
+       vm_backtrace_each of vm.c seems to be to use the line number of
+       the closest control frame that has an instruction sequence.
+       FIXME: investigate whether this is always the most accurate location. If
+       not, improve.
+    */
+    for ( cfp = tf->cfp; cfp && !cfp->iseq; 
+	  cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp) ) ;
+    
+    return (cfp->iseq)
+	/* NOTE: for now sourceline returns a single int. In the
+	   future it might return an array of ints.
+	*/
+	? rb_ary_new3(1, INT2FIX(rb_vm_get_sourceline(cfp)))
+	: Qnil;
 }
 
 /*
