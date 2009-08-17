@@ -29,9 +29,10 @@ iseq_equal(VALUE iseqval1, VALUE iseqval2)
 {
     rb_iseq_t *iseq1, *iseq2;
 
+    if (Qnil == iseqval2) return Qfalse;
     if (!rb_obj_is_kind_of(iseqval2, rb_cISeq)) {
 	rb_raise(rb_eTypeError, 
-		 "comparison argument must be an instance of %s (is %s)",
+		 "comparison argument must be an instance of %s or nil (is %s)",
 		 rb_obj_classname(iseqval1), rb_obj_classname(iseqval2));
     }
     

@@ -66,6 +66,7 @@ class TestISeq < Test::Unit::TestCase
       tf = tf.prev
       tf2 = tf2.prev
     end
+    assert_equal(false,  tf.iseq.equal?(nil))
     assert_equal(true,  tf.iseq.equal?(tf.iseq))
     assert_equal(true,  tf.iseq.equal?(tf2.iseq))
     tf2 = tf2.prev 
