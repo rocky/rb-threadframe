@@ -1,5 +1,5 @@
 require 'test/unit'
-require_relative File.join(%w(.. .. ext thread_frame))
+require_relative %w(.. .. ext thread_frame)
 
 class TestISeq < Test::Unit::TestCase
 

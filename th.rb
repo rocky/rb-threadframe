@@ -1,4 +1,4 @@
-require_relative File.join('ext', 'thread_frame')
+require_relative %w(ext thread_frame)
 a = 5
 tf = RubyVM::ThreadFrame.new(Thread::current) # Same as RubyVM::ThreadFrame.current
 puts tf.source_location.inspect
