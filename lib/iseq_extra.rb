@@ -1,4 +1,4 @@
-require_relative File.join(%w(.. ext thread_frame))
+require_relative %w(.. ext thread_frame)
 class RubyVM::InstructionSequence
   def format_args
     if iseq
