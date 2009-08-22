@@ -79,5 +79,8 @@ class TestThread < Test::Unit::TestCase
       tf.equal?(tf.iseq)
     end
   end
-
 end
+
+# We want to double-check we didn't mess up any pointers somewhere along
+# the line.
+at_exit { GC.start  }
