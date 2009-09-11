@@ -125,7 +125,7 @@ thread_frame_##FIELD(VALUE klass)		\
     return tf->cfp->FIELD;			\
 }
 
-#ifdef NO_reg_pc
+#ifndef NO_reg_pc
 /*
  *  call-seq:
  *     Thread#pc_offset=
@@ -141,11 +141,14 @@ thread_frame_set_pc_offset(VALUE klass, VALUE offset_val)
     THREAD_FRAME_SETUP ;
     if (Qtrue == thread_frame_invalid_internal(tf))
 	rb_raise(rb_eThreadFrameError, "invalid frame");
-    if (!FIXNUM_P(offset_val))
-	return Qfalse;
-    offset = FIX2INT(offset_val);
-    if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
-	tf->cfp->pc = tf->cfp->iseq->iseq_encoded + offset;
+    else if (!FIXNUM_P(offset_val)) {
+	rb_raise(rb_eTypeError, "integer argument expected");
+    } else {
+        offset = FIX2INT(offset_val);
+	if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq) && 
+	    (tf->cfp->pc != 0 && tf->cfp->iseq != 0)) {
+            tf->cfp->pc = tf->cfp->iseq->iseq_encoded + offset;
+	}
     }
     return Qtrue;
 }
@@ -316,14 +319,17 @@ thread_frame_method(VALUE klass)
 static VALUE
 thread_frame_pc_offset(VALUE klass)
 {
-    int pc = -1;
+    unsigned long pc;
     THREAD_FRAME_SETUP ;
     if (Qtrue == thread_frame_invalid_internal(tf))
 	rb_raise(rb_eThreadFrameError, "invalid frame");
-    if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
+    if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq) && 
+	(tf->cfp->pc != 0 && tf->cfp->iseq != 0)) {
 	pc = tf->cfp->pc - tf->cfp->iseq->iseq_encoded;
+	return INT2FIX(pc);
+    } else {
+        return INT2FIX(-1);
     }
-    return INT2FIX(pc);
 }
 
 
@@ -689,7 +695,7 @@ Init_thread_frame(void)
     rb_define_method(rb_cThreadFrame, "equal?", 
 		     thread_frame_equal, 1);
 
-#ifdef NO_reg_pc
+#ifndef NO_reg_pc
     rb_define_method(rb_cThreadFrame, "pc_offset=", 
 		     thread_frame_set_pc_offset, 1);
 #endif

@@ -10,6 +10,19 @@ class TestThread < Test::Unit::TestCase
     assert_equal(Thread::current.threadframe.thread, Thread::current)
   end
 
+  def test_pc_offset
+    tf = RubyVM::ThreadFrame::current
+    offset_1 = tf.pc_offset
+    assert_equal(true, offset_1 > 0,
+                 "Expecting a positive integer pc offset, got %s" % offset_1)
+    offset_2 = tf.pc_offset
+    assert_equal(true, offset_2 > 0,
+                 "Expecting a positive integer pc offset, got %s" % offset_2)
+    assert_equal(true, offset_2 > offset_1,
+                 "Expecting second pc offset %s to be larger than the first %s" % 
+                 [offset_2, offset_1])
+  end
+
   def test_fields
     tf = RubyVM::ThreadFrame::current
     pc1 = tf.pc_offset

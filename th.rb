@@ -7,6 +7,16 @@ puts tf.source_container.inspect
 puts tf.iseq
 puts tf.arity
 puts tf.iseq.disasm
+first_time = true
+offset_1 = RubyVM::ThreadFrame.current.pc_offset
+puts "Current PC offset %d\n" % offset_1
+puts "Current PC offset is now %d\n" % RubyVM::ThreadFrame.current.pc_offset
+if first_time
+  puts "Trying again...."
+  first_time = false
+  RubyVM::ThreadFrame.current.pc_offset = offset_1 
+  puts "pc_offset did not take. Perhaps pc is saved in local variable/register?"
+end
 p tf, tf.prev, tf.self, tf.binding, eval('a', tf.binding), '-' * 10
 def foo(x)
   a = 6
