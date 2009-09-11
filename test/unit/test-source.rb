@@ -74,6 +74,9 @@ class TestSource < Test::Unit::TestCase
       assert_equal(expect_line, tf.source_location[0])
     end
     x.call(__LINE__)
-
   end
 end
+
+# We want to double-check we didn't mess up any pointers somewhere along
+# the line.
+at_exit { GC.start  }
