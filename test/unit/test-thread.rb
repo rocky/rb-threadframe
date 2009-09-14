@@ -23,6 +23,15 @@ class TestThread < Test::Unit::TestCase
                  [offset_2, offset_1])
   end
 
+  def test_cfunc_source_container
+    cfunc_filebase = 'cfunc-use'
+    load File.join(File.dirname(__FILE__), cfunc_filebase + '.rb')
+    type, loc = cfunc_loc
+    assert_equal(['CFUNC',  cfunc_filebase], [type, File.basename(loc, '.rb')],
+                 'CFUNCs should get their file location from frame.prev*')
+  end
+    
+
   def test_fields
     tf = RubyVM::ThreadFrame::current
     pc1 = tf.pc_offset
