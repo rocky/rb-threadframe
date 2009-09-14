@@ -505,16 +505,20 @@ thread_frame_source_container(VALUE klass)
 {
     VALUE file;
     const char *contain_type;
+    rb_control_frame_t *cfp;
 
     THREAD_FRAME_SETUP ;
 
-    if (!tf->cfp->iseq) {
+    for ( cfp = tf->cfp; cfp && !cfp->iseq && RUBYVM_CFUNC_FRAME_P(cfp); 
+	  cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp) ) ;
+
+    if (!cfp->iseq) {
 	if (tf->th->vm->progname) 
 	    file = tf->th->vm->progname;
 	else
 	    return Qnil;
     } else 
-	file = tf->cfp->iseq->filename;
+	file = cfp->iseq->filename;
 
     /* FIXME: Is this right? Do more? */
     if (VM_FRAME_MAGIC_EVAL == VM_FRAME_TYPE(tf->cfp) &&
@@ -548,7 +552,7 @@ thread_frame_source_location(VALUE klass)
        FIXME: investigate whether this is always the most accurate location. If
        not, improve.
     */
-    for ( cfp = tf->cfp; cfp && !cfp->iseq; 
+    for ( cfp = tf->cfp; cfp && !cfp->iseq && RUBYVM_CFUNC_FRAME_P(cfp); 
 	  cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp) ) ;
     
     return (cfp->iseq)
