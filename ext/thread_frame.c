@@ -520,9 +520,14 @@ thread_frame_source_container(VALUE klass)
     } else 
 	file = cfp->iseq->filename;
 
-    /* FIXME: Is this right? Do more? */
-    if (VM_FRAME_MAGIC_EVAL == VM_FRAME_TYPE(tf->cfp) &&
-	0 == strncmp(RSTRING_PTR(file), "(eval)", sizeof("(eval)")))
+    /* FIXME: Is this right? Do more?  Initially I had &&
+       VM_FRAME_MAGIC_EVAL. I think apparently the misinformation
+       regarding (eval) propagates back to other kinds of frames such
+       as VM_MAGIC_BLOCK and so on.
+     */
+    if (0 == strncmp(RSTRING_PTR(file), "(eval)", sizeof("(eval)"))
+	|| (VM_FRAME_MAGIC_EVAL == VM_FRAME_TYPE(tf->cfp))
+	)
 	contain_type = "string";
     else
 	contain_type = "file";

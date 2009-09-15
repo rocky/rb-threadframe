@@ -23,12 +23,16 @@ class TestThread < Test::Unit::TestCase
                  [offset_2, offset_1])
   end
 
-  def test_cfunc_source_container
+  def test_source_container
     cfunc_filebase = 'cfunc-use'
     load File.join(File.dirname(__FILE__), cfunc_filebase + '.rb')
     type, loc = cfunc_loc
     assert_equal(['CFUNC',  cfunc_filebase], [type, File.basename(loc, '.rb')],
                  'CFUNCs should get their file location from frame.prev*')
+    cont = 'file'
+    eval '1.times{cont = RubyVM::ThreadFrame.current.source_container[0]}'
+    assert_equal('string',  cont, 
+                 'source container[0] of an eval(...) should be "string"')
   end
     
 
