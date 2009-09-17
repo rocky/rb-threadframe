@@ -298,8 +298,10 @@ thread_frame_method(VALUE klass)
 	    return tf->cfp->iseq->name;
 	else
 	    return rb_str_new2("unknown");
-      case VM_FRAME_MAGIC_CFUNC:
-	return rb_str_new2(rb_id2name(tf->cfp->me->original_id));
+    case VM_FRAME_MAGIC_CFUNC: {
+          const char *method_name = rb_id2name(tf->cfp->me->original_id);
+	  return rb_str_new2((NULL == method_name) ? "" : method_name );
+        }
       default:
 	/* FIXME */
 	return thread_frame_type(klass);
