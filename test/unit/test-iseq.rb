@@ -66,7 +66,7 @@ class TestISeq < Test::Unit::TestCase
       tf = tf.prev
       tf2 = tf2.prev
     end
-    assert_equal(false,  tf.iseq.equal?(nil))
+    assert_equal(false, tf.iseq.equal?(nil))
     assert_equal(true,  tf.iseq.equal?(tf.iseq))
     assert_equal(true,  tf.iseq.equal?(tf2.iseq))
     tf2 = tf2.prev 
@@ -74,6 +74,20 @@ class TestISeq < Test::Unit::TestCase
     assert_equal(false, tf.iseq.equal?(tf2.iseq))
     assert_raises TypeError do
       tf.iseq.equal?(tf)
+    end
+  end
+
+  def test_offset2lines
+    start     = __LINE__ - 1
+    tf        = RubyVM::ThreadFrame::current
+    iseq      = tf.iseq
+    off2lines = iseq.offset2lines
+    pc        = tf.pc_offset
+    assert_equal(__LINE__, off2lines[pc][0]+1)
+    off2lines.values.each do |value|
+      assert(value[0] >= start, "#{value[0]} should be not less than starting line #{start}")
+      # Rough count of # of lines is less than 15
+      assert(value[0] < start + 15, "#{value[0]} should be less than starting line #{start}")
     end
   end
 

@@ -53,7 +53,7 @@ class TestThread < Test::Unit::TestCase
     # Is this too specific to test/unit.rb implementation details? 
     assert_equal('run', tf_prev.method)
 
-  # 1.times creates a C frame.
+    # 1.times creates a C frame.
     1.times do 
       tf = RubyVM::ThreadFrame::current
       tup = tf.source_container
@@ -63,7 +63,7 @@ class TestThread < Test::Unit::TestCase
       assert_equal('CFUNC', tf.prev.type)
       ## FIXME
       ## assert_equal('times', tf.prev.method) 
-    assert_equal(self, tf.self)
+      assert_equal(self, tf.self)
       ## assert_equal(0, tf.prev.arity, 'C arity should work nowadays' )
       assert_equal('test_fields', tf.prev.prev.method) 
       assert_equal(0, tf.arity)

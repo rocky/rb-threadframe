@@ -1,6 +1,12 @@
 #include "vm_core_mini.h"  /* Pulls in ruby.h */
 #include "ruby19_externs.h"
 
+struct iseq_insn_info_entry {
+    unsigned short position;
+    unsigned short line_no;
+    unsigned short sp;
+};
+
 /* 
  * call-seq:
  *     RubyVM::InstructionSequence#arity => Fixnum
@@ -74,6 +80,35 @@ iseq_local_name(VALUE iseqval, VALUE val)
     }
 }
 
+/* 
+ * call-seq:
+ *     RubyVM::InstructionSequence#offset2lines -> Hash[Fixnum] -> [Fixnum]
+ * 
+ * Returns an hash. The keys in the hash form the VM offsets of the
+ * instructions.  The value of the hash for a given offset is a list
+ * of line numbers associated with that offset.
+ */
+VALUE iseq_offset2lines(VALUE iseqval)
+{
+    rb_iseq_t *iseq;
+    VALUE offset2lines = rb_hash_new();
+    unsigned long i, size;
+    struct iseq_insn_info_entry *table;
+   
+    GetISeqPtr(iseqval, iseq);
+    
+    size = iseq->insn_info_size;
+    table = iseq->insn_info_table;
+
+    for (i = 0; i < size; i++) {
+	VALUE ary = rb_ary_new2(1);
+	rb_ary_push(ary, INT2FIX(table[i].line_no));
+	rb_hash_aset(offset2lines, INT2FIX(table[i].position), ary);
+    }
+    return offset2lines;
+}
+
+
 #define ISEQ_FIELD_METHOD(FIELD)		\
 static VALUE					\
 iseq_##FIELD(VALUE iseqval)			\
@@ -123,6 +158,7 @@ Init_iseq_extra(void)
     RB_DEFINE_ISEQ_METHOD(local_name, 1) ;
     RB_DEFINE_ISEQ_METHOD(local_size, 0) ;
     RB_DEFINE_ISEQ_METHOD(local_table_size, 0) ;
+    RB_DEFINE_ISEQ_METHOD(offset2lines, 0) ;
     RB_DEFINE_ISEQ_METHOD(orig, 0) ;
     RB_DEFINE_ISEQ_METHOD(self, 0) ;
 
