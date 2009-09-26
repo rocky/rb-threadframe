@@ -82,16 +82,16 @@ iseq_local_name(VALUE iseqval, VALUE val)
 
 /* 
  * call-seq:
- *     RubyVM::InstructionSequence#offset2lines -> Hash[Fixnum] -> [Fixnum]
+ *     RubyVM::InstructionSequence#offsetlines -> Hash[Fixnum] -> [Fixnum]
  * 
  * Returns an hash. The keys in the hash form the VM offsets of the
  * instructions.  The value of the hash for a given offset is a list
  * of line numbers associated with that offset.
  */
-VALUE iseq_offset2lines(VALUE iseqval)
+VALUE iseq_offsetlines(VALUE iseqval)
 {
     rb_iseq_t *iseq;
-    VALUE offset2lines = rb_hash_new();
+    VALUE offsetlines = rb_hash_new();
     unsigned long i, size;
     struct iseq_insn_info_entry *table;
    
@@ -103,9 +103,41 @@ VALUE iseq_offset2lines(VALUE iseqval)
     for (i = 0; i < size; i++) {
 	VALUE ary = rb_ary_new2(1);
 	rb_ary_push(ary, INT2FIX(table[i].line_no));
-	rb_hash_aset(offset2lines, INT2FIX(table[i].position), ary);
+	rb_hash_aset(offsetlines, INT2FIX(table[i].position), ary);
     }
-    return offset2lines;
+    return offsetlines;
+}
+
+/* 
+ * call-seq:
+ *     RubyVM::InstructionSequence#offset2lines(offset) -> [Fixnum]
+ * 
+ * Returns an Array or nil. If offset is found then return the list of
+ * lines associated with that offset. If the offset isn't found return nil.
+ */
+VALUE iseq_offset2lines(VALUE iseqval, VALUE offsetval)
+{
+    rb_iseq_t *iseq;
+   
+    GetISeqPtr(iseqval, iseq);
+    
+    if (FIXNUM_P(offsetval)) {
+	unsigned long i, size;
+	int offset = FIX2INT(offsetval);
+	struct iseq_insn_info_entry *table;
+
+	size = iseq->insn_info_size;
+	table = iseq->insn_info_table;
+
+	for (i = 0; i < size; i++) {
+	    if (table[i].position == offset) {
+		VALUE ary = rb_ary_new2(1);
+		rb_ary_push(ary, INT2FIX(table[i].line_no));
+		return ary;
+	    }
+	}
+    }
+    return Qnil;
 }
 
 
@@ -158,7 +190,8 @@ Init_iseq_extra(void)
     RB_DEFINE_ISEQ_METHOD(local_name, 1) ;
     RB_DEFINE_ISEQ_METHOD(local_size, 0) ;
     RB_DEFINE_ISEQ_METHOD(local_table_size, 0) ;
-    RB_DEFINE_ISEQ_METHOD(offset2lines, 0) ;
+    RB_DEFINE_ISEQ_METHOD(offset2lines, 1) ;
+    RB_DEFINE_ISEQ_METHOD(offsetlines, 0) ;
     RB_DEFINE_ISEQ_METHOD(orig, 0) ;
     RB_DEFINE_ISEQ_METHOD(self, 0) ;
 

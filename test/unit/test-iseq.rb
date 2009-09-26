@@ -77,17 +77,20 @@ class TestISeq < Test::Unit::TestCase
     end
   end
 
-  def test_offset2lines
+  def test_offsetlines
     start     = __LINE__ - 1
     tf        = RubyVM::ThreadFrame::current
     iseq      = tf.iseq
-    off2lines = iseq.offset2lines
+    offlines  = iseq.offsetlines
     pc        = tf.pc_offset
-    assert_equal(__LINE__, off2lines[pc][0]+1)
-    off2lines.values.each do |value|
+    assert_equal(__LINE__, offlines[pc][0]+1)
+    offlines.values.each do |value|
       assert(value[0] >= start, "#{value[0]} should be not less than starting line #{start}")
-      # Rough count of # of lines is less than 15
-      assert(value[0] < start + 15, "#{value[0]} should be less than starting line #{start}")
+      # Rough count of # of lines is less than 20
+      assert(value[0] < start + 20, "#{value[0]} should be less than starting line #{start}")
+    end
+    offlines.keys.each do |offset|
+      assert_equal offlines[offset][0], iseq.offset2lines(offset)[0]
     end
   end
 
