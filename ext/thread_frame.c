@@ -514,13 +514,13 @@ thread_frame_source_container(VALUE klass)
     for ( cfp = tf->cfp; cfp && !cfp->iseq && RUBYVM_CFUNC_FRAME_P(cfp); 
 	  cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp) ) ;
 
-    if (!cfp->iseq) {
-	if (tf->th->vm->progname) 
-	    file = tf->th->vm->progname;
-	else
-	    return Qnil;
-    } else 
-	file = cfp->iseq->filename;
+    if (cfp->iseq) 
+	return iseq_source_container_internal(cfp->iseq);
+	
+    if (tf->th->vm->progname) 
+	file = tf->th->vm->progname;
+    else
+	return Qnil;
 
     /* FIXME: Is this right? Do more?  Initially I had &&
        VM_FRAME_MAGIC_EVAL. I think apparently the misinformation

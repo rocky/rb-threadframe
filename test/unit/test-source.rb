@@ -6,6 +6,16 @@ require_relative %w(.. .. ext thread_frame)
 # Test source_location and source_container.
 class TestSource < Test::Unit::TestCase
 
+  def test_iseq_source_container
+    test_basic_lineno = __LINE__ - 1
+    tup = method(:test_iseq_source_container).iseq.source_container
+    assert_equal(['file',  File.basename(__FILE__)], tup)
+
+    eval('def foo; 5 end')
+    tup = method(:foo).iseq.source_container    
+    assert_equal('string',  tup[0])
+  end
+
   def test_basic
     tf = RubyVM::ThreadFrame::current
     # Is this too specific to test/unit.rb implementation details? 

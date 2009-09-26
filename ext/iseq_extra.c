@@ -1,5 +1,6 @@
 #include "vm_core_mini.h"  /* Pulls in ruby.h */
 #include "ruby19_externs.h"
+#include <string.h>       /* For strlen() */
 
 struct iseq_insn_info_entry {
     unsigned short position;
@@ -141,6 +142,45 @@ VALUE iseq_offset2lines(VALUE iseqval, VALUE offsetval)
 }
 
 
+VALUE
+iseq_source_container_internal(rb_iseq_t *iseq)
+{
+    VALUE fileval = iseq->filename;
+    const char *file = RSTRING_PTR(fileval);
+    const char *contain_type;
+    size_t len = strlen(file);
+    
+    /* FIXME: Looking for (...) is a hack that I would love to know how
+       to remove. Probably Ruby has to be changed to record this kind
+       of information.
+     */
+    if (len > 0 && file[0] == '(' && file[len-1] == ')')
+	contain_type = "string";
+    else
+	contain_type = "file";
+    return rb_ary_new3(2, rb_str_new2(contain_type), fileval);
+}
+
+/*
+ * call-seq:
+ *    RubyVM::InstructionSequence#source_container() -> [Type, String]
+ *
+ * Returns a tuple representing kind of container, e.g. file
+ * eval'd string object, and the name of the container. If file,
+ * it would be a file name. If an eval'd string it might be the string.
+ */
+static VALUE
+iseq_source_container(VALUE iseqval)
+{
+    rb_iseq_t *iseq;
+   
+    if (Qnil == iseqval) return Qnil;
+    GetISeqPtr(iseqval, iseq);
+    return iseq_source_container_internal(iseq);
+}
+
+
+
 #define ISEQ_FIELD_METHOD(FIELD)		\
 static VALUE					\
 iseq_##FIELD(VALUE iseqval)			\
@@ -194,6 +234,7 @@ Init_iseq_extra(void)
     RB_DEFINE_ISEQ_METHOD(offsetlines, 0) ;
     RB_DEFINE_ISEQ_METHOD(orig, 0) ;
     RB_DEFINE_ISEQ_METHOD(self, 0) ;
+    RB_DEFINE_ISEQ_METHOD(source_container, 0) ;
 
     rb_define_method(rb_cISeq, "equal?", iseq_equal, 1) ;
 
