@@ -404,7 +404,7 @@ thread_frame_prev_internal(rb_control_frame_t *prev_cfp, rb_thread_t *th,
 {
   thread_frame_t *tf;
   VALUE prev;
-  rb_control_frame_t *cfp;
+  rb_control_frame_t *cfp = NULL;
 
   for (; n > 0; n--) {
     cfp = prev_cfp;
@@ -425,6 +425,8 @@ thread_frame_prev_internal(rb_control_frame_t *prev_cfp, rb_thread_t *th,
   if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
     memcpy(tf->signature1, &(tf->cfp->iseq), sizeof(tf->signature1)); 
     memcpy(tf->signature2, &(tf->cfp->proc), sizeof(tf->signature2));
+  } else if (!cfp) {
+    return Qnil;
   } else if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
     /* FIXME: This probabably not complete*/
     memcpy(tf->signature1, &(cfp->iseq), sizeof(tf->signature1)); 
