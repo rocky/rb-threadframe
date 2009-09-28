@@ -9,6 +9,7 @@ class TestSource < Test::Unit::TestCase
   def test_iseq_source_container
     test_basic_lineno = __LINE__ - 1
     tup = method(:test_iseq_source_container).iseq.source_container
+    tup[1] = File.basename(tup[1])
     assert_equal(['file',  File.basename(__FILE__)], tup)
 
     eval('def foo; 5 end')
