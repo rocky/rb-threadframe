@@ -171,7 +171,7 @@ thread_frame_arity(VALUE klass)
     if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
 	return iseq_arity(thread_frame_iseq(klass));
     } else if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
-	return INT2FIX(tf->cfp->me->body.cfunc.argc);
+	return INT2FIX(tf->cfp->me->def->body.cfunc.argc);
     } else
 	return Qnil;
 }
@@ -299,7 +299,7 @@ thread_frame_method(VALUE klass)
 	else
 	    return rb_str_new2("unknown");
     case VM_FRAME_MAGIC_CFUNC: {
-          const char *method_name = rb_id2name(tf->cfp->me->original_id);
+          const char *method_name = rb_id2name(tf->cfp->me->def->original_id);
 	  return rb_str_new2((NULL == method_name) ? "" : method_name );
         }
       default:

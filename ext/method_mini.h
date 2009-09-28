@@ -32,25 +32,26 @@ typedef struct rb_method_cfunc_struct {
     int argc;
 } rb_method_cfunc_t;
 
-typedef struct rb_method_entry_struct {
-    rb_method_flag_t flag;
+typedef struct rb_method_definition_struct {
     rb_method_type_t type; /* method type */
-    ID called_id;
     ID original_id;
-    VALUE klass;                    /* should be mark. This 
-				     field is guaranteed to set to the method
-				     caller only when the method type 
-				     is is CFUNC. */
     union {
 	rb_iseq_t *iseq;            /* should be mark */
 	rb_method_cfunc_t cfunc;
 	ID attr_id;
-	VALUE proc;
+	VALUE proc;                 /* should be mark */
 	enum method_optimized_type {
 	    OPTIMIZED_METHOD_TYPE_SEND,
 	    OPTIMIZED_METHOD_TYPE_CALL
 	} optimize_type;
     } body;
     int alias_count;
+} rb_method_definition_t;
+
+typedef struct rb_method_entry_struct {
+    rb_method_flag_t flag;
+    rb_method_definition_t *def;
+    rb_method_type_t type; /* method type */
+    ID called_id;
 } rb_method_entry_t;
 
