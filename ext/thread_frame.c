@@ -129,7 +129,7 @@ thread_frame_##FIELD(VALUE klass)		\
 static VALUE
 thread_frame_lfp(VALUE klass, VALUE index)
 {
-    if (!FIXNUM_P(offset_val)) {
+    if (!FIXNUM_P(index)) {
 	rb_raise(rb_eTypeError, "integer argument expected");
     } else {
 	long int i = FIX2INT(index);
@@ -142,7 +142,7 @@ thread_frame_lfp(VALUE klass, VALUE index)
 static VALUE
 thread_frame_sp(VALUE klass, VALUE index)
 {
-    if (!FIXNUM_P(offset_val)) {
+    if (!FIXNUM_P(index)) {
 	rb_raise(rb_eTypeError, "integer argument expected");
     } else {
 	long int i = FIX2INT(index);
