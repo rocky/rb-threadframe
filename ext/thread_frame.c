@@ -125,6 +125,35 @@ thread_frame_##FIELD(VALUE klass)		\
     return tf->cfp->FIELD;			\
 }
 
+#if 1  /* ? */
+static VALUE
+thread_frame_lfp(VALUE klass, VALUE index)
+{
+    if (!FIXNUM_P(offset_val)) {
+	rb_raise(rb_eTypeError, "integer argument expected");
+    } else {
+	long int i = FIX2INT(index);
+	THREAD_FRAME_SETUP ;
+	/* FIXME: check index is within range. */
+	return tf->cfp->lfp[i];
+    }
+}
+
+static VALUE
+thread_frame_sp(VALUE klass, VALUE index)
+{
+    if (!FIXNUM_P(offset_val)) {
+	rb_raise(rb_eTypeError, "integer argument expected");
+    } else {
+	long int i = FIX2INT(index);
+	THREAD_FRAME_SETUP ;
+	/* FIXME: check index is within range. */
+	return tf->cfp->sp[i];
+    }
+}
+#endif
+
+
 #ifndef NO_reg_pc
 /*
  *  call-seq:
@@ -354,6 +383,25 @@ thread_frame_iseq(VALUE klass)
     rb_iseq = iseq_alloc_shared(rb_cISeq);
     RDATA(rb_iseq)->data = iseq;
     return rb_iseq;
+}
+
+static VALUE
+thread_frame_next(VALUE klass)
+{
+    rb_control_frame_t *cfp = NULL;
+    THREAD_FRAME_SETUP ;
+    cfp = RUBY_VM_NEXT_CONTROL_FRAME(tf->cfp);
+    if ((void *)(cfp) <= (void *)(tf->th->stack))
+        return Qnil;
+    else {
+        thread_frame_t *next_tf;
+        VALUE prev = thread_frame_alloc(rb_cThreadFrame);
+	thread_frame_t_alloc(prev);
+	Data_Get_Struct(prev, thread_frame_t, next_tf);
+	next_tf->th  = tf->th;
+	next_tf->cfp = cfp;
+	return prev;
+    }
 }
 
 /*
@@ -682,19 +730,25 @@ Init_thread_frame(void)
 					    rb_cObject);
     rb_define_method(rb_cThread, "threadframe", thread_frame_threadframe, 0);
 
-    /* Thread:Frame */
+    /* Thread::Frame */
     rb_define_const(rb_cThreadFrame, "VERSION", 
 		    rb_str_new2(THREADFRAME_VERSION));
     rb_define_alloc_func(rb_cThreadFrame, thread_frame_alloc);
 
     rb_define_method(rb_cThreadFrame, "invalid?", thread_frame_invalid, 0);
 
+    /* RubyVM::ThreadFrame */
     RB_DEFINE_FRAME_METHOD(arity, 0);
     RB_DEFINE_FRAME_METHOD(binding, 0);
     RB_DEFINE_FRAME_METHOD(flag, 0);
     RB_DEFINE_FRAME_METHOD(iseq, 0);
     RB_DEFINE_FRAME_METHOD(initialize, 1);
+#if 1  /* ? */
+    RB_DEFINE_FRAME_METHOD(lfp, 1);
+    RB_DEFINE_FRAME_METHOD(sp, 1);
+#endif
     RB_DEFINE_FRAME_METHOD(method, 0);
+    RB_DEFINE_FRAME_METHOD(next, 0);
     RB_DEFINE_FRAME_METHOD(pc_offset, 0);
     RB_DEFINE_FRAME_METHOD(prev, -1);
     RB_DEFINE_FRAME_METHOD(proc, 0);

@@ -1,6 +1,13 @@
 #include "vm_core_mini.h"  /* Pulls in ruby.h */
 #include "ruby19_externs.h"
 
+struct METHOD {
+    VALUE recv;
+    VALUE rclass;
+    ID id;
+    rb_method_entry_t me;
+};
+
 /* 
    Proc#iseq - access instruction sequence of a Proc object.
  */
@@ -42,9 +49,21 @@ method_iseq(VALUE self)
 }
 
 
+/* 
+   Method#alias_count - number of aliases a method has
+ */
+VALUE
+method_alias_count(VALUE self)
+{
+  struct METHOD *m1 = (struct METHOD *)DATA_PTR(self);
+  return FIX2INT(m1->me.def->alias_count);
+}
+
+
 void
 Init_proc_extra(void)
 {
     rb_define_method(rb_cProc, "iseq",  proc_iseq, 0);
     rb_define_method(rb_cMethod, "iseq",  method_iseq, 0);
+    rb_define_method(rb_cMethod, "alias_count",  method_alias_count, 0);
 }
