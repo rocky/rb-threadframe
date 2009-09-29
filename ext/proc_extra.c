@@ -1,3 +1,7 @@
+/* 
+ *  Additions to Proc and Method classes.
+ */
+
 #include "vm_core_mini.h"  /* Pulls in ruby.h */
 #include "ruby19_externs.h"
 

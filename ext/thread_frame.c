@@ -99,7 +99,7 @@ thread_frame_invalid_internal(thread_frame_t *tf)
 
 /*
  *  call-seq:
- *     Thread#threadframe  => thread_frame_object
+ *     Thread#threadframe  -> thread_frame_object
  * 
  *  Returns a RubyVM::ThreadFrame object for the given thread.
  */
@@ -161,7 +161,7 @@ thread_frame_sp(VALUE klass, VALUE index)
  * 
  * Sets pc to the offset given. 
  * WARNING, this is pretty dangerous. You need to set this to a valid
- # instruction offset since little checking is done.
+ * instruction offset since little checking is done.
  */
 static VALUE
 thread_frame_set_pc_offset(VALUE klass, VALUE offset_val)
@@ -187,7 +187,7 @@ THREAD_FRAME_FIELD_METHOD(flag) ;
 
 /*
  *  call-seq:
- *     RubyVM::ThreadFrame#arity => Fixnum
+ *     RubyVM::ThreadFrame#arity -> Fixnum
  *
  *  Returns the number of arguments that would not be ignored.
  *  See Ruby 1.9 proc_arity of proc.c
@@ -207,7 +207,7 @@ thread_frame_arity(VALUE klass)
 
 /*
  *  call-seq:
- *     RubyVM::ThreadFrame#binding   => binding
+ *     RubyVM::ThreadFrame#binding   -> binding
  *
  *  Returns a binding for a given thread frame.
  */
@@ -225,7 +225,7 @@ thread_frame_binding(VALUE klass)
 
 /*
  *  call-seq:
- *     RubyVM::ThreadFrame#equal(tf)   => bool
+ *     RubyVM::ThreadFrame#equal(tf)   -> bool
  *
  *  Returns true if two thread frames are equal.
  */
@@ -261,7 +261,7 @@ thread_frame_equal(VALUE klass, VALUE tfval2)
 
 /*
  *  call-seq:
- *     RubyVM::ThreadFrame.new(thread)          => thread_frame_object
+ *     RubyVM::ThreadFrame.new(thread)          -> thread_frame_object
  *
  *  Returns an RubyVM::ThreadFrame object which can contains dynamic frame
  *  information. Don't use this directly. Instead use one of the 
@@ -305,7 +305,7 @@ thread_frame_invalid(VALUE klass)
 
 /*
  *  call-seq:
- *     Thread#method  => String
+ *     Thread#method  -> String
  * 
  * Returns the method associated with the frame or nil of none.
  * ThreadFrameError can be raised if the threadframe
@@ -341,7 +341,7 @@ thread_frame_method(VALUE klass)
 
 /*
  *  call-seq:
- *     Thread#pc_offset  => Fixnum
+ *     Thread#pc_offset  -> Fixnum
  * 
  * Returns the offset inside the iseq or "program-counter offset" or -1
  * If invalid/unstarted. ThreadFrameError can be raised if the threadframe
@@ -366,7 +366,7 @@ thread_frame_pc_offset(VALUE klass)
 
 /*
  *  call-seq:
- *     RubyVM::ThreadFrame#iseq           => ISeq
+ *     ThreadFrame#iseq           -> ISeq
  *
  *  Returns an instruction sequence object from the instruction sequence
  *  found inside the ThreadFrame object or nil if there is none.
@@ -406,15 +406,14 @@ thread_frame_next(VALUE klass)
 
 /*
  *  call-seq:
- *     RubyVM::ThreadFrame#prev(n)        => thread_frame_object
- *     RubyVM::ThreadFrame#prev           => thread_frame_object
+ *     RubyVM::ThreadFrame#prev(n=1) -> thread_frame_object
  *
  *  Returns a RubyVM::ThreadFrame object for the frame prior to the
- *  ThreadFrame object or nil if there is none. The default value for n is
- *  1. 0 just returns the object passed.
- *  A negative starts from the end. So prev(-1) is the top frame.
- *  Counts outside of the range -stack_size .. stack_size-1 exceed the
- *  the range of the stack and return nil.
+ *  ThreadFrame object or +nil+ if there is none. Setting n=0 just
+ *  returns the object passed.  A negative starts from the end. So
+ *  prev(-1) is the top frame.  Counts outside of the range
+ *  -stack_size .. stack_size-1 exceed the the range of the stack and
+ *  return nil.
  *
  */
 static VALUE
@@ -488,7 +487,7 @@ THREAD_FRAME_FIELD_METHOD(self) ;
 
 /*
  *  call-seq:
- *     RubyVM::ThreadFrame::current  => thread_frame_object
+ *     RubyVM::ThreadFrame::current  -> thread_frame_object
  * 
  *  Returns a ThreadFrame object for the currently executing thread.
  *  Same as: RubyVM::ThreadFrame.new(Thread::current)
@@ -503,8 +502,8 @@ thread_frame_s_current(VALUE klass)
 
 /*
  *  call-seq:
- *     RubyVM::ThreadFrame#prev(thread)     => threadframe_object
- *     RubyVM::ThreadFrame#prev(thread, n)   => threadframe_object
+ *     RubyVM::ThreadFrame#prev(thread)     -> threadframe_object
+ *     RubyVM::ThreadFrame#prev(thread, n)   -> threadframe_object
  *
  *  Returns a RubyVM::ThreadFrame for the frame prior to the
  *  Thread object passed or nil if there is none. The default value for n
@@ -590,7 +589,7 @@ thread_frame_source_container(VALUE klass)
  * call-seq:
  *    RubyVM::ThreadFrame#source_location() -> Array 
  *
- *  Returns an array of source location positions that match
+ * Returns an array of source location positions that match
  * +tf.instruction_offset+. A source location position is left
  * implementation dependent. It could be line number, a line number
  * and start and end column, or a start line number, start column, end
@@ -622,7 +621,7 @@ thread_frame_source_location(VALUE klass)
 
 /*
  *  call-seq:
- *     ThreadFrame#stack_size  => Fixnum;
+ *     RubyVM::ThreadFrame#stack_size  -> Fixnum;
  *
  *  Returns a count of the number of frames including the current one. 
  *  ThreadFrame#prev(ThreadFrame#stack_size) = nil
@@ -659,7 +658,7 @@ thread_frame_stack_size_internal(rb_control_frame_t *cfp, rb_thread_t *th)
 
 /*
  *  call-seq:
- *     RubyVM::ThreadFrame#thread   => thread
+ *     RubyVM::ThreadFrame#thread   -> thread
  *
  *  Returns the thread object for the thread frame.
  */
@@ -707,7 +706,7 @@ frame_magic2str(rb_control_frame_t *cfp)
 
 /*
  *  call-seq:
- *     Thread#type  => String 
+ *     Thread#type  -> String 
  * 
  * Returns the kind of frame. Basically interprets VM_FRAME_MAGIC for
  * tf->cfp->flag
@@ -719,6 +718,7 @@ thread_frame_type(VALUE klass)
     return rb_str_new2(frame_magic2str(tf->cfp));
 }
 
+/* Using this cause RDoc not to pick up method definitions. */
 #define RB_DEFINE_FRAME_METHOD(FIELD, ARGC)					\
     rb_define_method(rb_cThreadFrame, #FIELD, thread_frame_##FIELD, ARGC);
 
@@ -738,26 +738,29 @@ Init_thread_frame(void)
     rb_define_method(rb_cThreadFrame, "invalid?", thread_frame_invalid, 0);
 
     /* RubyVM::ThreadFrame */
-    RB_DEFINE_FRAME_METHOD(arity, 0);
-    RB_DEFINE_FRAME_METHOD(binding, 0);
-    RB_DEFINE_FRAME_METHOD(flag, 0);
-    RB_DEFINE_FRAME_METHOD(iseq, 0);
+    rb_define_method(rb_cThreadFrame, "arity", thread_frame_arity, 0);
+    rb_define_method(rb_cThreadFrame, "binding", thread_frame_binding, 0);
+    rb_define_method(rb_cThreadFrame, "flag", thread_frame_flag, 0);
+    rb_define_method(rb_cThreadFrame, "iseq", thread_frame_iseq, 0);
     RB_DEFINE_FRAME_METHOD(initialize, 1);
 #if 1  /* ? */
     RB_DEFINE_FRAME_METHOD(lfp, 1);
     RB_DEFINE_FRAME_METHOD(sp, 1);
 #endif
-    RB_DEFINE_FRAME_METHOD(method, 0);
-    RB_DEFINE_FRAME_METHOD(next, 0);
-    RB_DEFINE_FRAME_METHOD(pc_offset, 0);
-    RB_DEFINE_FRAME_METHOD(prev, -1);
-    RB_DEFINE_FRAME_METHOD(proc, 0);
-    RB_DEFINE_FRAME_METHOD(self, 0);
-    RB_DEFINE_FRAME_METHOD(source_container, 0);
-    RB_DEFINE_FRAME_METHOD(source_location, 0);
-    RB_DEFINE_FRAME_METHOD(stack_size, 0);
-    RB_DEFINE_FRAME_METHOD(thread, 0);
-    RB_DEFINE_FRAME_METHOD(type, 0);
+    rb_define_method(rb_cThreadFrame, "method", thread_frame_method, 0);
+    rb_define_method(rb_cThreadFrame, "next", thread_frame_next, 0);
+    rb_define_method(rb_cThreadFrame, "pc_offset", thread_frame_pc_offset, 0);
+    rb_define_method(rb_cThreadFrame, "prev", thread_frame_prev, -1);
+    rb_define_method(rb_cThreadFrame, "proc", thread_frame_proc, 0);
+    rb_define_method(rb_cThreadFrame, "self", thread_frame_self, 0);
+    rb_define_method(rb_cThreadFrame, "source_container", 
+		     thread_frame_source_container, 0);
+    rb_define_method(rb_cThreadFrame, "source_location", 
+		     thread_frame_source_location, 0);
+    rb_define_method(rb_cThreadFrame, "stack_size", 
+		     thread_frame_stack_size, 0);
+    rb_define_method(rb_cThreadFrame, "thread", thread_frame_thread, 0);
+    rb_define_method(rb_cThreadFrame, "type", thread_frame_type, 0);
 
     rb_define_method(rb_cThreadFrame, "equal?", 
 		     thread_frame_equal, 1);

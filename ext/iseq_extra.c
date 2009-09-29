@@ -1,3 +1,10 @@
+#if 0  // The following is to fake out rdoc, until I find a better fix.
+/* 
+ *  Additions to the RubyVM::InstructionSequence class
+ */
+VALUE rb_cIseq = rb_define_class_under(rb_cRubyVM, "InstructionSequence", ...)
+#endif
+
 #include "vm_core_mini.h"  /* Pulls in ruby.h */
 #include "ruby19_externs.h"
 #include <string.h>       /* For strlen() */
@@ -8,10 +15,12 @@ struct iseq_insn_info_entry {
     unsigned short sp;
 };
 
+
 /* 
+ * Document-method: RubyVM::InstructionSequence::arity?
+ *
  * call-seq:
- *     RubyVM::InstructionSequence#arity => Fixnum
- *  sequence or nil is we can't get one.
+ *     RubyVM::InstructionSequence#arity -> Fixnum
  *
  *  Returns the number of arguments that would not be ignored.
  *  See Ruby 1.9 proc_arity of proc.c
@@ -26,8 +35,10 @@ iseq_arity(VALUE iseqval)
 }
 
 /* 
+ * Document-method: RubyVM::InstructionSequence::equal?
+ * 
  * call-seq:
- *     RubyVM::InstructionSequence#equal?(iseq2) => bool
+ *     RubyVM::InstructionSequence#equal?(iseq2) -> bool
  *
  *  Returns true if the instruction sequences are equal.
  */
@@ -239,4 +250,3 @@ Init_iseq_extra(void)
     rb_define_method(rb_cISeq, "equal?", iseq_equal, 1) ;
 
 }
-
