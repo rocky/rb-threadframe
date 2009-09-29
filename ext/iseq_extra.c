@@ -1,4 +1,4 @@
-#if 0  // The following is to fake out rdoc, until I find a better fix.
+#if 0  /* The following is to fake out rdoc, until I find a better fix. */
 /* 
  *  Additions to the RubyVM::InstructionSequence class
  */
@@ -224,29 +224,28 @@ ISEQ_INT_FIELD_METHOD(local_size) ;
 ISEQ_INT_FIELD_METHOD(local_table_size) ;
 
 
+/* RDoc can't find methods when we use a definition like this: */
 #define RB_DEFINE_ISEQ_METHOD(FIELD, ARGC) \
     rb_define_method(rb_cISeq, #FIELD, iseq_##FIELD, ARGC);
 
 void
 Init_iseq_extra(void)
 {
-    RB_DEFINE_ISEQ_METHOD(arity, 0);
-    RB_DEFINE_ISEQ_METHOD(arg_block, 0) ;
-    RB_DEFINE_ISEQ_METHOD(arg_opts, 0) ;
-    RB_DEFINE_ISEQ_METHOD(arg_post_len, 0) ;
-    RB_DEFINE_ISEQ_METHOD(arg_rest, 0) ;
-    RB_DEFINE_ISEQ_METHOD(arg_simple, 0) ;
-    RB_DEFINE_ISEQ_METHOD(argc, 0) ;
-    RB_DEFINE_ISEQ_METHOD(klass, 0) ;
-    RB_DEFINE_ISEQ_METHOD(local_name, 1) ;
-    RB_DEFINE_ISEQ_METHOD(local_size, 0) ;
-    RB_DEFINE_ISEQ_METHOD(local_table_size, 0) ;
-    RB_DEFINE_ISEQ_METHOD(offset2lines, 1) ;
-    RB_DEFINE_ISEQ_METHOD(offsetlines, 0) ;
-    RB_DEFINE_ISEQ_METHOD(orig, 0) ;
-    RB_DEFINE_ISEQ_METHOD(self, 0) ;
-    RB_DEFINE_ISEQ_METHOD(source_container, 0) ;
-
-    rb_define_method(rb_cISeq, "equal?", iseq_equal, 1) ;
-
+    rb_define_method(rb_cISeq, "arity",            iseq_arity, 0);
+    rb_define_method(rb_cISeq, "arg_block",        iseq_arg_block, 0) ;
+    rb_define_method(rb_cISeq, "arg_opts",         iseq_arg_opts, 0) ;
+    rb_define_method(rb_cISeq, "arg_post_len",     iseq_arg_post_len, 0) ;
+    rb_define_method(rb_cISeq, "arg_arg_rest",     iseq_arg_rest, 0) ;
+    rb_define_method(rb_cISeq, "arg_simple",       iseq_arg_simple, 0) ;
+    rb_define_method(rb_cISeq, "argc",             iseq_argc, 0) ;
+    rb_define_method(rb_cISeq, "equal?",           iseq_equal, 1) ;
+    rb_define_method(rb_cISeq, "klass",            iseq_klass, 0) ;
+    rb_define_method(rb_cISeq, "local_name",       iseq_local_name, 1) ;
+    rb_define_method(rb_cISeq, "local_size",       iseq_local_size, 0) ;
+    rb_define_method(rb_cISeq, "local_table_size", iseq_local_table_size, 0) ;
+    rb_define_method(rb_cISeq, "offset2lines",     iseq_offset2lines, 1) ;
+    rb_define_method(rb_cISeq, "offsetlines",      iseq_offsetlines, 0) ;
+    rb_define_method(rb_cISeq, "orig",             iseq_orig, 0) ;
+    rb_define_method(rb_cISeq, "self",             iseq_self, 0) ;
+    rb_define_method(rb_cISeq, "source_container", iseq_source_container, 0) ;
 }

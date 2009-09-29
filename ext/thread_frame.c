@@ -126,6 +126,13 @@ thread_frame_##FIELD(VALUE klass)		\
 }
 
 #if 1  /* ? */
+/*
+ *  call-seq:
+ *     Thread#lfp(n)  -> object
+ * 
+ * Returns a RubyVM object stored at lfp position <i>i</i>. The top object
+ * is position 1. 
+ */
 static VALUE
 thread_frame_lfp(VALUE klass, VALUE index)
 {
@@ -135,10 +142,17 @@ thread_frame_lfp(VALUE klass, VALUE index)
 	long int i = FIX2INT(index);
 	THREAD_FRAME_SETUP ;
 	/* FIXME: check index is within range. */
-	return tf->cfp->lfp[i];
+	return tf->cfp->lfp[-i]; /* stack  grows "down" */
     }
 }
 
+/*
+ *  call-seq:
+ *     Thread#lfp(n)  -> object
+ * 
+ * Returns a RubyVM object stored at stack position <i>i</i>. The top object
+ * is position 1. 
+ */
 static VALUE
 thread_frame_sp(VALUE klass, VALUE index)
 {
@@ -148,7 +162,7 @@ thread_frame_sp(VALUE klass, VALUE index)
 	long int i = FIX2INT(index);
 	THREAD_FRAME_SETUP ;
 	/* FIXME: check index is within range. */
-	return tf->cfp->sp[i];
+	return tf->cfp->sp[-i]; /* stack  grows "down" */
     }
 }
 #endif
