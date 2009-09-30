@@ -63,6 +63,16 @@ method_alias_count(VALUE self)
   return INT2FIX(m1->me.def->alias_count);
 }
 
+/* 
+   Method#original_id - Original name of method
+ */
+VALUE
+method_original_id(VALUE self)
+{
+  struct METHOD *m1 = (struct METHOD *)DATA_PTR(self);
+  return ID2SYM(m1->me.def->original_id);
+}
+
 
 void
 Init_proc_extra(void)
@@ -70,4 +80,5 @@ Init_proc_extra(void)
     rb_define_method(rb_cProc, "iseq",  proc_iseq, 0);
     rb_define_method(rb_cMethod, "iseq",  method_iseq, 0);
     rb_define_method(rb_cMethod, "alias_count",  method_alias_count, 0);
+    rb_define_method(rb_cMethod, "original_id",  method_original_id, 0);
 }
