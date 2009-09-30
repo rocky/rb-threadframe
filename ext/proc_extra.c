@@ -60,7 +60,7 @@ VALUE
 method_alias_count(VALUE self)
 {
   struct METHOD *m1 = (struct METHOD *)DATA_PTR(self);
-  return FIX2INT(m1->me.def->alias_count);
+  return INT2FIX(m1->me.def->alias_count);
 }
 
 
