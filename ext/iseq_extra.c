@@ -235,7 +235,7 @@ Init_iseq_extra(void)
     rb_define_method(rb_cISeq, "arg_block",        iseq_arg_block, 0) ;
     rb_define_method(rb_cISeq, "arg_opts",         iseq_arg_opts, 0) ;
     rb_define_method(rb_cISeq, "arg_post_len",     iseq_arg_post_len, 0) ;
-    rb_define_method(rb_cISeq, "arg_arg_rest",     iseq_arg_rest, 0) ;
+    rb_define_method(rb_cISeq, "arg_rest",         iseq_arg_rest, 0) ;
     rb_define_method(rb_cISeq, "arg_simple",       iseq_arg_simple, 0) ;
     rb_define_method(rb_cISeq, "argc",             iseq_argc, 0) ;
     rb_define_method(rb_cISeq, "equal?",           iseq_equal, 1) ;
