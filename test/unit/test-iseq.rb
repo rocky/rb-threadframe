@@ -77,6 +77,15 @@ class TestISeq < Test::Unit::TestCase
     end
   end
 
+  # FIXME: killcache interface will probably change. Try make less sensitive
+  # to compile sequence
+  def test_iseq_killcache
+    iseq = RubyVM::ThreadFrame.current.iseq
+    assert_equal(1, iseq.killcache)
+    assert_equal(0, iseq.killcache, 
+                 'Doing killcache a second time should do nothing')
+  end
+
   def test_offsetlines
     start     = __LINE__ - 1
     tf        = RubyVM::ThreadFrame::current

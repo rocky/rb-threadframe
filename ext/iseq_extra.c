@@ -152,6 +152,33 @@ VALUE iseq_offset2lines(VALUE iseqval, VALUE offsetval)
     return Qnil;
 }
 
+/* FIXME: should return array of destroyed entries */
+VALUE iseq_killcache(VALUE iseqval)
+{
+    rb_iseq_t *iseqdat;
+    int *iseq ;
+    unsigned long i, size, count = 0;
+    struct iseq_insn_info_entry *table;
+
+    GetISeqPtr(iseqval, iseqdat);
+    iseq = (int *) iseqdat->iseq;
+    size = iseqdat->insn_info_size;
+    table = iseqdat->insn_info_table;
+    for (i = 0; i < size; i++) {
+      const unsigned long pos = table[i].position;
+      const int insn = iseq[pos];
+      if (insn == 52) /* getinlinecache */
+      {
+	/* printf("pos: %lu\n", pos); */
+	count ++;
+	iseq[pos] = 0;
+	iseq[pos+1] = 0;
+	iseq[pos+2] = 0;
+      }
+    }
+    return INT2FIX(count);
+}
+
 
 VALUE
 iseq_source_container_internal(rb_iseq_t *iseq)
@@ -239,6 +266,7 @@ Init_iseq_extra(void)
     rb_define_method(rb_cISeq, "arg_simple",       iseq_arg_simple, 0) ;
     rb_define_method(rb_cISeq, "argc",             iseq_argc, 0) ;
     rb_define_method(rb_cISeq, "equal?",           iseq_equal, 1) ;
+    rb_define_method(rb_cISeq, "killcache",        iseq_killcache, 0) ;
     rb_define_method(rb_cISeq, "klass",            iseq_klass, 0) ;
     rb_define_method(rb_cISeq, "local_name",       iseq_local_name, 1) ;
     rb_define_method(rb_cISeq, "local_size",       iseq_local_size, 0) ;
