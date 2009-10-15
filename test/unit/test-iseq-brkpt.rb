@@ -38,6 +38,24 @@ class TestISeqBrkpt < Test::Unit::TestCase
 
   end
 
+  def test_iseq_brkpt_set
+    set_trace_func(Proc.new { |event, file, lineno, mid, binding, klass|
+                     if 'brkpt' == event
+                       $saw_brkpt = true
+                     end
+                    })
+
+
+    $saw_brkpt = false
+    tf = RubyVM::ThreadFrame.current
+    tf.iseq.offsetlines.keys.each do |offset|
+      tf.iseq.brkpt_set(offset)
+    end
+    assert_equal(true, $saw_brkpt)
+    set_trace_func(nil)
+  end
+
+
 end
 
 # We want to double-check we didn't mess up any pointers somewhere.
