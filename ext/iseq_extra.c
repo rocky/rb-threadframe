@@ -6,6 +6,9 @@ VALUE rb_cIseq = rb_define_class_under(rb_cRubyVM, "InstructionSequence", ...)
 #endif
 
 #include "vm_core_mini.h"  /* Pulls in ruby.h */
+#ifdef HAVE_COMPILE_OPTIONS
+#endif
+#include "iseq_mini.h"  /* Pulls in ruby.h */
 #include "ruby19_externs.h"
 #include <string.h>       /* For strlen() */
 
@@ -33,6 +36,196 @@ iseq_arity(VALUE iseqval)
     GetISeqPtr(iseqval, iseq);
     return (iseq) ? INT2FIX(get_iseq_arity(iseq)) : Qnil;
 }
+
+/* 
+ * Document-method: RubyVM::InstructionSequence::brkpt_alloc
+ *
+ * call-seq:
+ *     RubyVM::InstructionSequence#brkpt_alloc -> bool
+ *
+ *  Allocates a breakpoint byte vector of zeros for each 
+ *  instruction in the instruction sequence. True is returned if 
+ *  a vector was allocated, false if there already was one allocated,
+ *  and nil if there was some problem.
+ */
+VALUE
+iseq_brkpt_alloc(VALUE iseqval)
+{
+    rb_iseq_t *iseq;
+    if (Qnil == iseqval) return Qnil;
+    else {
+	GetISeqPtr(iseqval, iseq);
+	if (iseq->breakpoints) {
+	    return Qfalse;
+	}
+	iseq->breakpoints = calloc( iseq->iseq_size, sizeof(unsigned char));
+	return Qtrue;
+    }
+}
+
+/* 
+ * Document-method: RubyVM::InstructionSequence::brkpt_clear
+ *
+ * call-seq:
+ *     RubyVM::InstructionSequence#brkpt_clear(offset) -> bool
+ *
+ *  Clears breakpoint of byte vector at +offset+.
+ *  True is returned if there was a breakpoint previously set,
+ *  false if not, and nil if there was some problem.
+ */
+VALUE
+iseq_brkpt_clear(VALUE iseqval, VALUE offsetval)
+{
+    rb_iseq_t *iseq;
+    if (Qnil != iseqval) {
+	GetISeqPtr(iseqval, iseq);
+	if (!iseq->breakpoints) 
+	    return Qtrue;
+	if (FIXNUM_P(offsetval)) {
+	    int offset = FIX2INT(offsetval);
+	    /* FIXME: check that offset is at a valid instruction offset */
+	    if (offset >= 0 && offset < iseq->iseq_size) {
+		iseq->breakpoints[offset] = '\000';
+		return Qtrue;
+	    } else
+		rb_raise(rb_eTypeError, "given offset %d is not less than max size %lu", 
+			 offset, iseq->iseq_size);
+	} else {
+	    rb_raise(rb_eTypeError, "type mismatch: %s given, int >= 0 expected", 
+		     rb_class2name(CLASS_OF(offsetval)));
+	}
+    }
+    return Qnil;
+}
+
+/* 
+ * Document-method: RubyVM::InstructionSequence::brkpt_dealloc
+ *
+ * call-seq:
+ *     RubyVM::InstructionSequence#dealloc -> bool
+ *
+ *  DeAllocates a breakpoint byte vector of zeros for each 
+ *  instruction in the instruction sequence. True is returned if 
+ *  a vector was allocated, false if there already was one allocated,
+ *  and nil if there was some problem.
+ */
+VALUE
+iseq_brkpt_dealloc(VALUE iseqval)
+{
+    rb_iseq_t *iseq;
+    if (Qnil == iseqval) return Qnil;
+    else {
+	GetISeqPtr(iseqval, iseq);
+	if (!iseq->breakpoints) {
+	    return Qfalse;
+	}
+	free(iseq->breakpoints);
+	iseq->breakpoints = NULL;
+	return Qtrue;
+    }
+}
+
+/* 
+ * Document-method: RubyVM::InstructionSequence::brkpt_get(offset)
+ *
+ * call-seq:
+ *     RubyVM::InstructionSequence#brkpt_get(offset) -> bool
+ *
+ *  Get a value of breakpoint of byte vector at +offset+.
+ *  True is returned if there was a breakpoint previously set,
+ *  false if not, and nil if there was some problem.
+ */
+VALUE
+iseq_brkpt_get(VALUE iseqval, VALUE offsetval)
+{
+    rb_iseq_t *iseq;
+    if (Qnil != iseqval) {
+	if (FIXNUM_P(offsetval)) {
+	    int offset = FIX2INT(offsetval);
+
+	    GetISeqPtr(iseqval, iseq);
+	    if (!iseq->breakpoints) {
+		return Qfalse;
+	    }
+	    /* FIXME: check that offset is at a valid instruction offset */
+	    if (offset >= 0 && offset < iseq->iseq_size) {
+		return (0 != iseq->breakpoints[offset]) ? Qtrue : Qfalse;
+	    } else
+		rb_raise(rb_eTypeError, "given offset %d is not less than max size %lu", 
+			 offset, iseq->iseq_size);
+	} else {
+	    rb_raise(rb_eTypeError, "type mismatch: %s given, int >= 0 expected", 
+		     rb_class2name(CLASS_OF(offsetval)));
+	}
+    }
+    return Qnil;
+}
+
+/* 
+ * Document-method: RubyVM::InstructionSequence::brkpt_set
+ *
+ * call-seq:
+ *     RubyVM::InstructionSequence#brkpt_set(offset) -> bool
+ *
+ *  Set a breakpoint of byte vector at +offset+.
+ *  True is returned if there was a breakpoint previously set,
+ *  false if not, and nil if there was some problem.
+ */
+VALUE
+iseq_brkpt_set(VALUE iseqval, VALUE offsetval)
+{
+    rb_iseq_t *iseq;
+    if (Qnil != iseqval) {
+	GetISeqPtr(iseqval, iseq);
+	if (!iseq->breakpoints) {
+	    VALUE alloc_ret = iseq_brkpt_alloc(iseqval);
+	    if (!iseq->breakpoints) return alloc_ret;
+	}
+	if (FIXNUM_P(offsetval)) {
+	    int offset = FIX2INT(offsetval);
+	    /* FIXME: check that offset is at a valid instruction offset */
+	    if (offset >= 0 && offset < iseq->iseq_size) {
+		iseq->breakpoints[offset] = '\001';
+		return Qtrue;
+	    } else
+		rb_raise(rb_eTypeError, "given offset %d is not less than max size %lu", 
+			 offset, iseq->iseq_size);
+	} else {
+	    rb_raise(rb_eTypeError, "type mismatch: %s given, int >= 0 expected", 
+		     rb_class2name(CLASS_OF(offsetval)));
+	}
+    }
+    return Qnil;
+}
+
+#ifdef HAVE_COMPILE_OPTIONS
+/* 
+ * Document-method: RubyVM::InstructionSequence::compile_options
+ *
+ * call-seq:
+ *     RubyVM::InstructionSequence#compile_options -> Hash
+ *
+ *  Returns a hash of the compiler options used to create the 
+ *  instruction sequence.
+ */
+VALUE
+iseq_compile_options(VALUE iseqval)
+{
+    rb_iseq_t *iseq;
+    if (Qnil == iseqval) return Qnil;
+    else {
+	VALUE hash_opts = rb_hash_new();
+	rb_compile_option_t *compile_opts;
+	GetISeqPtr(iseqval, iseq);
+	if (!iseq->compile_data) return Qnil;
+	compile_opts = iseq->compile_data->option;
+	rb_hash_aset(hash_opts, rb_str_new2("inline_const_cache"), 
+		     (compile_opts->inline_const_cache) ? Qtrue : Qfalse);
+	return hash_opts;
+    }
+    
+}
+#endif
 
 /* 
  * Document-method: RubyVM::InstructionSequence::equal?
@@ -67,6 +260,21 @@ iseq_equal(VALUE iseqval1, VALUE iseqval2)
 	return Qfalse;
 }
 
+
+/* 
+ * call-seq:
+ *     RubyVM::InstructionSequence#iseq_size - Fixnum
+ * 
+ *  Returns the size of the instruction sequences
+ */
+VALUE
+iseq_iseq_size(VALUE iseqval)
+{
+    rb_iseq_t *iseq;
+    if (Qnil == iseqval) return Qnil;
+    GetISeqPtr(iseqval, iseq);
+    return INT2FIX(iseq->iseq_size);
+}
 
 /* 
  * call-seq:
@@ -265,7 +473,16 @@ Init_iseq_extra(void)
     rb_define_method(rb_cISeq, "arg_rest",         iseq_arg_rest, 0) ;
     rb_define_method(rb_cISeq, "arg_simple",       iseq_arg_simple, 0) ;
     rb_define_method(rb_cISeq, "argc",             iseq_argc, 0) ;
+#ifdef HAVE_COMPILE_OPTIONS
+    rb_define_method(rb_cISeq, "compile_options",  iseq_compile_options, 0) ;
+#endif
+    rb_define_method(rb_cISeq, "brkpt_alloc",      iseq_brkpt_alloc, 0) ;
+    rb_define_method(rb_cISeq, "brkpt_clear",      iseq_brkpt_clear, 1) ;
+    rb_define_method(rb_cISeq, "brkpt_dealloc",    iseq_brkpt_dealloc, 0) ;
+    rb_define_method(rb_cISeq, "brkpt_get",        iseq_brkpt_get, 1) ;
+    rb_define_method(rb_cISeq, "brkpt_set",        iseq_brkpt_set, 1) ;
     rb_define_method(rb_cISeq, "equal?",           iseq_equal, 1) ;
+    rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
     rb_define_method(rb_cISeq, "killcache",        iseq_killcache, 0) ;
     rb_define_method(rb_cISeq, "klass",            iseq_klass, 0) ;
     rb_define_method(rb_cISeq, "local_name",       iseq_local_name, 1) ;

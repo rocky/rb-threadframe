@@ -60,6 +60,18 @@
 typedef struct iseq_catch_table_entry iseq_catch_table_entry_t;
 typedef struct node NODE;
 
+typedef struct rb_compile_option_struct {
+    int inline_const_cache;
+    int peephole_optimization;
+    int tailcall_optimization;
+    int specialized_instruction;
+    int operands_unification;
+    int instructions_unification;
+    int stack_caching;
+    int trace_instruction;
+    int debug_level;
+} rb_compile_option_t;
+
 /* Instruction sequence */
 typedef struct rb_iseq_struct {
     /***************/
@@ -154,10 +166,10 @@ typedef struct rb_iseq_struct {
     /* misc */
     ID defined_method_id;	/* for define_method */
 
-#if 0
     /* used at compile time */
     struct iseq_compile_data *compile_data;
-#endif
+    /* Used to set a breakpoint at a VM instruction */
+    unsigned char *breakpoints; 
 } rb_iseq_t;
 
 #include "method_mini.h"

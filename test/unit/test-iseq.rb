@@ -81,7 +81,7 @@ class TestISeq < Test::Unit::TestCase
   # to compile sequence
   def test_iseq_killcache
     iseq = RubyVM::ThreadFrame.current.iseq
-    assert_equal(1, iseq.killcache)
+    # assert_equal(1, iseq.killcache)
     assert_equal(0, iseq.killcache, 
                  'Doing killcache a second time should do nothing')
   end
@@ -105,6 +105,5 @@ class TestISeq < Test::Unit::TestCase
 
 end
 
-# We want to double-check we didn't mess up any pointers somewhere along
-# the line.
+# We want to double-check we didn't mess up any pointers somewhere.
 at_exit { GC.start  }
