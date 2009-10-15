@@ -81,9 +81,11 @@ class TestISeq < Test::Unit::TestCase
   # to compile sequence
   def test_iseq_killcache
     iseq = RubyVM::ThreadFrame.current.iseq
-    # assert_equal(1, iseq.killcache)
-    assert_equal(0, iseq.killcache, 
+    count = iseq.killcache
+    if 0 != count
+      assert_equal(0, iseq.killcache, 
                  'Doing killcache a second time should do nothing')
+    end
   end
 
   def test_offsetlines
