@@ -11,6 +11,11 @@ class TestLibISeqExtra < Test::Unit::TestCase
     # See that we get the same offsets
     assert_equal(iseq.lineoffsets.values.flatten.uniq.sort, 
                  iseq.offsetlines.keys.sort)
+
+    assert_equal(iseq.lineoffsets[__LINE__].sort, 
+                 iseq.line2offsets(__LINE__-1).sort)
+
+    assert_equal([], iseq.line2offsets(__LINE__+100))
   end
 
 end

@@ -27,6 +27,12 @@ class RubyVM::InstructionSequence
     end
     result
   end
+
+  def line2offsets(line_number)
+    offsetlines.select do |offset, lines| 
+      lines.member?(line_number) 
+    end.keys
+  end
 end
 
 if __FILE__ == $0
@@ -34,6 +40,8 @@ if __FILE__ == $0
   puts iseq.format_args
   puts iseq.disassemble
   puts iseq.lineoffsets
+  p iseq.line2offsets(__LINE__)
+  p iseq.line2offsets(__LINE__+100)
   # Demo it.
 end
 
