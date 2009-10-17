@@ -1,0 +1,16 @@
+require 'test/unit'
+require_relative %w(.. .. lib iseq_extra)
+
+class TestLibISeqExtra < Test::Unit::TestCase
+
+  def test_basic
+    iseq = RubyVM::ThreadFrame.current.iseq
+    # See that we get the same line numbers
+    assert_equal(iseq.offsetlines.values.flatten.uniq.sort, 
+                 iseq.lineoffsets.keys.sort)
+    # See that we get the same offsets
+    assert_equal(iseq.lineoffsets.values.flatten.uniq.sort, 
+                 iseq.offsetlines.keys.sort)
+  end
+
+end
