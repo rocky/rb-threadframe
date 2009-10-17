@@ -64,41 +64,6 @@ iseq_brkpt_alloc(VALUE iseqval)
 }
 
 /* 
- * Document-method: RubyVM::InstructionSequence::brkpt_clear
- *
- * call-seq:
- *     RubyVM::InstructionSequence#brkpt_clear(offset) -> bool
- *
- *  Clears breakpoint of byte vector at +offset+.
- *  True is returned if there was a breakpoint previously set,
- *  false if not, and nil if there was some problem.
- */
-VALUE
-iseq_brkpt_clear(VALUE iseqval, VALUE offsetval)
-{
-    rb_iseq_t *iseq;
-    if (Qnil != iseqval) {
-	GetISeqPtr(iseqval, iseq);
-	if (!iseq->breakpoints) 
-	    return Qtrue;
-	if (FIXNUM_P(offsetval)) {
-	    int offset = FIX2INT(offsetval);
-	    /* FIXME: check that offset is at a valid instruction offset */
-	    if (offset >= 0 && offset < iseq->iseq_size) {
-		iseq->breakpoints[offset] = '\000';
-		return Qtrue;
-	    } else
-		rb_raise(rb_eTypeError, "given offset %d is not less than max size %lu", 
-			 offset, iseq->iseq_size);
-	} else {
-	    rb_raise(rb_eTypeError, "type mismatch: %s given, int >= 0 expected", 
-		     rb_class2name(CLASS_OF(offsetval)));
-	}
-    }
-    return Qnil;
-}
-
-/* 
  * Document-method: RubyVM::InstructionSequence::brkpt_dealloc
  *
  * call-seq:
@@ -186,6 +151,41 @@ iseq_brkpt_set(VALUE iseqval, VALUE offsetval)
 	    /* FIXME: check that offset is at a valid instruction offset */
 	    if (offset >= 0 && offset < iseq->iseq_size) {
 		iseq->breakpoints[offset] = '\001';
+		return Qtrue;
+	    } else
+		rb_raise(rb_eTypeError, "given offset %d is not less than max size %lu", 
+			 offset, iseq->iseq_size);
+	} else {
+	    rb_raise(rb_eTypeError, "type mismatch: %s given, int >= 0 expected", 
+		     rb_class2name(CLASS_OF(offsetval)));
+	}
+    }
+    return Qnil;
+}
+
+/* 
+ * Document-method: RubyVM::InstructionSequence::brkpt_unset
+ *
+ * call-seq:
+ *     RubyVM::InstructionSequence#brkpt_clear(offset) -> bool
+ *
+ *  Unsets breakpoint of byte vector at +offset+.
+ *  True is returned if there was a breakpoint previously set,
+ *  false if not, and nil if there was some problem.
+ */
+VALUE
+iseq_brkpt_unset(VALUE iseqval, VALUE offsetval)
+{
+    rb_iseq_t *iseq;
+    if (Qnil != iseqval) {
+	GetISeqPtr(iseqval, iseq);
+	if (!iseq->breakpoints) 
+	    return Qtrue;
+	if (FIXNUM_P(offsetval)) {
+	    int offset = FIX2INT(offsetval);
+	    /* FIXME: check that offset is at a valid instruction offset */
+	    if (offset >= 0 && offset < iseq->iseq_size) {
+		iseq->breakpoints[offset] = '\000';
 		return Qtrue;
 	    } else
 		rb_raise(rb_eTypeError, "given offset %d is not less than max size %lu", 
@@ -477,7 +477,7 @@ Init_iseq_extra(void)
     rb_define_method(rb_cISeq, "compile_options",  iseq_compile_options, 0) ;
 #endif
     rb_define_method(rb_cISeq, "brkpt_alloc",      iseq_brkpt_alloc, 0) ;
-    rb_define_method(rb_cISeq, "brkpt_clear",      iseq_brkpt_clear, 1) ;
+    rb_define_method(rb_cISeq, "brkpt_unset",      iseq_brkpt_unset, 1) ;
     rb_define_method(rb_cISeq, "brkpt_dealloc",    iseq_brkpt_dealloc, 0) ;
     rb_define_method(rb_cISeq, "brkpt_get",        iseq_brkpt_get, 1) ;
     rb_define_method(rb_cISeq, "brkpt_set",        iseq_brkpt_set, 1) ;

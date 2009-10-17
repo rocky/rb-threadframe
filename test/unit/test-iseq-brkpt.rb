@@ -16,12 +16,12 @@ class TestISeqBrkpt < Test::Unit::TestCase
       assert_equal(true, iseq.brkpt_set(offset))
       assert_equal(true, iseq.brkpt_get(offset),
                    "Offset %d should be set" % offset)
-      assert_equal(true, iseq.brkpt_clear(offset),
-                   "Offset %d should be clear" % offset)
+      assert_equal(true, iseq.brkpt_unset(offset),
+                   "Offset %d should be unset" % offset)
       assert_equal(false, iseq.brkpt_get(offset),
-                   "Offset %d should be cleared now" % offset)
-      assert_equal(true, iseq.brkpt_clear(offset),
-                   "Offset %d should be cleared again" % offset)
+                   "Offset %d should be unset now" % offset)
+      assert_equal(true, iseq.brkpt_unset(offset),
+                   "Offset %d should be unset again" % offset)
     end
     
     max_offset = offsets.max[0]
@@ -30,8 +30,8 @@ class TestISeqBrkpt < Test::Unit::TestCase
 
     assert_equal(true, iseq.brkpt_dealloc)
     assert_equal(false, iseq.brkpt_dealloc)
-    assert_equal(true, iseq.brkpt_clear(max_offset),
-                 "Offset %d should be clear even when deallocated" % max_offset)
+    assert_equal(true, iseq.brkpt_unset(max_offset),
+                 "Offset %d should be unset even when deallocated" % max_offset)
 
     assert_raises TypeError do iseq.brkpt_get('a') end
     assert_raises TypeError do iseq.brkpt_set('a') end
