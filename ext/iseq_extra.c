@@ -167,7 +167,7 @@ iseq_brkpt_set(VALUE iseqval, VALUE offsetval)
  * Document-method: RubyVM::InstructionSequence::brkpt_unset
  *
  * call-seq:
- *     RubyVM::InstructionSequence#brkpt_clear(offset) -> bool
+ *     RubyVM::InstructionSequence#brkpt_unset(offset) -> bool
  *
  *  Unsets breakpoint of byte vector at +offset+.
  *  True is returned if there was a breakpoint previously set,
