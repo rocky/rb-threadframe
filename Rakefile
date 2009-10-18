@@ -92,6 +92,7 @@ EOF
 
   spec.version = PACKAGE_VERSION
   spec.require_path = 'lib'
+  spec.extensions = ["ext/extconf.rb"]
 
   spec.author = "R. Bernstein"
   spec.email = "rocky@gnu.org"

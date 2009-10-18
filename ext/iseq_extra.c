@@ -477,10 +477,10 @@ Init_iseq_extra(void)
     rb_define_method(rb_cISeq, "compile_options",  iseq_compile_options, 0) ;
 #endif
     rb_define_method(rb_cISeq, "brkpt_alloc",      iseq_brkpt_alloc, 0) ;
-    rb_define_method(rb_cISeq, "brkpt_unset",      iseq_brkpt_unset, 1) ;
     rb_define_method(rb_cISeq, "brkpt_dealloc",    iseq_brkpt_dealloc, 0) ;
     rb_define_method(rb_cISeq, "brkpt_get",        iseq_brkpt_get, 1) ;
     rb_define_method(rb_cISeq, "brkpt_set",        iseq_brkpt_set, 1) ;
+    rb_define_method(rb_cISeq, "brkpt_unset",      iseq_brkpt_unset, 1) ;
     rb_define_method(rb_cISeq, "equal?",           iseq_equal, 1) ;
     rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
     rb_define_method(rb_cISeq, "killcache",        iseq_killcache, 0) ;
