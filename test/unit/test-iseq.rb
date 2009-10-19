@@ -16,6 +16,7 @@ class TestISeq < Test::Unit::TestCase
   def test_fields
     iseq = RubyVM::ThreadFrame::current.iseq
     assert iseq
+    assert_equal('test_fields', iseq.name)
     assert_equal(0, iseq.arity)
     assert_equal(-1, iseq.arg_block)
     assert_equal(0, iseq.argc)

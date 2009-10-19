@@ -302,6 +302,20 @@ iseq_local_name(VALUE iseqval, VALUE val)
 
 /* 
  * call-seq:
+ *     RubyVM::InstructionSequence#name -> String
+ * 
+ *  Returns the name if the instruction sequence.
+ */
+VALUE
+iseq_name(VALUE iseqval)
+{
+    rb_iseq_t *iseq;
+    GetISeqPtr(iseqval, iseq);
+    return(iseq->name);
+}
+
+/* 
+ * call-seq:
  *     RubyVM::InstructionSequence#offsetlines -> Hash[Fixnum] -> [Fixnum]
  * 
  * Returns an hash. The keys in the hash form the VM offsets of the
@@ -491,6 +505,7 @@ Init_iseq_extra(void)
     rb_define_method(rb_cISeq, "offset2lines",     iseq_offset2lines, 1) ;
     rb_define_method(rb_cISeq, "offsetlines",      iseq_offsetlines, 0) ;
     rb_define_method(rb_cISeq, "orig",             iseq_orig, 0) ;
+    rb_define_method(rb_cISeq, "name",             iseq_name, 0) ;
     rb_define_method(rb_cISeq, "self",             iseq_self, 0) ;
     rb_define_method(rb_cISeq, "source_container", iseq_source_container, 0) ;
 }
