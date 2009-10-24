@@ -1,3 +1,10 @@
+#if 0  /* The following is to fake out rdoc, until I find a better fix. */
+/* 
+ *  Additions to the RubyVM::Method class
+ */
+VALUE rb_cIseq = rb_define_class("Method", ...)
+#endif
+
 /* 
  *  Additions to Proc and Method classes.
  */
@@ -39,7 +46,8 @@ proc_iseq(VALUE self)
 extern rb_iseq_t *rb_method_get_iseq(VALUE method);
 
 /* 
-   Method#iseq - access instruction sequence of a Method object.
+ *  call-seq:
+ *  Method#iseq - access instruction sequence of a Method object.
  */
 VALUE
 method_iseq(VALUE self)
@@ -52,9 +60,9 @@ method_iseq(VALUE self)
     return rb_iseq;
 }
 
-
 /* 
-   Method#alias_count - number of aliases a method has
+ *  call-seq:
+ *  Method#alias_count - number of aliases a method has
  */
 VALUE
 method_alias_count(VALUE self)
@@ -64,7 +72,8 @@ method_alias_count(VALUE self)
 }
 
 /* 
-   Method#original_id - Original name of method
+ *  call-seq:
+ *  Method#original_id - Original name of method
  */
 VALUE
 method_original_id(VALUE self)
@@ -77,7 +86,10 @@ method_original_id(VALUE self)
 void
 Init_proc_extra(void)
 {
-    rb_define_method(rb_cProc, "iseq",  proc_iseq, 0);
+    /* Additions to Proc */
+    rb_define_method(rb_cProc,   "iseq",  proc_iseq, 0);
+
+    /* Additions to Method */
     rb_define_method(rb_cMethod, "iseq",  method_iseq, 0);
     rb_define_method(rb_cMethod, "alias_count",  method_alias_count, 0);
     rb_define_method(rb_cMethod, "original_id",  method_original_id, 0);

@@ -6,7 +6,9 @@ class TestISeqBrkpt < Test::Unit::TestCase
   def test_iseq_brkpt
     iseq = RubyVM::ThreadFrame.current.iseq
     assert iseq
+    assert_equal(nil, iseq.brkpts)
     assert_equal(true, iseq.brkpt_alloc)
+    assert_equal([], iseq.brkpts)
     assert_equal(false, iseq.brkpt_alloc)
 
     offlines  = iseq.offsetlines
@@ -22,7 +24,9 @@ class TestISeqBrkpt < Test::Unit::TestCase
                    "Offset %d should be unset now" % offset)
       assert_equal(true, iseq.brkpt_unset(offset),
                    "Offset %d should be unset again" % offset)
+      iseq.brkpt_set(offset) # For test below
     end
+    assert_equal(2, iseq.brkpts.size)
     
     max_offset = offsets.max[0]
 

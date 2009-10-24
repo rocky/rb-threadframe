@@ -198,6 +198,37 @@ iseq_brkpt_unset(VALUE iseqval, VALUE offsetval)
     return Qnil;
 }
 
+/* 
+ * Document-method: RubyVM::InstructionSequence::brkpts
+ *
+ * call-seq:
+ *     RubyVM::InstructionSequence#brkpts -> Array
+ *
+ *  Returns a list of breakpoints in effect for this instruction sequence.
+ *  If no breakpoints have been allocated nil is returned. If breakpoints
+ *  were allocated but none are set then the empty array is returned.
+ */
+VALUE
+iseq_brkpts(VALUE iseqval)
+{
+    rb_iseq_t *iseq;
+    if (Qnil == iseqval) return Qnil;
+    else {
+	GetISeqPtr(iseqval, iseq);
+	if (iseq->breakpoints) {
+	    int offset;
+	    VALUE ary = rb_ary_new();
+	    for (offset = 0; offset < iseq->iseq_size; offset++) {
+		if (iseq->breakpoints[offset])
+		    rb_ary_push(ary, INT2FIX(offset));
+	    }
+	    return ary;
+	} else {
+	    return Qnil;
+	}
+    }
+}
+
 #ifdef HAVE_COMPILE_OPTIONS
 /* 
  * Document-method: RubyVM::InstructionSequence::compile_options
@@ -483,6 +514,7 @@ Init_iseq_extra(void)
     rb_define_method(rb_cISeq, "brkpt_get",        iseq_brkpt_get, 1) ;
     rb_define_method(rb_cISeq, "brkpt_set",        iseq_brkpt_set, 1) ;
     rb_define_method(rb_cISeq, "brkpt_unset",      iseq_brkpt_unset, 1) ;
+    rb_define_method(rb_cISeq, "brkpts",           iseq_brkpts, 0) ;
     rb_define_method(rb_cISeq, "equal?",           iseq_equal, 1) ;
     rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
     rb_define_method(rb_cISeq, "killcache",        iseq_killcache, 0) ;
