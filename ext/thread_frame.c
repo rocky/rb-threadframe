@@ -125,48 +125,67 @@ thread_frame_##FIELD(VALUE klass)		\
     return tf->cfp->FIELD;			\
 }
 
-#if 1  /* ? */
-/*
- *  call-seq:
- *     Thread#lfp(n)  -> object
- * 
- * Returns a RubyVM object stored at lfp position <i>i</i>. The top object
- * is position 1. 
- */
-static VALUE
-thread_frame_lfp(VALUE klass, VALUE index)
-{
-    if (!FIXNUM_P(index)) {
-	rb_raise(rb_eTypeError, "integer argument expected");
-    } else {
-	long int i = FIX2INT(index);
-	THREAD_FRAME_SETUP ;
-	/* FIXME: check index is within range. */
-	return tf->cfp->lfp[-i]; /* stack  grows "down" */
-    }
+#define THREAD_FRAME_FP_METHOD(REG)				\
+static VALUE						        \
+thread_frame_##REG(VALUE klass, VALUE index)			\
+{								\
+    if (!FIXNUM_P(index)) {					\
+	rb_raise(rb_eTypeError, "integer argument expected");	\
+    } else {							\
+        long int i = FIX2INT(index);				\
+	THREAD_FRAME_SETUP ;					\
+	/* FIXME: check index is within range. */		\
+	return tf->cfp->REG[-i]; /* stack  grows "down" */	\
+    }								\
 }
 
+#if 0
 /*
  *  call-seq:
- *     Thread#lfp(n)  -> object
+ *     ThreadFrame#dfp(n)  -> object
  * 
- * Returns a RubyVM object stored at stack position <i>i</i>. The top object
- * is position 1. 
+ * Returns a RubyVM object stored at dfp position <i>i</i>. The top object
+ * is position 0. 
  */
-static VALUE
-thread_frame_sp(VALUE klass, VALUE index)
+static VALUE thread_frame_dfp(VALUE klass, VALUE index) 
 {
-    if (!FIXNUM_P(index)) {
-	rb_raise(rb_eTypeError, "integer argument expected");
-    } else {
-	long int i = FIX2INT(index);
-	THREAD_FRAME_SETUP ;
-	/* FIXME: check index is within range. */
-	return tf->cfp->sp[-i]; /* stack  grows "down" */
-    }
+    /* handled by THREAD_FRAME_FP_METHOD macro;  */
 }
 #endif
+/* The above declaration is to make RDOC happy. */
+THREAD_FRAME_FP_METHOD(dfp)
 
+#if 0
+/*
+ *  call-seq:
+ *     ThreadFrame#lfp(n)  -> object
+ * 
+ * Returns a RubyVM object stored at lfp position <i>i</i>. The top object
+ * is position 0. 
+ */
+static VALUE thread_frame_lfp(VALUE klass, VALUE index) 
+{
+    /* handled by THREAD_FRAME_FP_METHOD macro;  */
+}
+#endif
+/* The above declaration is to make RDOC happy. */
+THREAD_FRAME_FP_METHOD(lfp)
+
+#if 0
+/*
+ *  call-seq:
+ *     Thread#sp(n)  -> object
+ * 
+ * Returns a RubyVM object stored at stack position <i>i</i>. The top object
+ * is position 0. 1 is the next object.
+ */
+static VALUE thread_frame_sp(VALUE klass, VALUE index) 
+{
+    /* handled by THREAD_FRAME_FP_METHOD macro;  */
+}
+#endif
+/* The above declaration is to make RDOC happy. */
+THREAD_FRAME_FP_METHOD(sp)
 
 #ifndef NO_reg_pc
 /*
@@ -197,6 +216,21 @@ thread_frame_set_pc_offset(VALUE klass, VALUE offset_val)
 }
 #endif
 
+#if 0
+/*
+ *  call-seq:
+ *     RubyVM::ThreadFrame#flag -> Fixnum
+ *
+ *  Returns the frame flags, a FIXNUM which should be interpreted as a
+ *  bitmask.
+ *
+ */
+static VALUE thread_frame_flag(VALUE klass) 
+{ 
+    /* handled by THREAD_FRAME_FIELD_METHOD macro;  */
+}
+/* The above declaration is to make RDOC happy. */
+#endif
 THREAD_FRAME_FIELD_METHOD(flag) ;
 
 /*
@@ -732,10 +766,6 @@ thread_frame_type(VALUE klass)
     return rb_str_new2(frame_magic2str(tf->cfp));
 }
 
-/* Using this cause RDoc not to pick up method definitions. */
-#define RB_DEFINE_FRAME_METHOD(FIELD, ARGC)					\
-    rb_define_method(rb_cThreadFrame, #FIELD, thread_frame_##FIELD, ARGC);
-
 void
 Init_thread_frame(void)
 {
@@ -754,13 +784,11 @@ Init_thread_frame(void)
     /* RubyVM::ThreadFrame */
     rb_define_method(rb_cThreadFrame, "arity", thread_frame_arity, 0);
     rb_define_method(rb_cThreadFrame, "binding", thread_frame_binding, 0);
+    rb_define_method(rb_cThreadFrame, "dfp", thread_frame_dfp, 1);
     rb_define_method(rb_cThreadFrame, "flag", thread_frame_flag, 0);
+    rb_define_method(rb_cThreadFrame, "initialize", thread_frame_initialize, 1);
     rb_define_method(rb_cThreadFrame, "iseq", thread_frame_iseq, 0);
-    RB_DEFINE_FRAME_METHOD(initialize, 1);
-#if 1  /* ? */
-    RB_DEFINE_FRAME_METHOD(lfp, 1);
-    RB_DEFINE_FRAME_METHOD(sp, 1);
-#endif
+    rb_define_method(rb_cThreadFrame, "lfp", thread_frame_lfp, 1);
     rb_define_method(rb_cThreadFrame, "method", thread_frame_method, 0);
     rb_define_method(rb_cThreadFrame, "next", thread_frame_next, 0);
     rb_define_method(rb_cThreadFrame, "pc_offset", thread_frame_pc_offset, 0);
@@ -771,6 +799,7 @@ Init_thread_frame(void)
 		     thread_frame_source_container, 0);
     rb_define_method(rb_cThreadFrame, "source_location", 
 		     thread_frame_source_location, 0);
+    rb_define_method(rb_cThreadFrame, "sp", thread_frame_sp, 1);
     rb_define_method(rb_cThreadFrame, "stack_size", 
 		     thread_frame_stack_size, 0);
     rb_define_method(rb_cThreadFrame, "thread", thread_frame_thread, 0);

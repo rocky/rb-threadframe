@@ -46,6 +46,9 @@ class TestThread < Test::Unit::TestCase
     assert_equal('test_fields', tf.method)
     assert_equal(self, tf.self)
     assert_equal(0, tf.arity)
+    assert tf.dfp(0)
+    assert tf.lfp(0)
+    assert tf.sp(0)
 
     tf_prev = tf.prev
     assert(tf_prev.pc_offset > 0, "Should be valid PC offset for prev")
