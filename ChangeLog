@@ -1,0 +1,605 @@
+2009-10-24  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, ext/proc_extra.c, test/unit/test-iseq-brkpt.rb: 
+	RubyVM::InstructionSequence#brktps - an Array of offsets that
+	breakpoints have been set or nil if no breakpoints allocated.
+
+2009-10-24  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, test/unit/test-thread.rb: Add access to dfp.
+	And while we are at it, RDOC these, complete with workarounds to
+	trick RDOC into to working. RDOC doesn't handle the C preprocessor
+	very well. :-(
+
+2009-10-21  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c: Add access to iseq#line_no.
+
+2009-10-20  rocky <rockyb@rubyforge.org>
+
+	* threadframe-ruby-1.9.patch: Add rb_iseq_disassm_no_children
+	(iseq#disasm_nochildren)
+
+2009-10-19  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, test/unit/test-iseq.rb: Add iseq.name: access to
+	iseq->name.
+
+2009-10-18  rocky <rockyb@rubyforge.org>
+
+	* threadframe-ruby-1.9.patch: Add iseq#child_iseqs
+
+2009-10-18  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, test/unit/test-binding.rb,
+	test/unit/test-thread.rb: Go over tests to remove FIXMEs that are
+	fixed. iseq_extra.c: Commment fix: clear -> unset
+
+2009-10-17  rocky <rockyb@rubyforge.org>
+
+	* Rakefile, ext/iseq_extra.c: Add thread_frame.so (DLL) to gem. Doc
+	string typo: "clear" -> "unset".
+
+2009-10-17  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, test/unit/test-iseq-brkpt.rb: iseq#brkpt_clear
+	-> iseq#brkpt_unset
+
+2009-10-17  rocky <rockyb@rubyforge.org>
+
+	* Rakefile, lib/thread_frame.rb: Work on gem packaging so we include
+	iseq_extra.rb.
+
+2009-10-16  rocky <rockyb@rubyforge.org>
+
+	* lib/iseq_extra.rb, test/unit/test-lib-iseq-extra.rb: 
+	iseq_extra.rb: add offset2line() analogue - line2offsets()
+
+2009-10-16  rocky <rockyb@rubyforge.org>
+
+	* lib/iseq_extra.rb, test/unit/test-lib-iseq-extra.rb: 
+	iseq_extra.rb: add lineoffsets to get the offset for a given line
+	number. Correct format_args (although it's not well tested yet)
+
+2009-10-15  rockyb <rocky@gnu.org>
+
+	* test/unit/test-iseq-brkpt.rb, threadframe-ruby-1.9.patch: 
+	threadframe-ruby-1.9.patch: Add code in Ruby 1.9 to test for
+	breakpoints!
+
+2009-10-15  R. Bernstein <rocky@gnu.org>
+
+	* test/unit/test-iseq.rb: Make work when iseq has no inlinecache as
+	well as inlinecache
+
+2009-10-15  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, ext/iseq_mini.h, ext/vm_core_mini.h,
+	test/unit/test-iseq-brkpt.rb, test/unit/test-iseq.rb: Add breakpoint
+	alloc, dealloc, set, and clear instructions. Add access to
+	instruction sequence size.
+
+2009-10-15  rocky <rockyb@rubyforge.org>
+
+	* threadframe-ruby-1.9.patch: Patches needed for threadframe -- with
+	breakpoint field added to instruction sequence but VM interpretater
+	breakpoint handling.
+
+2009-10-11  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, test/unit/test-iseq.rb: Add a routine to turn
+	"getinlinecache" instructions into NOPs for debugging.
+
+2009-09-30  R. Bernstein <rocky@gnu.org>
+
+	* ext/iseq_extra.c: Typo in method name.
+
+2009-09-30  rocky <rockyb@rubyforge.org>
+
+	* ext/proc_extra.c, test/unit/test-proc.rb: Add Method#original_id
+
+2009-09-30  rocky <rockyb@rubyforge.org>
+
+	* ext/proc_extra.c, test/unit/test-proc.rb: Method#alias_count works
+	now.
+
+2009-09-29  R. Bernstein <rocky@gnu.org>
+
+	* ext/iseq_extra.c, ext/thread_frame.c: thread_frame.c: sp, lfp -
+	adjust arg for downward-growing stack. Rdoc updates.
+
+2009-09-29  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, ext/proc_extra.c, ext/thread_frame.c: Bang on
+	RDoc formatting.
+
+2009-09-28  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c: Wrong param name - dunno how that last commit
+	snuck in.
+
+2009-09-28  rocky <rockyb@rubyforge.org>
+
+	* ext/proc_extra.c, ext/thread_frame.c: ext/thread_frame.c: add
+	access to lfp and sp.                     allow moving frame pointer
+	to a more recent frame.  ext/proc_extra.c: add struct METHOD and
+	alias_count  Add access to lfp and sp. Allow going
+
+2009-09-28  rocky <rockyb@rubyforge.org>
+
+	* ext/method_mini.h, ext/thread_frame.c, test/unit/test-thread.rb: 
+	Track ruby 1.9 change of Fri Aug 28 11:45:33 2009 Nobuyoshi Nakada
+	to method.h
+
+2009-09-28  R. Bernstein <rocky@atwood.corp.ce-interactive.com>
+
+	* ext/thread_frame.c: ext/threadframe.c: (thread_frame_arity):
+	Defensive programming: check for nil cfp
+
+2009-09-28  R. Bernstein <rocky@atwood.corp.ce-interactive.com>
+
+	* test/unit/test-source.rb: Fix erroneous unit test
+
+2009-09-26  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, ext/iseq_extra.h, ext/proc_extra.c,
+	ext/thread_frame.c, test/unit/test-source.rb: Add
+	RubyVM::InstructionSequence#source_container and Method#iseq. Code
+	for source_container is mostly moved from RubyVM::ThreadFrame so
+	that now calls the iseq code for instruction sequences.  Move/add
+	source_container from thread_frame into iseq.
+
+2009-09-26  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, test/unit/test-iseq.rb: offset2lines ->
+	offsetlines (returns a hash) offset2lines now takes a parameter that
+	returns *only* the lines for that offset.  (Good thing no one other
+	than myself uses this.)
+
+2009-09-24  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, ext/iseq_extra.h, test/unit/test-iseq.rb,
+	test/unit/test-thread.rb: Add ability to get line numbers for
+	instruction offset. (Florian: I'm still weeping.)
+
+2009-09-17  rockyb <rocky@gnu.org>
+
+	* ext/thread_frame.c, test/unit/test-thread.rb: More defensive of
+	CFRAMES. Also have to back off some tests until I figure out what's
+	up with the C method disappearance.
+
+2009-09-15  R. Bernstein <rocky@gnu.org>
+
+	* ext/thread_frame.c, test/unit/test-thread.rb: For now I need to be
+	more aggressive about checking for (exec) as a file name. Apparently
+	the string (exec) can propagate backwards into enclosing blocks.
+
+2009-09-14  R. Bernstein <rocky@gnu.org>
+
+	* test/unit/cfunc-use.rb, test/unit/test-thread.rb: Add unit test
+	for source_container of a CFUNC.
+
+2009-09-14  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c: If C Frame, use location of previous on stack.
+	May revisit this idea later
+
+2009-09-11  R. Bernstein <rocky@gnu.org>
+
+	Merge branch 'master' of git@github.com:rocky/rb-threadframe
+
+2009-09-11  R. Bernstein <rocky@gnu.org>
+
+	* ext/thread_frame.c, test/unit/test-thread.rb, th.rb: Add unit test
+	for PC offset. We will use shortly in rbdbgr
+
+2009-08-21  rocky <rockyb@rubyforge.org>
+
+	Merge branch 'master' of git@github.com:rocky/rb-threadframe
+
+2009-08-21  rocky <rockyb@rubyforge.org>
+
+	* test/unit/test-iseq.rb, test/unit/test-source.rb,
+	test/unit/test-thread.rb: Add calls to garbage collector to make
+	sure pointers weren't horribly bolixed.
+
+2009-08-18  R. Bernstein <rocky@gnu.org>
+
+	* lib/iseq_extra.rb, test/unit/test-binding.rb,
+	test/unit/test-invalid.rb, test/unit/test-iseq.rb,
+	test/unit/test-prev.rb, test/unit/test-proc.rb,
+	test/unit/test-source.rb, test/unit/test-thread.rb, th.rb: Remove
+	File.join on require_relative. It takes and Array!
+
+2009-08-17  R. Bernstein <rocky@gnu.org>
+
+	* ext/iseq_extra.c, test/unit/test-iseq.rb: iseq.equal? allowed for
+	nil
+
+2009-08-16  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, test/unit/test-source.rb,
+	test/unit/test-thread.rb: Improve source_location for control frames
+	that don't have an instruction sequence (iseq). Follow what's done
+	in vm_backtrace_each in vm.c.
+
+2009-08-14  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, test/unit/test-thread.rb: Add equal? for
+	ThreadFrame. (Will make use of these in checking whether to ignore
+	tracing into the frames such as in a debugger).
+
+2009-08-14  rocky <rockyb@rubyforge.org>
+
+	* ext/vm_core_mini.h: Conflicted merge.
+
+2009-08-14  rocky <rockyb@rubyforge.org>
+
+	Merge branch 'master' of git@github.com:rocky/rb-threadframe
+	Conflicts: 	ext/vm_core_mini.h
+
+2009-08-14  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, ext/vm_core_mini.h, test/unit/test-iseq.rb: Add
+	InstructionSequence#equal? to see if two instruction sequences are
+	the same.
+
+2009-08-13  R. Bernstein <rocky@gnu.org>
+
+	* Rakefile, ext/vm_core_mini.h: Cosmetic changes.
+
+2009-08-03  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c: Catch pecial-case the container type string
+	eval via "(eval)" and eval frame type.
+
+2009-08-02  rocky <rockyb@rubyforge.org>
+
+	* ext/ruby19_externs.h, ext/thread_frame.c, test/unit/test-prev.rb: 
+	Negative offset in prev counts from the other direction. Add more
+	stringent argument type checking in prev routines.
+
+2009-08-02  rocky <rockyb@rubyforge.org>
+
+	* ext/method_mini.h, ext/thread_frame.c, test/unit/test-thread.rb,
+	threadframe.rd: Remove ThreadFrame#method_class. Programs should use
+	eval("self.class", tf.binding) for now. Document what's known
+	method_entry_struct.
+
+2009-07-31  R. Bernstein <rocky@gnu.org>
+
+	* test/unit/test-prev.rb: A slightly better prev test.
+
+2009-07-31  R. Bernstein <rocky@gnu.org>
+
+	* ext/thread_frame.c, test/unit/test-prev.rb: ThreadFrame#prev(0) is
+	nop. Add optional count argument to ThreadFrame#prev.
+
+2009-07-30  rocky <rockyb@rubyforge.org>
+
+	Merge branch 'master' of git@github.com:rocky/rb-threadframe
+
+2009-07-30  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, test/unit/test-prev.rb,
+	test/unit/test-thread.rb: Add ThreadFrame#stack_size
+
+2009-07-30  rockyb <rocky@gnu.org>
+
+	* ext/iseq_extra.c, test/unit/test-iseq.rb: Don't rely on FIX2NUM to
+	throw a type error
+
+2009-07-30  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, ext/thread_frame.c, ext/vm_core_mini.h,
+	test/unit/test-invalid.rb: Add methods to get at iseq fields: self,
+	orig, klass.
+
+2009-07-29  rocky <rockyb@rubyforge.org>
+
+	* ext/.gitignore, ext/extconf.rb: Finally figured out how to
+	customize the mkmf Makefile WITHOUT checking in those options into
+	version control
+
+2009-07-28  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c: Small prev bugs.
+
+2009-07-28  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, test/unit/test-thread.rb: Add optional count
+	on ThreadFrame#prev. Should remove the singleton method and clean
+	prev_common code.
+
+2009-07-28  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c: Guard agains NULL pointer.
+
+2009-07-27  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, test/unit/test-thread.rb: Add arity for C
+	frames - Thanks ko1! Reinstate method_class under new structure
+	layout.
+
+2009-07-27  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, ext/method_mini.h, ext/ruby19_externs.h,
+	ext/thread_frame.c, ext/vm_core_mini.h: Track changes in C
+	structures for control frame and instruction sequence. Add structurs
+	from method.h. Be more explicit about what externs came from where
+	and which are patched. frame method_class no longer makes sense.
+
+2009-07-25  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, ext/thread_frame.c, test/unit/test-iseq.rb: 
+	iseq_extra.c: iseq_local_name() check for negative indexes. correct
+	rdoc. More tests.
+
+2009-07-24  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, lib/.gitignore, test/unit/test-thread.rb: Was
+	SEGV'ing in arity on C-style frames.
+
+2009-07-24  rocky <rockyb@rubyforge.org>
+
+	* lib/.gitignore, lib/iseq_extra.rb: Was SEGV'ing in arity on
+	C-style frames.
+
+2009-07-24  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.h, ext/proc_extra.c, ext/proc_extra.h,
+	ext/thread_frame.c: Tidy proc_extra/thread_frame interaction.
+	Probably we need to create a driver e.g. "introspection" which
+	combines thread_frame, proc, and iseq.
+
+2009-07-23  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, ext/iseq_extra.h, ext/thread_frame.c,
+	ext/vm_core_mini.h, test/unit/test-binding.rb,
+	test/unit/test-invalid.rb, test/unit/test-iseq.rb,
+	test/unit/test-proc.rb, test/unit/test-thread.rb: Allow access to
+	iseq parameter counts and integer values and local table names..
+	Clean up access to iseq methods. Still need to do proc_extra.{c,h}
+	like this.
+
+2009-07-23  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, ext/iseq_extra.h, ext/proc_extra.h,
+	ext/ruby19_externs.h, ext/thread_frame.c, test/unit/test-thread.rb,
+	th.rb: Add iseq#arity and ThreadFrame#arity
+
+2009-07-23  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, test/unit/test-thread.rb: Expand method for
+	lambda. Add Proc and lambda tests.
+
+2009-07-22  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c: Check for stack overflow in prev.
+	ThreadFrame#type is the MAGIC string now.
+
+2009-07-22  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, test/unit/test-thread.rb: prev skips over
+	FINISH frames. Extract VM_FRAME_MAGIC translation code from
+	vm_dump.c
+
+2009-07-22  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, test/unit/test-thread.rb: Add all frame types.
+
+
+2009-07-20  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, test/unit/test-invalid.rb,
+	test/unit/test-thread.rb: Lame attempt at handling C frames. An
+	additional "unknown" frame seems to be slipping in. Need to
+	investigate and fix in a less flaky way.
+
+2009-07-20  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c: Add ThreadFrame#type to indicate what kind of
+	frame we got. Todo: fix ThreadFrame#prev not to skip over C frames
+	and do a fixup of those.
+
+2009-07-20  rocky <rockyb@rubyforge.org>
+
+	* test/unit/test-thread.rb: One more small test
+
+2009-07-20  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, ext/thread_pthread.h, ext/vm_core_mini.h,
+	test/unit/test-thread.rb: Presumably this copes with C frames
+	better. Better unit tests are needed.
+
+2009-07-20  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c: More DRY through the magic of macros.
+
+2009-07-20  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c: Squeeze out a little more DRYness.
+
+2009-07-20  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c: DRY code more.
+
+2009-07-19  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c: DRY code a little.
+
+2009-07-19  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, test/unit/test-thread.rb, th.rb: Add
+	Threadframe#method - returns associated method name.
+
+2009-07-16  rocky <rocky@gnu.org>
+
+	* ext/thread_frame.c: Sort of along the idea for adding pc_offset=
+
+2009-07-15  rocky <rocky@gnu.org>
+
+	* README: Typo
+
+2009-07-13  rocky <rocky@gnu.org>
+
+	* .gitignore, Rakefile: Correct gem creation. This time, for sure!
+
+2009-07-12  rocky <rocky@gnu.org>
+
+	* ext/proc_extra.c, ext/thread_extra.h, ext/thread_frame.c,
+	ext/vm_core_mini.h, test/unit/test-thread.rb: Add ability to get pc
+	offset into instruction sequence. Merge rest of thread_extra.h into
+	vm_core_mini.h. Everything in vm_core_mini.h is really a subset of
+	Ruby 1.9's vm_core.h.
+
+2009-07-12  rocky <rocky@gnu.org>
+
+	* Rakefile: Add code to build a gem.
+
+2009-07-12  rocky <rocky@gnu.org>
+
+	* ext/thread_frame.c, ext/vm_core_mini.h,
+	test/unit/test-invalid.rb, threadframe.rd: Add ThreadFrame#invalid?
+	ThreadFrame#binding now checks validity of frame before making a
+	binding.
+
+2009-07-10  rocky <rocky@gnu.org>
+
+	* test/unit/test-invalid.rb: Add first cut at ThreadFrame#invalid?
+
+2009-07-10  rocky <rocky@gnu.org>
+
+	* ext/thread_extra.h, ext/thread_frame.c, ext/vm_core_mini.h: Expose
+	bp. Move more vm_core.h things into vm_core_mini.h
+
+2009-07-09  rocky <rocky@gnu.org>
+
+	* ext/proc_extra.c, ext/vm_core_mini.h, test/unit/test-proc.rb: Add
+	minimal Proc.new().iseq test
+
+2009-07-06  rocky <rocky@gnu.org>
+
+	* ext/proc_extra.c, ext/ruby19_externs.h, ext/thread_extra.c,
+	ext/thread_frame.c, ext/vm_core_mini.h: Add iseq method to Proc.
+
+2009-07-05  rocky <rocky@sanchez.(none)>
+
+	* ext/ruby19_externs.h, ext/thread_extra.h, ext/thread_frame.c,
+	ext/vm_core_mini.h, test/unit/test-thread.rb, th.rb, threadframe.rd: 
+	Add tf.source_container. Make source_location an array to follow the
+	threadframe.rd API. Move Ruby externs into a separate file. Need now
+	to include part of iseq definition in order to pick out filename.
+
+2009-07-02  rocky <rocky@sanchez.(none)>
+
+	* ext/thread_frame.c, th.rb, threadframe.rd: First stab at
+	tf.source_location. More to come later...
+
+2009-06-30  rocky <rocky@sanchez.(none)>
+
+	* ext/thread_frame.c, test/unit/test-binding.rb,
+	test/unit/test-thread.rb, th.rb, threadframe.rd: Thread::Frame ->
+	RubyVM::ThreadFrame
+
+2009-06-28  rocky <rocky@sanchez.(none)>
+
+	* ext/thread_extra.h, ext/thread_frame.c: Add Thread#stack to see
+	what it gives (which seems to be nil). Will probably remove later.
+
+2009-06-28  rocky <rocky@sanchez.(none)>
+
+	* ext/thread_extra.h, ext/thread_frame.c, ext/vm_core_mini.h,
+	test/unit/test-binding.rb, test/unit/test-thread.rb, th.rb: 
+	Workaround bug in Thread::Frame#prev where frame is an inline C
+	type. For now we can only deal with Ruby frames. Reinstate
+	Thread::Frame::current, since that's so common.
+
+2009-06-26  rocky <rocky@sanchez.(none)>
+
+	* ext/thread_frame.c, test/unit/test-binding.rb,
+	test/unit/test-thread.rb: A little closer to API ... add
+	Thread:threadframe which is in API and remove Thread::Frame::current
+	which wasn't.  Is probably more correct in terms of code as well.
+	(And probably more bugs remain).
+
+2009-06-25  rocky <rocky@sanchez.(none)>
+
+	* Rakefile, ext/thread_frame.c: See above.
+
+2009-06-25  rocky <rocky@sanchez.(none)>
+
+	* test/.gitignore, test/test-binding.rb, test/test-thread.rb,
+	test/unit/.gitignore, test/unit/test-binding.rb,
+	test/unit/test-thread.rb: Add Frame#thread. Move tests to unit
+	tests. Fix erroneous unit test.
+
+2009-06-24  rocky <rocky@sanchez.(none)>
+
+	* test/test-thread.rb: Thread::Frame#new() now takes a Thread object
+	and returns a fully-initialized object now. Add
+	Thread::Frame#thread.
+
+2009-06-24  rocky <rocky@sanchez.(none)>
+
+	* ext/thread_frame.c, test/test-binding.rb, th.rb: ThreadFrame ->
+	Thread::Frame
+
+2009-06-23  rocky <rocky@sanchez.(none)>
+
+	* threadframe.rd: Start my thankyous early and often
+
+2009-06-23  rocky <rocky@sanchez.(none)>
+
+	* threadframe.rd: ThreadFrame -> Thread::Frame. Thread::Frame::new
+	defined as Thread#threadframe. Added Thread::Frame#binding and
+	Thread:Frame#source_container
+
+2009-06-14  rocky <rocky@sanchez.(none)>
+
+	* threadframe.rd: Modifications based on qwik.atdot.net discussion.
+
+
+2009-06-14  rocky <rocky@sanchez.(none)>
+
+	* threadframe.rd: Threadframe API as originally sent to
+	quik.atdot.net
+
+2009-05-25  rocky <rocky@sanchez.(none)>
+
+	* ext/thread_frame.c: Name changes.
+
+2009-05-25  rocky <rocky@sanchez.(none)>
+
+	* .gitignore, README, Rakefile, ext/thread_frame.c,
+	test/.gitignore, th.rb: Add Rakefile with clean, test, and rdoc
+	tasks. And oh, start to document C routines better
+
+2009-05-10  rocky <rocky@sanchez.(none)>
+
+	* ext/thread_frame.c, th.rb: Add disasm method to disassemble
+	current thread
+
+2009-04-13  rocky <rocky@sanchez.(none)>
+
+	* ext/thread_frame.c: Hoist common code
+
+2009-04-13  rocky <rocky@sanchez.(none)>
+
+	* ext/thread_frame.c, test/test-binding.rb: More comments, one more
+	test
+
+2009-04-12  rocky <rocky@sanchez.(none)>
+
+	* ext/thread_extra.c, ext/thread_extra.h, ext/thread_frame.c,
+	test/test-binding.rb: Add ThreadFrame.prev1()
+
+2009-04-09  rocky <rocky@sanchez.(none)>
+
+	* ext/thread_frame.c: Save thread pointer along with the
+	control-frame pointer in a ThreadFrame
+
+2009-04-05  rocky <rocky@sanchez.(none)>
+
+	* Initial cut at extracting a thread frame
+
