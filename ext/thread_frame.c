@@ -155,21 +155,34 @@ static VALUE thread_frame_dfp(VALUE klass, VALUE index)
 /* The above declaration is to make RDOC happy. */
 THREAD_FRAME_FP_METHOD(dfp)
 
-#if 0
 /*
  *  call-seq:
- *     ThreadFrame#lfp(n)  -> object
+ *     ThreadFrame#lfp(i)  -> object
  * 
  * Returns a RubyVM object stored at lfp position <i>i</i>. The top object
- * is position 0. 
+ * is position 0. Negative values of <i>i</i> count from the end.
  */
 static VALUE thread_frame_lfp(VALUE klass, VALUE index) 
 {
-    /* handled by THREAD_FRAME_FP_METHOD macro;  */
+  if (!FIXNUM_P(index)) {
+    rb_raise(rb_eTypeError, "integer argument expected");
+  } else {
+    long int i = FIX2INT(index);
+    long int size;
+    
+    THREAD_FRAME_SETUP ;
+
+    size = tf->cfp->iseq->local_size;
+    if (i < 0) i = size - i;
+    
+    if (i > size)
+      rb_raise(rb_eIndexError, 
+	       "local frame index %ld should be in the range %ld .. %ld",
+	       i, -size, size-1);
+
+    return tf->cfp->lfp[-i]; /* stack  grows "down" */
+  }
 }
-#endif
-/* The above declaration is to make RDOC happy. */
-THREAD_FRAME_FP_METHOD(lfp)
 
 #if 0
 /*

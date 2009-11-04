@@ -22,7 +22,6 @@ class TestISeq < Test::Unit::TestCase
     assert_equal(0, iseq.argc)
     assert_equal(0, iseq.arg_opts)
     assert_equal(2, iseq.local_table_size)
-    assert_equal(nil, iseq.local_name(-10))
 
     x  = lambda do |x,y| 
       iseq = RubyVM::ThreadFrame::current.iseq
@@ -35,8 +34,11 @@ class TestISeq < Test::Unit::TestCase
       ['x', 'y'].each_with_index do |expect, i|
         assert_equal(expect, iseq.local_name(i))
       end
-      assert_equal(nil, iseq.local_name(-1))
-      assert_equal(nil, iseq.local_name(10))
+      
+      assert_equal('x', iseq.local_name(-1))
+      assert_raise IndexError do
+        x = iseq.local_name(10)
+      end
     end
     x.call(1,2)
 
@@ -51,7 +53,9 @@ class TestISeq < Test::Unit::TestCase
       ['a'].each_with_index do |expect, i|
         assert_equal(expect, iseq.local_name(i))
       end
-      assert_equal(nil, iseq.local_name(100))
+      assert_raises IndexError do
+        x = iseq.local_name(100)
+      end
       assert_raises TypeError do 
         p iseq.local_name('a')
       end

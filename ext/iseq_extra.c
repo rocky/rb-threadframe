@@ -97,27 +97,38 @@ iseq_brkpt_dealloc(VALUE iseqval)
  *     RubyVM::InstructionSequence#brkpt_get(offset) -> bool
  *
  *  Get a value of breakpoint of byte vector at +offset+.
- *  True is returned if there was a breakpoint previously set,
- *  false if not, and nil if there was some problem.
+ *
+ *  True is returned if there is a breakpoint previously set, false
+ *  if not, and nil if there was some problem. Negative values of
+ *  <i>offset</i> count from the end of the instruction sequence.
  */
 VALUE
 iseq_brkpt_get(VALUE iseqval, VALUE offsetval)
 {
+    /* FIXME: DRY code with brkpt_get */
     rb_iseq_t *iseq;
     if (Qnil != iseqval) {
 	if (FIXNUM_P(offsetval)) {
 	    int offset = FIX2INT(offsetval);
+	    unsigned long int uoffset;
+	    unsigned long int size;
 
 	    GetISeqPtr(iseqval, iseq);
 	    if (!iseq->breakpoints) {
 		return Qfalse;
 	    }
+
+	    size = iseq->iseq_size;
+	    uoffset = (offset < 0) ? 
+	      (unsigned long int) iseq->iseq_size + offset :
+	      (unsigned long int) offset;
+	      
 	    /* FIXME: check that offset is at a valid instruction offset */
-	    if (offset >= 0 && offset < iseq->iseq_size) {
-		return (0 != iseq->breakpoints[offset]) ? Qtrue : Qfalse;
+	    if (uoffset < iseq->iseq_size) {
+		return (0 != iseq->breakpoints[uoffset]) ? Qtrue : Qfalse;
 	    } else
-		rb_raise(rb_eTypeError, "given offset %d is not less than max size %lu", 
-			 offset, iseq->iseq_size);
+		rb_raise(rb_eTypeError, "given offset %lu is not less than max size %lu", 
+			 uoffset, iseq->iseq_size);
 	} else {
 	    rb_raise(rb_eTypeError, "type mismatch: %s given, int >= 0 expected", 
 		     rb_class2name(CLASS_OF(offsetval)));
@@ -133,12 +144,15 @@ iseq_brkpt_get(VALUE iseqval, VALUE offsetval)
  *     RubyVM::InstructionSequence#brkpt_set(offset) -> bool
  *
  *  Set a breakpoint of byte vector at +offset+.
- *  True is returned if there was a breakpoint previously set,
- *  false if not, and nil if there was some problem.
+ *
+ *  True is returned if there was a breakpoint previously set, false
+ *  if not, and nil if there was some problem. Negative values of
+ *  <i>offset</i> count from the end of the instruction sequence.
  */
 VALUE
 iseq_brkpt_set(VALUE iseqval, VALUE offsetval)
 {
+  /* FIXME: DRY code with brkpt_set */
     rb_iseq_t *iseq;
     if (Qnil != iseqval) {
 	GetISeqPtr(iseqval, iseq);
@@ -148,13 +162,21 @@ iseq_brkpt_set(VALUE iseqval, VALUE offsetval)
 	}
 	if (FIXNUM_P(offsetval)) {
 	    int offset = FIX2INT(offsetval);
+	    unsigned long int uoffset;
+	    unsigned long int size;
+
+	    size = iseq->iseq_size;
+	    uoffset = (offset < 0) ? 
+	      (unsigned long int) iseq->iseq_size + offset :
+	      (unsigned long int) offset;
+
 	    /* FIXME: check that offset is at a valid instruction offset */
-	    if (offset >= 0 && offset < iseq->iseq_size) {
-		iseq->breakpoints[offset] = '\001';
+	    if (uoffset < size) {
+		iseq->breakpoints[uoffset] = '\001';
 		return Qtrue;
 	    } else
-		rb_raise(rb_eTypeError, "given offset %d is not less than max size %lu", 
-			 offset, iseq->iseq_size);
+		rb_raise(rb_eTypeError, "given offset %lu is not less than max size %lu", 
+			 uoffset, size);
 	} else {
 	    rb_raise(rb_eTypeError, "type mismatch: %s given, int >= 0 expected", 
 		     rb_class2name(CLASS_OF(offsetval)));
@@ -183,13 +205,21 @@ iseq_brkpt_unset(VALUE iseqval, VALUE offsetval)
 	    return Qtrue;
 	if (FIXNUM_P(offsetval)) {
 	    int offset = FIX2INT(offsetval);
+	    unsigned long int uoffset;
+	    unsigned long int size;
+
+	    size = iseq->iseq_size;
+	    uoffset = (offset < 0) ? 
+	      (unsigned long int) iseq->iseq_size + offset :
+	      (unsigned long int) offset;
+
 	    /* FIXME: check that offset is at a valid instruction offset */
-	    if (offset >= 0 && offset < iseq->iseq_size) {
+	    if (uoffset < size) {
 		iseq->breakpoints[offset] = '\000';
 		return Qtrue;
 	    } else
-		rb_raise(rb_eTypeError, "given offset %d is not less than max size %lu", 
-			 offset, iseq->iseq_size);
+		rb_raise(rb_eTypeError, "given offset %lu is not less than max size %lu", 
+			 uoffset, iseq->iseq_size);
 	} else {
 	    rb_raise(rb_eTypeError, "type mismatch: %s given, int >= 0 expected", 
 		     rb_class2name(CLASS_OF(offsetval)));
@@ -216,7 +246,7 @@ iseq_brkpts(VALUE iseqval)
     else {
 	GetISeqPtr(iseqval, iseq);
 	if (iseq->breakpoints) {
-	    int offset;
+	    unsigned int offset;
 	    VALUE ary = rb_ary_new();
 	    for (offset = 0; offset < iseq->iseq_size; offset++) {
 		if (iseq->breakpoints[offset])
@@ -305,13 +335,23 @@ iseq_local_name(VALUE iseqval, VALUE val)
 {
     rb_iseq_t *iseq;
     if (FIXNUM_P(val)) {
-      int i = FIX2INT(val);
+      long int i = FIX2INT(val);
+      long int size;
+      
       GetISeqPtr(iseqval, iseq);
-      return (i < iseq->local_table_size && i >= 0) 
-	? rb_str_new2(rb_id2name(iseq->local_table[i]))
-	: Qnil;
+      
+      size = iseq->local_table_size;
+      
+      if (i < 0) i = size + i;
+      
+      if (i >= size)
+	rb_raise(rb_eIndexError, 
+		 "local table index %ld should be in the range %ld .. %ld",
+		 i, -size, size-1);
+      
+      rb_str_new2(rb_id2name(iseq->local_table[i]));
     } else {
-      rb_raise(rb_eTypeError, "type mismatch: %s given, int >= 0 expected", 
+      rb_raise(rb_eTypeError, "type mismatch: %s given, Fixnum expected", 
 	       rb_class2name(CLASS_OF(val)));
     }
 }

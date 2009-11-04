@@ -50,6 +50,11 @@ class TestThread < Test::Unit::TestCase
     assert tf.lfp(0)
     assert tf.sp(0)
 
+    assert_raises IndexError do
+      x = tf.lfp(tf.iseq.local_size+1)
+    end
+
+
     tf_prev = tf.prev
     assert(tf_prev.pc_offset > 0, "Should be valid PC offset for prev")
   
