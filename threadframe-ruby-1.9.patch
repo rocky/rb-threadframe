@@ -1,8 +1,8 @@
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 25424)
+--- include/ruby/ruby.h	(revision 25565)
 +++ include/ruby/ruby.h	(working copy)
-@@ -1317,7 +1317,9 @@
+@@ -1322,7 +1322,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
  #define RUBY_EVENT_C_RETURN  0x0040
  #define RUBY_EVENT_RAISE     0x0080
@@ -15,7 +15,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 25424)
+--- vm_core.h	(revision 25565)
 +++ vm_core.h	(working copy)
 @@ -155,7 +155,7 @@
      VALUE type;          /* instruction sequence type */
@@ -53,9 +53,48 @@ Index: vm_core.h
  int rb_iseq_first_lineno(rb_iseq_t *iseq);
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 25424)
+--- iseq.c	(revision 25565)
 +++ iseq.c	(working copy)
-@@ -117,6 +117,17 @@
+@@ -23,6 +23,38 @@
+ 
+ #define hidden_obj_p(obj) (!SPECIAL_CONST_P(obj) && !RBASIC(obj)->klass)
+ 
++/* some utilities */
++
++int
++insn_len(VALUE insn)
++{
++  return insn_len_info[(int)insn];
++}
++
++const char *
++insn_name(VALUE insn)
++{
++  return insn_name_info[(int)insn];
++}
++
++const char *
++insn_op_types(VALUE insn)
++{
++  return insn_operand_info[(int)insn];
++}
++
++int
++insn_op_type(VALUE insn, long pos)
++{
++  int len = insn_len(insn) - 1;
++  if(pos < len){
++    return insn_operand_info[(int)insn][pos];
++  }
++  else{
++    return 0;
++  }
++}
++
+ static inline VALUE
+ obj_resurrect(VALUE obj)
+ {
+@@ -117,6 +149,17 @@
      RUBY_MARK_LEAVE("iseq");
  }
  
@@ -73,7 +112,7 @@ Index: iseq.c
  static size_t
  iseq_memsize(const void *ptr)
  {
-@@ -712,6 +723,117 @@
+@@ -712,6 +755,117 @@
      return 0;
  }
  
@@ -191,7 +230,7 @@ Index: iseq.c
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -901,9 +1023,8 @@
+@@ -901,9 +1055,8 @@
  }
  
  VALUE
@@ -202,7 +241,7 @@ Index: iseq.c
      VALUE *iseq;
      VALUE str = rb_str_new(0, 0);
      VALUE child = rb_ary_new();
-@@ -995,14 +1116,44 @@
+@@ -995,14 +1148,44 @@
  	n += rb_iseq_disasm_insn(str, iseq, n, iseqdat, child);
      }
  
@@ -251,7 +290,7 @@ Index: iseq.c
  static VALUE
  iseq_s_disasm(VALUE klass, VALUE body)
  {
-@@ -1481,9 +1632,11 @@
+@@ -1481,9 +1664,11 @@
      rb_define_alloc_func(rb_cISeq, iseq_alloc);
      rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
      rb_define_method(rb_cISeq, "disasm", rb_iseq_disasm, 0);
@@ -263,9 +302,24 @@ Index: iseq.c
  
      /* disable this feature because there is no verifier. */
      /* rb_define_singleton_method(rb_cISeq, "load", iseq_s_load, -1); */
+Index: iseq.h
+===================================================================
+--- iseq.h	(revision 25565)
++++ iseq.h	(working copy)
+@@ -101,4 +101,10 @@
+ #define DEFINED_ZSUPER INT2FIX(9)
+ #define DEFINED_FUNC   INT2FIX(10)
+ 
++/* some utilities */
++extern int insn_len(VALUE insn);
++extern const char *insn_name(VALUE insn);
++extern const char *insn_op_types(VALUE insn);
++extern int insn_op_type(VALUE insn, long pos);
++
+ #endif /* RUBY_COMPILE_H */
 Index: proc.c
 ===================================================================
---- proc.c	(revision 25424)
+--- proc.c	(revision 25565)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -342,7 +396,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 25424)
+--- thread.c	(revision 25565)
 +++ thread.c	(working copy)
 @@ -309,6 +309,16 @@
  
@@ -479,7 +533,7 @@ Index: thread.c
  
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 25424)
+--- vm_exec.h	(revision 25565)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,45 @@
  typedef rb_num_t GENTRY;
@@ -549,7 +603,7 @@ Index: vm_exec.h
  #define debugs printf
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 25424)
+--- tool/instruction.rb	(revision 25565)
 +++ tool/instruction.rb	(working copy)
 @@ -854,6 +854,7 @@
        commit "INSN_ENTRY(#{insn.name}){"
@@ -559,4 +613,46 @@ Index: tool/instruction.rb
        make_header_stack_val  insn
        make_header_default_operands insn
        make_header_operands   insn
-
+Index: template/insns_info.inc.tmpl
+===================================================================
+--- template/insns_info.inc.tmpl	(revision 25565)
++++ template/insns_info.inc.tmpl	(working copy)
+@@ -46,38 +46,6 @@
+ }
+ #endif
+ 
+-/* some utilities */
+-
+-static int
+-insn_len(VALUE insn)
+-{
+-  return insn_len_info[(int)insn];
+-}
+-
+-static const char *
+-insn_name(VALUE insn)
+-{
+-  return insn_name_info[(int)insn];
+-}
+-
+-static const char *
+-insn_op_types(VALUE insn)
+-{
+-  return insn_operand_info[(int)insn];
+-}
+-
+-static int
+-insn_op_type(VALUE insn, long pos)
+-{
+-  int len = insn_len(insn) - 1;
+-  if(pos < len){
+-    return insn_operand_info[(int)insn][pos];
+-  }
+-  else{
+-    return 0;
+-  }
+-}
+-
+ #ifdef USE_INSN_RET_NUM
+ static int
+ insn_ret_num(VALUE insn)

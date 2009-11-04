@@ -24,4 +24,8 @@ struct iseq_compile_data {
     /*const*/ rb_compile_option_t *option;  // "const" removed 
 };
 
-
+/* some utilities */
+extern int insn_len(VALUE insn);
+extern const char *insn_name(VALUE insn);
+extern const char *insn_op_types(VALUE insn);
+extern int insn_op_type(VALUE insn, long pos);

@@ -394,18 +394,19 @@ VALUE iseq_offset2lines(VALUE iseqval, VALUE offsetval)
 VALUE iseq_killcache(VALUE iseqval)
 {
     rb_iseq_t *iseqdat;
-    int *iseq ;
+    VALUE *iseq ;
     unsigned long i, size, count = 0;
     struct iseq_insn_info_entry *table;
 
     GetISeqPtr(iseqval, iseqdat);
-    iseq = (int *) iseqdat->iseq;
+    iseq = iseqdat->iseq;
     size = iseqdat->insn_info_size;
     table = iseqdat->insn_info_table;
     for (i = 0; i < size; i++) {
       const unsigned long pos = table[i].position;
-      const int insn = iseq[pos];
-      if (insn == 52) /* getinlinecache */
+      const VALUE insn = iseq[pos];
+      if (0 == strncmp(insn_name(insn), "getinlinecache", 
+		       sizeof("getinlinecache")))
       {
 	/* printf("pos: %lu\n", pos); */
 	count ++;
