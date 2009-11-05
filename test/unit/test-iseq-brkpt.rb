@@ -37,7 +37,6 @@ class TestISeqBrkpt < Test::Unit::TestCase
     assert_equal(true, iseq.brkpt_unset(max_offset),
                  "Offset %d should be unset even when deallocated" % max_offset)
 
-    assert_raises TypeError do iseq.brkpt_get('a') end
     assert_raises TypeError do iseq.brkpt_set('a') end
 
   end
