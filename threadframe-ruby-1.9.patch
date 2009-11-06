@@ -1,3 +1,4 @@
+svn diff
 Index: include/ruby/ruby.h
 ===================================================================
 --- include/ruby/ruby.h	(revision 25565)
@@ -535,15 +536,13 @@ Index: vm_exec.h
 ===================================================================
 --- vm_exec.h	(revision 25565)
 +++ vm_exec.h	(working copy)
-@@ -18,6 +18,45 @@
+@@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
  typedef rb_iseq_t *ISEQ;
  
 +#include "insns_info.inc"
 +
-+#define TRACE_INSN_EXTRA_INFO 1
-+
-+#if !TRACE_INSN_EXTRA_INFO
++#if 0
 +
 +#define TRACE_INSN_SET_EXTRA_INFO(insn, var) do { var = Qnil; } while (0)
 +
@@ -572,16 +571,13 @@ Index: vm_exec.h
 +#endif
 +
 +#define TRACE_INSN(insn) do { \
-+  VALUE trace_ary__; \
-+  TRACE_INSN_SET_EXTRA_INFO(insn, trace_ary__); \
-+  EXEC_EVENT_HOOK(th, RUBY_EVENT_INSN, GET_SELF(), \
-+    rb_intern(#insn), trace_ary__); \
++  EXEC_EVENT_HOOK(th, RUBY_EVENT_INSN, GET_SELF(), 0, 0); \
 +} while (0)
 +
  #ifdef  COLLECT_USAGE_ANALYSIS
  #define USAGE_ANALYSIS_INSN(insn)           vm_analysis_insn(insn)
  #define USAGE_ANALYSIS_OPERAND(insn, n, op) vm_analysis_operand(insn, n, (VALUE)op)
-@@ -28,12 +67,14 @@
+@@ -28,12 +62,14 @@
  #define USAGE_ANALYSIS_REGISTER(reg, s)		/* none */
  #endif
  
@@ -605,11 +601,20 @@ Index: tool/instruction.rb
 ===================================================================
 --- tool/instruction.rb	(revision 25565)
 +++ tool/instruction.rb	(working copy)
-@@ -854,6 +854,7 @@
+@@ -854,6 +854,16 @@
        commit "INSN_ENTRY(#{insn.name}){"
        make_header_prepare_stack insn
        commit "{"
-+      commit "  TRACE_INSN(#{insn.name});"
++      # rocky: for reasons that I don't understand, calling the
++      # instruction trace hook in a "leave" instruction causes a
++      # SEGV via an illegal access csuch as via vm.c line 1144: 
++      #    ep = ... cfp->iseq ...  
++      # 
++      # Since we can handle this event via RUBY_EVENT_END I don't
++      # think there is any loss in functionality.
++      unless insn.name == 'leave'
++        commit "  TRACE_INSN(#{insn.name});"
++      end
        make_header_stack_val  insn
        make_header_default_operands insn
        make_header_operands   insn
@@ -656,3 +661,4 @@ Index: template/insns_info.inc.tmpl
  #ifdef USE_INSN_RET_NUM
  static int
  insn_ret_num(VALUE insn)
+
