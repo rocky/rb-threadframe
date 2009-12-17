@@ -14,7 +14,7 @@ end
 EXT_FILES    = FileList[%w(ext/*.c ext/*.h)]
 LIB_FILES    = FileList['lib/*.rb']
 TEST_FILES   = FileList['test/**/*.rb']
-COMMON_FILES = FileList[%w(README Rakefile)]
+COMMON_FILES = FileList[%w(README.md Rakefile)]
 ALL_FILES    = COMMON_FILES + LIB_FILES + EXT_FILES + TEST_FILES
 
 desc 'Create the core thread-frame shared library extension'
@@ -79,9 +79,9 @@ Rake::RDocTask.new('rdoc') do |rdoc|
   # Show source inline with line numbers
   rdoc.options << '--inline-source' << '--line-numbers'
   # Make the readme file the start page for the generated html
-  rdoc.options << '--main' << 'README'
+  rdoc.options << '--main' << 'README.md'
   rdoc.rdoc_files.include('ext/**/thread_frame.c',
-                          'README')
+                          'README.md')
 end
 
 # Base GEM Specification
@@ -110,7 +110,7 @@ EOF
   
   # rdoc
   spec.has_rdoc = true
-  spec.extra_rdoc_files = ['README', 'threadframe.rd']
+  spec.extra_rdoc_files = ['README.md', 'threadframe.rd']
 end
 
 # Rake task to build the default package
