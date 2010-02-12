@@ -1,6 +1,6 @@
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 26649)
+--- include/ruby/ruby.h	(revision 26650)
 +++ include/ruby/ruby.h	(working copy)
 @@ -1325,7 +1325,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
@@ -15,7 +15,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 26649)
+--- vm_core.h	(revision 26650)
 +++ vm_core.h	(working copy)
 @@ -155,7 +155,7 @@
      VALUE type;          /* instruction sequence type */
@@ -53,7 +53,7 @@ Index: vm_core.h
  int rb_iseq_first_lineno(rb_iseq_t *iseq);
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 26649)
+--- iseq.c	(revision 26650)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -112,17 +112,17 @@ Index: iseq.c
  static size_t
  iseq_memsize(const void *ptr)
  {
-@@ -384,6 +427,24 @@
+@@ -384,6 +427,35 @@
  				parent, ISEQ_TYPE_MAIN, &COMPILE_OPTION_DEFAULT);
  }
  
 +static void
-+update_file_iseq(VALUE filename, VALUE iseq)
++update_file_iseq(VALUE filename, VALUE iseq_name, VALUE iseq)
 +{
-+    ID script_lines;
-+    CONST_ID(script_lines, "SCRIPT_ISEQS__");
-+    if (rb_const_defined_at(rb_cObject, script_lines)) {
-+	VALUE hash = rb_const_get_at(rb_cObject, script_lines);
++    ID hash_id;
++    CONST_ID(hash_id, "SCRIPT_ISEQS__");
++    if (rb_const_defined_at(rb_cObject, hash_id)) {
++	VALUE hash = rb_const_get_at(rb_cObject, hash_id);
 +	if (TYPE(hash) == T_HASH) {
 +	    VALUE iseqs = rb_hash_aref(hash, filename);
 +	    if (TYPE(iseqs) == T_ARRAY)
@@ -131,21 +131,32 @@ Index: iseq.c
 +		rb_hash_aset(hash, filename, rb_ary_new3(1, iseq));
 +	}
 +    }
++    CONST_ID(hash_id, "ISEQS__");
++    if (rb_const_defined_at(rb_cObject, hash_id)) {
++	VALUE hash = rb_const_get_at(rb_cObject, hash_id);
++	if (TYPE(hash) == T_HASH) {
++	    VALUE iseqs = rb_hash_aref(hash, iseq_name);
++	    if (TYPE(iseqs) == T_ARRAY)
++		rb_ary_push(iseqs, iseq);
++	    else
++		rb_hash_aset(hash, iseq_name, rb_ary_new3(1, iseq));
++	}
++    }
 +}
 +
 +
  static VALUE
  rb_iseq_new_with_bopt_and_opt(NODE *node, VALUE name, VALUE filename, VALUE line_no,
  				VALUE parent, VALUE type, VALUE bopt,
-@@ -398,6 +459,7 @@
+@@ -398,6 +470,7 @@
      prepare_iseq_build(iseq, name, filename, line_no, parent, type, bopt, option);
      rb_iseq_compile_node(self, node);
      cleanup_iseq_build(iseq);
-+    update_file_iseq(filename, self);
++    update_file_iseq(filename, name, self);
      return self;
  }
  
-@@ -712,6 +774,117 @@
+@@ -712,6 +785,117 @@
      return 0;
  }
  
@@ -263,7 +274,7 @@ Index: iseq.c
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -901,9 +1074,8 @@
+@@ -901,9 +1085,8 @@
  }
  
  VALUE
@@ -274,7 +285,7 @@ Index: iseq.c
      VALUE *iseq;
      VALUE str = rb_str_new(0, 0);
      VALUE child = rb_ary_new();
-@@ -995,14 +1167,44 @@
+@@ -995,14 +1178,44 @@
  	n += rb_iseq_disasm_insn(str, iseq, n, iseqdat, child);
      }
  
@@ -323,7 +334,7 @@ Index: iseq.c
  static VALUE
  iseq_s_disasm(VALUE klass, VALUE body)
  {
-@@ -1481,9 +1683,11 @@
+@@ -1481,9 +1694,11 @@
      rb_define_alloc_func(rb_cISeq, iseq_alloc);
      rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
      rb_define_method(rb_cISeq, "disasm", rb_iseq_disasm, 0);
@@ -337,7 +348,7 @@ Index: iseq.c
      /* rb_define_singleton_method(rb_cISeq, "load", iseq_s_load, -1); */
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 26649)
+--- iseq.h	(revision 26650)
 +++ iseq.h	(working copy)
 @@ -101,4 +101,10 @@
  #define DEFINED_ZSUPER INT2FIX(9)
@@ -352,7 +363,7 @@ Index: iseq.h
  #endif /* RUBY_COMPILE_H */
 Index: proc.c
 ===================================================================
---- proc.c	(revision 26649)
+--- proc.c	(revision 26650)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -429,7 +440,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 26649)
+--- thread.c	(revision 26650)
 +++ thread.c	(working copy)
 @@ -336,6 +336,16 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -566,7 +577,7 @@ Index: thread.c
  
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 26649)
+--- vm_exec.h	(revision 26650)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
@@ -631,7 +642,7 @@ Index: vm_exec.h
  #define debugs printf
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 26649)
+--- tool/instruction.rb	(revision 26650)
 +++ tool/instruction.rb	(working copy)
 @@ -854,6 +854,16 @@
        commit "INSN_ENTRY(#{insn.name}){"
@@ -652,7 +663,7 @@ Index: tool/instruction.rb
        make_header_operands   insn
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 26649)
+--- template/insns_info.inc.tmpl	(revision 26650)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -46,38 +46,6 @@
  }
