@@ -461,7 +461,10 @@ iseq_source_container_internal(rb_iseq_t *iseq)
        to remove. Probably Ruby has to be changed to record this kind
        of information.
      */
-    if (len > 0 && file[0] == '(' && file[len-1] == ')')
+    if (len > 0 && 
+	((file[0] == '(' && file[len-1] == ')')
+	 || 0 == strncmp(file, "<compiled>", 
+			 sizeof("<compiled>"))))
 	contain_type = "string";
     else
 	contain_type = "file";

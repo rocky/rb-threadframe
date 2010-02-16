@@ -15,6 +15,9 @@ class TestSource < Test::Unit::TestCase
     eval('def foo; 5 end')
     tup = method(:foo).iseq.source_container    
     assert_equal('string',  tup[0])
+
+    iseq = RubyVM::InstructionSequence.compile("1+2")
+    assert_equal('string',  iseq.source_container[0])
   end
 
   def test_basic

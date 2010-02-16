@@ -637,7 +637,8 @@ thread_frame_source_container(VALUE klass)
        regarding (eval) propagates back to other kinds of frames such
        as VM_MAGIC_BLOCK and so on.
      */
-    if (0 == strncmp(RSTRING_PTR(file), "(eval)", sizeof("(eval)"))
+    if (0 == strncmp(RSTRING_PTR(file), "(eval)", sizeof("(eval)")) 
+	|| 0 == strncmp(RSTRING_PTR(file), "<compiled>", sizeof("<compiled>")) 
 	|| (VM_FRAME_MAGIC_EVAL == VM_FRAME_TYPE(tf->cfp))
 	)
 	contain_type = "string";
