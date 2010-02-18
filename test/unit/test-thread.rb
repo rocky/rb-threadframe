@@ -23,6 +23,14 @@ class TestThread < Test::Unit::TestCase
                  [offset_2, offset_1])
   end
 
+  def test_sp
+    tf = RubyVM::ThreadFrame::current.prev
+    assert tf.sp(1)
+    tf.sp_set(1, 5)
+    assert_equal(5, tf.sp(1),
+                 'chcking value of recently-set sp(1)')
+  end
+
   def test_source_container
     cfunc_filebase = 'cfunc-use'
     load File.join(File.dirname(__FILE__), cfunc_filebase + '.rb')
@@ -48,7 +56,6 @@ class TestThread < Test::Unit::TestCase
     assert_equal(0, tf.arity)
     assert tf.dfp(0)
     assert tf.lfp(0)
-    assert tf.sp(0)
 
     assert_raises IndexError do
       x = tf.lfp(tf.iseq.local_size+1)

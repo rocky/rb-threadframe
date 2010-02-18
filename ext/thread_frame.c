@@ -99,7 +99,7 @@ thread_frame_invalid_internal(thread_frame_t *tf)
 
 /*
  *  call-seq:
- *     Thread#threadframe  -> thread_frame_object
+ *     RubyVM::ThreadFrame#threadframe  -> thread_frame_object
  * 
  *  Returns a RubyVM::ThreadFrame object for the given thread.
  */
@@ -142,7 +142,7 @@ thread_frame_##REG(VALUE klass, VALUE index)			\
 #if 0
 /*
  *  call-seq:
- *     ThreadFrame#dfp(n)  -> object
+ *     RubyVM::ThreadFrame#dfp(n)  -> object
  * 
  * Returns a RubyVM object stored at dfp position <i>i</i>. The top object
  * is position 0. 
@@ -157,7 +157,7 @@ THREAD_FRAME_FP_METHOD(dfp)
 
 /*
  *  call-seq:
- *     ThreadFrame#lfp(i)  -> object
+ *     RubyVM::ThreadFrame#lfp(i)  -> object
  * 
  * Returns a RubyVM object stored at lfp position <i>i</i>. The top object
  * is position 0. Negative values of <i>i</i> count from the end.
@@ -187,7 +187,7 @@ static VALUE thread_frame_lfp(VALUE klass, VALUE index)
 #if 0
 /*
  *  call-seq:
- *     Thread#sp(n)  -> object
+ *     RubyVM::ThreadFrame#sp(n)  -> object
  * 
  * Returns a RubyVM object stored at stack position <i>i</i>. The top object
  * is position 0. 1 is the next object.
@@ -200,10 +200,31 @@ static VALUE thread_frame_sp(VALUE klass, VALUE index)
 /* The above declaration is to make RDOC happy. */
 THREAD_FRAME_FP_METHOD(sp)
 
+/*
+ *  call-seq:
+ *     RubyVM::ThreadFrame#sp_set(n, newvalue)  -> object
+ * 
+ * Returns a RubyVM object stored at stack position <i>i</i>. The top object
+ * is position 0. 1 is the next object.
+ */
+static VALUE thread_frame_sp_set(VALUE klass, VALUE index, VALUE newvalue)
+{
+    if (!FIXNUM_P(index)) {
+	rb_raise(rb_eTypeError, "integer argument expected");
+    } else {
+        long int i = FIX2INT(index);
+	THREAD_FRAME_SETUP ;
+	/* FIXME: check index is within range. */
+        /* stack  grows "down" */
+	tf->cfp->sp[-i] = newvalue;
+	return newvalue;
+    }
+}
+
 #ifndef NO_reg_pc
 /*
  *  call-seq:
- *     Thread#pc_offset=
+ *     RubyVM::ThreadFrame#pc_offset=
  * 
  * Sets pc to the offset given. 
  * WARNING, this is pretty dangerous. You need to set this to a valid
@@ -328,10 +349,10 @@ thread_frame_equal(VALUE klass, VALUE tfval2)
  *  information. Don't use this directly. Instead use one of the 
  *  class methods.
  *
- *     ThreadFrame::VERSION               => 0.1 
- *     ThreadFrame::current.flag          => 72
- *     ThreadFrame::current.proc          => false
- *     ThreadFrame::current.self          => 'main'
+ *    RubyVM::ThreadFrame::VERSION               => 0.1 
+ *    RubyVM::ThreadFrame::current.flag          => 72
+ *    RubyVM::ThreadFrame::current.proc          => false
+ *    RubyVM::ThreadFrame::current.self          => 'main'
  */
 static VALUE
 thread_frame_initialize(VALUE tfval, VALUE thval)
@@ -366,7 +387,7 @@ thread_frame_invalid(VALUE klass)
 
 /*
  *  call-seq:
- *     Thread#method  -> String
+ *     ThreadFrame#method  -> String
  * 
  * Returns the method associated with the frame or nil of none.
  * ThreadFrameError can be raised if the threadframe
@@ -402,7 +423,7 @@ thread_frame_method(VALUE klass)
 
 /*
  *  call-seq:
- *     Thread#pc_offset  -> Fixnum
+ *     ThreadFrame#pc_offset  -> Fixnum
  * 
  * Returns the offset inside the iseq or "program-counter offset" or -1
  * If invalid/unstarted. ThreadFrameError can be raised if the threadframe
@@ -768,7 +789,7 @@ frame_magic2str(rb_control_frame_t *cfp)
 
 /*
  *  call-seq:
- *     Thread#type  -> String 
+ *     ThreadFrame#type  -> String 
  * 
  * Returns the kind of frame. Basically interprets VM_FRAME_MAGIC for
  * tf->cfp->flag
@@ -813,9 +834,17 @@ Init_thread_frame(void)
 		     thread_frame_source_container, 0);
     rb_define_method(rb_cThreadFrame, "source_location", 
 		     thread_frame_source_location, 0);
+
+    /* sp[] and sp[]= would be neater, but that would require making sp an
+       object which I am not sure I want to do.
+     */
     rb_define_method(rb_cThreadFrame, "sp", thread_frame_sp, 1);
+    rb_define_method(rb_cThreadFrame, "sp_set", thread_frame_sp_set, 2);
+
+    /* I think I like the more explicit stack_size over size or length. */
     rb_define_method(rb_cThreadFrame, "stack_size", 
 		     thread_frame_stack_size, 0);
+
     rb_define_method(rb_cThreadFrame, "thread", thread_frame_thread, 0);
     rb_define_method(rb_cThreadFrame, "type", thread_frame_type, 0);
 
