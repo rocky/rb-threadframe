@@ -669,6 +669,38 @@ Index: vm_exec.h
  
  #if VMDEBUG > 0
  #define debugs printf
+Index: vm_insnhelper.c
+===================================================================
+--- vm_insnhelper.c	(revision 26704)
++++ vm_insnhelper.c	(working copy)
+@@ -367,23 +367,23 @@
+     const rb_method_definition_t *def = me->def;
+     rb_control_frame_t *cfp;
+ 
+-    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, me->called_id, me->klass);
+-
+     cfp = vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
+ 			recv, (VALUE) blockptr, 0, reg_cfp->sp, 0, 1);
+     cfp->me = me;
+     reg_cfp->sp -= num + 1;
+ 
++    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, me->called_id, me->klass);
++
+     val = call_cfunc(def->body.cfunc.func, recv, (int)def->body.cfunc.argc, num, reg_cfp->sp + 1);
+ 
+     if (reg_cfp != th->cfp + 1) {
+ 	rb_bug("cfp consistency error - send");
+     }
+ 
++    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, me->called_id, me->klass);
++
+     vm_pop_frame(th);
+ 
+-    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, me->called_id, me->klass);
+-
+     return val;
+ }
+ 
 Index: tool/instruction.rb
 ===================================================================
 --- tool/instruction.rb	(revision 26704)

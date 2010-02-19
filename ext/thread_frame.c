@@ -467,22 +467,37 @@ thread_frame_iseq(VALUE klass)
     return rb_iseq;
 }
 
+/* 
+   See the above thread_frame_prev comment for what's going on here.
+*/
 static VALUE
 thread_frame_next(VALUE klass)
 {
     rb_control_frame_t *cfp = NULL;
     THREAD_FRAME_SETUP ;
     cfp = RUBY_VM_NEXT_CONTROL_FRAME(tf->cfp);
+
     if ((void *)(cfp) <= (void *)(tf->th->stack))
         return Qnil;
     else {
         thread_frame_t *next_tf;
-        VALUE prev = thread_frame_alloc(rb_cThreadFrame);
-	thread_frame_t_alloc(prev);
-	Data_Get_Struct(prev, thread_frame_t, next_tf);
+        VALUE next = thread_frame_alloc(rb_cThreadFrame);
+	thread_frame_t_alloc(next);
+	Data_Get_Struct(next, thread_frame_t, next_tf);
 	next_tf->th  = tf->th;
 	next_tf->cfp = cfp;
-	return prev;
+    
+	if (RUBY_VM_NORMAL_ISEQ_P(cfp->iseq)) {
+	    memcpy(tf->signature1, &(cfp->iseq), sizeof(tf->signature1)); 
+	    memcpy(tf->signature2, &(cfp->proc), sizeof(tf->signature2));
+	} else if (!cfp) {
+	    return Qnil;
+	} else if (RUBYVM_CFUNC_FRAME_P(cfp)) {
+	    /* FIXME: This probabably not complete*/
+	    memcpy(tf->signature1, &(cfp->iseq), sizeof(tf->signature1)); 
+	    memcpy(tf->signature2, &(cfp->proc), sizeof(tf->signature2));
+	}
+	return next;
     }
 }
 
