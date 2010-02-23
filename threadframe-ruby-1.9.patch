@@ -373,17 +373,21 @@ Index: vm_eval.c
  	{
  	    rb_control_frame_t *reg_cfp = th->cfp;
  	    rb_control_frame_t *cfp =
-@@ -75,14 +74,15 @@
+@@ -75,14 +74,19 @@
  			      recv, (VALUE)blockptr, 0, reg_cfp->sp, 0, 1);
  
  	    cfp->me = me;
-+	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
++	    if (th->tracing == 0)
++	        EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
++
  	    val = call_cfunc(def->body.cfunc.func, recv, def->body.cfunc.argc, argc, argv);
  
  	    if (reg_cfp != th->cfp + 1) {
  		rb_bug("cfp consistency error - call0");
  	    }
-+	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
++	    if (th->tracing == 0)
++	        EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
++
  	    vm_pop_frame(th);
  	}
 -	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
@@ -673,7 +677,7 @@ Index: vm_insnhelper.c
 ===================================================================
 --- vm_insnhelper.c	(revision 26704)
 +++ vm_insnhelper.c	(working copy)
-@@ -367,23 +367,23 @@
+@@ -367,23 +367,25 @@
      const rb_method_definition_t *def = me->def;
      rb_control_frame_t *cfp;
  
@@ -684,7 +688,8 @@ Index: vm_insnhelper.c
      cfp->me = me;
      reg_cfp->sp -= num + 1;
  
-+    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, me->called_id, me->klass);
++    if (th->tracing == 0)
++        EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, me->called_id, me->klass);
 +
      val = call_cfunc(def->body.cfunc.func, recv, (int)def->body.cfunc.argc, num, reg_cfp->sp + 1);
  
@@ -692,7 +697,8 @@ Index: vm_insnhelper.c
  	rb_bug("cfp consistency error - send");
      }
  
-+    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, me->called_id, me->klass);
++    if (th->tracing == 0)
++        EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, me->called_id, me->klass);
 +
      vm_pop_frame(th);
  
