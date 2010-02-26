@@ -1,6 +1,6 @@
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 26704)
+--- include/ruby/ruby.h	(revision 26765)
 +++ include/ruby/ruby.h	(working copy)
 @@ -1325,7 +1325,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
@@ -15,7 +15,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 26704)
+--- vm_core.h	(revision 26765)
 +++ vm_core.h	(working copy)
 @@ -155,7 +155,7 @@
      VALUE type;          /* instruction sequence type */
@@ -53,7 +53,7 @@ Index: vm_core.h
  int rb_iseq_first_lineno(rb_iseq_t *iseq);
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 26704)
+--- iseq.c	(revision 26765)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -156,7 +156,24 @@ Index: iseq.c
      return self;
  }
  
-@@ -712,6 +785,117 @@
+@@ -640,9 +713,13 @@
+         return rb_sprintf("#<%s: uninitialized>", rb_obj_classname(self));
+     }
+ 
+-    return rb_sprintf("<%s:%s@%s>",
+-                      rb_obj_classname(self),
+-		      RSTRING_PTR(iseq->name), RSTRING_PTR(iseq->filename));
++    if (ISEQ_TYPE_TOP == iseq->type)
++	return rb_sprintf("<%s:%s>",
++			  rb_obj_classname(self), RSTRING_PTR(iseq->name));
++    else
++	return rb_sprintf("<%s:%s@%s>",
++			  rb_obj_classname(self),
++			  RSTRING_PTR(iseq->name), RSTRING_PTR(iseq->filename));
+ }
+ 
+ static
+@@ -712,6 +789,117 @@
      return 0;
  }
  
@@ -274,7 +291,7 @@ Index: iseq.c
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -901,9 +1085,8 @@
+@@ -901,9 +1089,8 @@
  }
  
  VALUE
@@ -285,7 +302,7 @@ Index: iseq.c
      VALUE *iseq;
      VALUE str = rb_str_new(0, 0);
      VALUE child = rb_ary_new();
-@@ -995,14 +1178,44 @@
+@@ -995,14 +1182,44 @@
  	n += rb_iseq_disasm_insn(str, iseq, n, iseqdat, child);
      }
  
@@ -334,7 +351,7 @@ Index: iseq.c
  static VALUE
  iseq_s_disasm(VALUE klass, VALUE body)
  {
-@@ -1481,9 +1694,11 @@
+@@ -1483,9 +1700,11 @@
      rb_define_alloc_func(rb_cISeq, iseq_alloc);
      rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
      rb_define_method(rb_cISeq, "disasm", rb_iseq_disasm, 0);
@@ -348,7 +365,7 @@ Index: iseq.c
      /* rb_define_singleton_method(rb_cISeq, "load", iseq_s_load, -1); */
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 26704)
+--- iseq.h	(revision 26765)
 +++ iseq.h	(working copy)
 @@ -101,4 +101,10 @@
  #define DEFINED_ZSUPER INT2FIX(9)
@@ -361,9 +378,43 @@ Index: iseq.h
 +extern int insn_op_type(VALUE insn, long pos);
 +
  #endif /* RUBY_COMPILE_H */
+Index: load.c
+===================================================================
+--- load.c	(revision 26765)
++++ load.c	(working copy)
+@@ -284,11 +284,14 @@
+     if (state == 0) {
+ 	NODE *node;
+ 	VALUE iseq;
++	char iseq_name[MAXPATHLEN];
+ 
+ 	th->mild_compile_error++;
+ 	node = (NODE *)rb_load_file(RSTRING_PTR(fname));
+ 	loaded = TRUE;
+-	iseq = rb_iseq_new_top(node, rb_str_new2("<top (required)>"), fname, Qfalse);
++	
++	snprintf(iseq_name, sizeof(iseq_name), "<top %s>", RSTRING_PTR(fname));
++	iseq = rb_iseq_new_top(node, rb_str_new2(iseq_name), fname, Qfalse);
+ 	th->mild_compile_error--;
+ 	rb_iseq_eval(iseq);
+     }
+Index: compile.c
+===================================================================
+--- compile.c	(revision 26765)
++++ compile.c	(working copy)
+@@ -3360,6 +3360,9 @@
+ 	if (iseq->compile_data->redo_label != 0) {
+ 	    LABEL *splabel = NEW_LABEL(0);
+ 	    debugs("next in while loop\n");
++	    if (!poped) {
++		ADD_INSN(ret, nd_line(node), putnil);
++	    }
+ 	    ADD_LABEL(ret, splabel);
+ 	    COMPILE(ret, "next val/valid syntax?", node->nd_stts);
+ 	    add_ensure_iseq(ret, iseq, 0);
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 26704)
+--- vm_eval.c	(revision 26765)
 +++ vm_eval.c	(working copy)
 @@ -67,7 +67,6 @@
  	break;
@@ -373,12 +424,12 @@ Index: vm_eval.c
  	{
  	    rb_control_frame_t *reg_cfp = th->cfp;
  	    rb_control_frame_t *cfp =
-@@ -75,14 +74,19 @@
+@@ -75,14 +74,18 @@
  			      recv, (VALUE)blockptr, 0, reg_cfp->sp, 0, 1);
  
  	    cfp->me = me;
 +	    if (th->tracing == 0)
-+	        EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
++		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
 +
  	    val = call_cfunc(def->body.cfunc.func, recv, def->body.cfunc.argc, argc, argv);
  
@@ -386,8 +437,7 @@ Index: vm_eval.c
  		rb_bug("cfp consistency error - call0");
  	    }
 +	    if (th->tracing == 0)
-+	        EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
-+
++		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
  	    vm_pop_frame(th);
  	}
 -	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
@@ -396,7 +446,7 @@ Index: vm_eval.c
        case VM_METHOD_TYPE_ATTRSET: {
 Index: proc.c
 ===================================================================
---- proc.c	(revision 26704)
+--- proc.c	(revision 26765)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -473,7 +523,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 26704)
+--- thread.c	(revision 26765)
 +++ thread.c	(working copy)
 @@ -336,6 +336,16 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -610,7 +660,7 @@ Index: thread.c
  
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 26704)
+--- vm_exec.h	(revision 26765)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
@@ -675,9 +725,9 @@ Index: vm_exec.h
  #define debugs printf
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 26704)
+--- vm_insnhelper.c	(revision 26765)
 +++ vm_insnhelper.c	(working copy)
-@@ -367,23 +367,25 @@
+@@ -367,11 +367,13 @@
      const rb_method_definition_t *def = me->def;
      rb_control_frame_t *cfp;
  
@@ -685,20 +735,23 @@ Index: vm_insnhelper.c
 -
      cfp = vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
  			recv, (VALUE) blockptr, 0, reg_cfp->sp, 0, 1);
++
      cfp->me = me;
++    if (th->tracing == 0)
++	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, me->called_id, me->klass);
++
      reg_cfp->sp -= num + 1;
  
-+    if (th->tracing == 0)
-+        EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, me->called_id, me->klass);
-+
      val = call_cfunc(def->body.cfunc.func, recv, (int)def->body.cfunc.argc, num, reg_cfp->sp + 1);
- 
-     if (reg_cfp != th->cfp + 1) {
+@@ -380,10 +382,14 @@
  	rb_bug("cfp consistency error - send");
      }
  
-+    if (th->tracing == 0)
-+        EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, me->called_id, me->klass);
++    if (th->tracing == 0) {
++	reg_cfp->sp += num + 1;
++	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, me->called_id, me->klass);
++	reg_cfp->sp -= num + 1;
++    }
 +
      vm_pop_frame(th);
  
@@ -709,9 +762,9 @@ Index: vm_insnhelper.c
  
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 26704)
+--- tool/instruction.rb	(revision 26765)
 +++ tool/instruction.rb	(working copy)
-@@ -854,6 +854,16 @@
+@@ -854,6 +854,17 @@
        commit "INSN_ENTRY(#{insn.name}){"
        make_header_prepare_stack insn
        commit "{"
@@ -722,7 +775,8 @@ Index: tool/instruction.rb
 +      # 
 +      # Since we can handle this event via RUBY_EVENT_END I don't
 +      # think there is any loss in functionality.
-+      unless insn.name == 'leave'
++      # Not sure if "send" should be included.
++      unless %w(leave send).member?(insn.name)
 +        commit "  TRACE_INSN(#{insn.name});"
 +      end
        make_header_stack_val  insn
@@ -730,9 +784,9 @@ Index: tool/instruction.rb
        make_header_operands   insn
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 26704)
+--- template/insns_info.inc.tmpl	(revision 26765)
 +++ template/insns_info.inc.tmpl	(working copy)
-@@ -46,38 +46,6 @@
+@@ -42,38 +42,6 @@
  }
  #endif
  
