@@ -490,6 +490,16 @@ iseq_source_container(VALUE iseqval)
 }
 
 
+#if 0
+/*
+ * call-seq:
+ *    RubyVM::InstructionSequence#type() -> Fixnum
+ *
+ * Returns instruction-sequence type.
+ */
+static VALUE
+iseq_type(VALUE iseqval)
+#endif
 
 #define ISEQ_FIELD_METHOD(FIELD)		\
 static VALUE					\
@@ -501,8 +511,9 @@ iseq_##FIELD(VALUE iseqval)			\
   return iseq->FIELD;				\
 }
 
-ISEQ_FIELD_METHOD(self) ;
 ISEQ_FIELD_METHOD(orig) ;
+ISEQ_FIELD_METHOD(self) ;
+ISEQ_FIELD_METHOD(type) ;
 
 #define ISEQ_INT_FIELD_METHOD(FIELD)		\
 static VALUE					\
@@ -563,4 +574,6 @@ Init_iseq_extra(void)
     rb_define_method(rb_cISeq, "name",             iseq_name, 0) ;
     rb_define_method(rb_cISeq, "self",             iseq_self, 0) ;
     rb_define_method(rb_cISeq, "source_container", iseq_source_container, 0) ;
+    rb_define_method(rb_cISeq, "type",             iseq_type, 0) ;
+
 }

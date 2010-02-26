@@ -1,3 +1,13 @@
+#define ISEQ_TYPE_TOP    INT2FIX(1)
+#define ISEQ_TYPE_METHOD INT2FIX(2)
+#define ISEQ_TYPE_BLOCK  INT2FIX(3)
+#define ISEQ_TYPE_CLASS  INT2FIX(4)
+#define ISEQ_TYPE_RESCUE INT2FIX(5)
+#define ISEQ_TYPE_ENSURE INT2FIX(6)
+#define ISEQ_TYPE_EVAL   INT2FIX(7)
+#define ISEQ_TYPE_MAIN   INT2FIX(8)
+#define ISEQ_TYPE_DEFINED_GUARD INT2FIX(9)
+
 struct iseq_compile_data {
     /* GC is needed */
     VALUE err_info;

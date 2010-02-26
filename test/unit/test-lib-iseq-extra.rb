@@ -16,6 +16,8 @@ class TestLibISeqExtra < Test::Unit::TestCase
                  iseq.line2offsets(__LINE__-1).sort)
 
     assert_equal([], iseq.line2offsets(__LINE__+100))
+    top_iseq = RubyVM::ThreadFrame.current.prev(-1).iseq
+    assert_equal('method', RubyVM::InstructionSequence::TYPE2STR[top_iseq.type])
   end
 
 end
