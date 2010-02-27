@@ -44,7 +44,7 @@ class TestThread < Test::Unit::TestCase
   end
     
 
-  def test_fields
+  def test_fields(notused=nil)
     tf = RubyVM::ThreadFrame::current
     pc1 = tf.pc_offset
     assert(pc1 > 0, 'Should be able to get a valid PC offset')
@@ -54,6 +54,7 @@ class TestThread < Test::Unit::TestCase
     assert_equal('test_fields', tf.method)
     assert_equal(self, tf.self)
     assert_equal(0, tf.arity)
+    assert_equal(0, tf.argc)
     assert tf.dfp(0)
     assert tf.lfp(0)
 
@@ -79,8 +80,10 @@ class TestThread < Test::Unit::TestCase
       assert_equal('times', tf.prev.method) 
       assert_equal(self, tf.self)
       assert_equal(0, tf.prev.arity, 'C arity should work nowadays' )
+      assert_equal(0, tf.prev.argc, 'C args is the same as arity')
       assert_equal('test_fields', tf.prev.prev.method) 
       assert_equal(0, tf.arity)
+      assert_equal(0, tf.argc)
     end
 
     # 1.upto also creates a C frame.
@@ -88,6 +91,7 @@ class TestThread < Test::Unit::TestCase
       tf = RubyVM::ThreadFrame::current.prev
       assert_equal('CFUNC', tf.type)
       assert_equal(1, tf.arity, 'C arity should work nowadays' )
+      assert_equal(1, tf.argc)
     end
 
     x  = lambda do |x,y| 
@@ -96,6 +100,7 @@ class TestThread < Test::Unit::TestCase
       assert_equal('LAMBDA', frame.type)
       assert_equal(x, tf.self)
     assert_equal(2, frame.arity)
+    assert_equal(2, frame.argc)
     end
     x.call(x,2)
 

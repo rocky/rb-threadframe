@@ -269,6 +269,27 @@ THREAD_FRAME_FIELD_METHOD(flag) ;
 
 /*
  *  call-seq:
+ *     RubyVM::ThreadFrame#argc -> Fixnum
+ *
+ *  Returns the number of arguments that were actually passed 
+ *  in the call to this frame. This differs from arity when
+ *  arity can take optional or "splat"ted parameters.
+ *
+ */
+static VALUE
+thread_frame_argc(VALUE klass)
+{
+    THREAD_FRAME_SETUP ;
+    if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
+	return iseq_argc(thread_frame_iseq(klass));
+    } else if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
+	return (VALUE) tf->cfp->block_iseq;
+    } else
+	return Qnil;
+}
+
+/*
+ *  call-seq:
  *     RubyVM::ThreadFrame#arity -> Fixnum
  *
  *  Returns the number of arguments that would not be ignored.
@@ -832,6 +853,7 @@ Init_thread_frame(void)
     rb_define_method(rb_cThreadFrame, "invalid?", thread_frame_invalid, 0);
 
     /* RubyVM::ThreadFrame */
+    rb_define_method(rb_cThreadFrame, "argc", thread_frame_argc, 0);
     rb_define_method(rb_cThreadFrame, "arity", thread_frame_arity, 0);
     rb_define_method(rb_cThreadFrame, "binding", thread_frame_binding, 0);
     rb_define_method(rb_cThreadFrame, "dfp", thread_frame_dfp, 1);

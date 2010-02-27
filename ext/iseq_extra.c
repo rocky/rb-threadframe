@@ -516,7 +516,7 @@ ISEQ_FIELD_METHOD(self) ;
 ISEQ_FIELD_METHOD(type) ;
 
 #define ISEQ_INT_FIELD_METHOD(FIELD)		\
-static VALUE					\
+extern VALUE					\
 iseq_##FIELD(VALUE iseqval)			\
 {						\
   rb_iseq_t *iseq;				\
