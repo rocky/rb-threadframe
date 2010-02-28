@@ -906,4 +906,5 @@ Init_thread_frame(void)
     /* Perform the other C extension initializations. */
     Init_iseq_extra();
     Init_proc_extra();
+    Init_thread_extra();
 }

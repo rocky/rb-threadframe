@@ -44,6 +44,14 @@ class TestThread < Test::Unit::TestCase
   end
     
 
+  def test_thread_tracing
+    assert_equal(false, Thread.current.tracing)
+    Thread.current.tracing = true
+    assert_equal(true, Thread.current.tracing)
+    Thread.current.tracing = false
+    assert_equal(false, Thread.current.tracing)
+  end    
+    
   def test_fields(notused=nil)
     tf = RubyVM::ThreadFrame::current
     pc1 = tf.pc_offset

@@ -105,7 +105,7 @@ typedef struct rb_iseq_struct {
      * argument information
      *
      *  def m(a1, a2, ..., aM,                    # mandatory
-     *        b1=(...), b2=(...), ..., bN=(...),  # optinal
+     *        b1=(...), b2=(...), ..., bN=(...),  # optional
      *        *c,                                 # rest
      *        d1, d2, ..., dO,                    # post
      *        &e)                                 # block
@@ -276,6 +276,12 @@ typedef struct rb_thread_struct
 
     /* passing state */
     int state;
+
+    /* tracer */
+    rb_event_hook_t *event_hooks;
+    rb_event_flag_t event_flags;
+    int tracing;
+    int trace_skip_insn_count;
 
     /* Lot's of other stuff ... */
 } rb_thread_t;
