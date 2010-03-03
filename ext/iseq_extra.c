@@ -339,11 +339,13 @@ iseq_local_name(VALUE iseqval, VALUE val)
 		 "local table index %ld should be in the range -%ld .. %ld",
 		 i, size, size-1);
       
-      rb_str_new2(rb_id2name(iseq->local_table[i]));
+      return rb_str_new2(rb_id2name(iseq->local_table[i]));
     } else {
       rb_raise(rb_eTypeError, "type mismatch: %s given, Fixnum expected", 
 	       rb_class2name(CLASS_OF(val)));
     }
+    /* not reached. */
+    return Qnil;
 }
 
 /* 

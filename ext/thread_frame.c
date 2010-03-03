@@ -10,6 +10,7 @@
 #include "vm_core_mini.h"  /* Pulls in ruby.h */
 #include "proc_extra.h"
 #include "iseq_extra.h"
+#include "thread_extra.h"
 
 /* Frames can't be detached from the control frame they live in.
    So we create a structure to contain the pair. 
