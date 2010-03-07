@@ -280,8 +280,14 @@ typedef struct rb_thread_struct
     /* tracer */
     rb_event_hook_t *event_hooks;
     rb_event_flag_t event_flags;
-    int tracing;
-    int trace_skip_insn_count;
+    int tracing;  /* 0 if not tracing. If less than 0, skip that many
+		     C call/return pairs */
+    int exec_event_tracing;  /* 0 if not in rb_threadptr_evec_event_hooks. */
+    int trace_skip_insn_count; /* # of VM instructions to skip */
+
+    /* misc */
+    int method_missing_reason;
+    int abort_on_exception;
 
     /* Lot's of other stuff ... */
 } rb_thread_t;

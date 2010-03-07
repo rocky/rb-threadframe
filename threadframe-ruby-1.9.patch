@@ -53,7 +53,7 @@ Index: vm_core.h
  };
  
  enum ruby_special_exceptions {
-@@ -377,6 +379,13 @@
+@@ -377,6 +379,18 @@
      /* passing state */
      int state;
  
@@ -62,24 +62,55 @@ Index: vm_core.h
 +    rb_event_flag_t event_flags;
 +    int tracing;  /* 0 if not tracing. If less than 0, skip that many
 +		     C call/return pairs */
++    int exec_event_tracing;  /* 0 if not in rb_threadptr_evec_event_hooks. */
 +    int trace_skip_insn_count; /* # of VM instructions to skip */
++
++    /* misc */
++    int method_missing_reason;
++    int abort_on_exception;
 +
      /* for rb_iterate */
      const rb_block_t *passed_block;
  
-@@ -448,11 +457,6 @@
-     /* statistics data for profiler */
-     VALUE stat_insn_usage;
+@@ -396,6 +410,14 @@
+     int priority;
+     int slice;
  
++    /* statistics data for profiler */
++    VALUE stat_insn_usage;
++
++    /* fiber */
++    VALUE fiber;
++    VALUE root_fiber;
++    rb_jmpbuf_t root_jmpbuf;
++
+     native_thread_data_t native_thread_data;
+     void *blocking_region_buffer;
+ 
+@@ -445,22 +467,6 @@
+     jmp_buf machine_regs;
+     int mark_stack_len;
+ 
+-    /* statistics data for profiler */
+-    VALUE stat_insn_usage;
+-
 -    /* tracer */
 -    rb_event_hook_t *event_hooks;
 -    rb_event_flag_t event_flags;
 -    int tracing;
 -
-     /* fiber */
-     VALUE fiber;
-     VALUE root_fiber;
-@@ -471,6 +475,7 @@
+-    /* fiber */
+-    VALUE fiber;
+-    VALUE root_fiber;
+-    rb_jmpbuf_t root_jmpbuf;
+-
+-    /* misc */
+-    int method_missing_reason;
+-    int abort_on_exception;
+ } rb_thread_t;
+ 
+ /* iseq.c */
+@@ -471,6 +477,7 @@
  VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, const rb_compile_option_t*);
  VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
  VALUE rb_iseq_disasm(VALUE self);
@@ -87,6 +118,29 @@ Index: vm_core.h
  int rb_iseq_disasm_insn(VALUE str, VALUE *iseqval, size_t pos, rb_iseq_t *iseq, VALUE child);
  const char *ruby_node_name(int node);
  int rb_iseq_first_lineno(rb_iseq_t *iseq);
+@@ -671,13 +678,14 @@
+ void
+ rb_threadptr_exec_event_hooks(rb_thread_t *th, rb_event_flag_t flag, VALUE self, ID id, VALUE klass);
+ 
+-#define EXEC_EVENT_HOOK(th, flag, self, id, klass) do { \
+-    rb_event_flag_t wait_event__ = th->event_flags; \
+-    if (UNLIKELY(wait_event__)) { \
+-	if (wait_event__ & (flag | RUBY_EVENT_VM)) { \
+-	    rb_threadptr_exec_event_hooks(th, flag, self, id, klass); \
+-	} \
+-    } \
+-} while (0)
++#define EXEC_EVENT_HOOK(th, flag, self, id, klass)  \
++    if (0 == th->tracing) {			    \
++      rb_event_flag_t wait_event__ = th->event_flags; \
++      if (UNLIKELY(wait_event__)) {		      \
++	  if (wait_event__ & (flag | RUBY_EVENT_VM)) {		      \
++	      rb_threadptr_exec_event_hooks(th, flag, self, id, klass); \
++	  }								\
++      }									\
++    }
+ 
+ #endif /* RUBY_VM_CORE_H */
 Index: iseq.c
 ===================================================================
 --- iseq.c	(revision 26821)
@@ -452,7 +506,7 @@ Index: vm_eval.c
 ===================================================================
 --- vm_eval.c	(revision 26821)
 +++ vm_eval.c	(working copy)
-@@ -67,22 +67,31 @@
+@@ -67,22 +67,29 @@
  	break;
        }
        case VM_METHOD_TYPE_CFUNC: {
@@ -470,16 +524,14 @@ Index: vm_eval.c
 +	    cfp->block_iseq = (rb_iseq_t *) INT2FIX(argc);
 +
  	    cfp->me = me;
-+	    if (th->tracing == 0)
-+		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
++	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
 +
  	    val = call_cfunc(def->body.cfunc.func, recv, def->body.cfunc.argc, argc, argv);
  
  	    if (reg_cfp != th->cfp + 1) {
  		rb_bug("cfp consistency error - call0");
  	    }
-+	    if (th->tracing == 0)
-+		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
++	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
  	    vm_pop_frame(th);
  	}
 -	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
@@ -584,7 +636,28 @@ Index: thread.c
  void
  rb_thread_terminate_all(void)
  {
-@@ -3858,8 +3868,9 @@
+@@ -3765,11 +3775,16 @@
+     const rb_event_flag_t wait_event = th->event_flags;
+ 
+     if (self == rb_mRubyVMFrozenCore) return;
+-    if (wait_event & flag) {
+-	exec_event_hooks(th->event_hooks, flag, self, id, klass);
++    if (wait_event & flag && th->tracing <= 0) {
++        exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
+     }
+-    if (wait_event & RUBY_EVENT_VM) {
+-	exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
++    if (wait_event & RUBY_EVENT_VM && th->tracing <= 0)  {
++        if (0 == th->exec_event_tracing) {
++	    int event_tracing_save = th->exec_event_tracing;
++	    th->exec_event_tracing = 1;
++  	    exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
++	    th->exec_event_tracing = event_tracing_save;
++	}
+     }
+     th->errinfo = errinfo;
+ }
+@@ -3858,8 +3873,9 @@
  
  /*
   *  call-seq:
@@ -596,7 +669,7 @@ Index: thread.c
   *
   *  Establishes _proc_ as the handler for tracing, or disables
   *  tracing if the parameter is +nil+. _proc_ takes up
-@@ -3873,6 +3884,8 @@
+@@ -3873,6 +3889,8 @@
   *  <code>line</code> (execute code on a new line), <code>raise</code>
   *  (raise an exception), and <code>return</code> (return from a Ruby
   *  method). Tracing is disabled within the context of _proc_.
@@ -605,7 +678,7 @@ Index: thread.c
   *
   *      class Test
   *	def test
-@@ -3897,11 +3910,28 @@
+@@ -3897,11 +3915,28 @@
   *	  line prog.rb:3        test     Test
   *	  line prog.rb:4        test     Test
   *      return prog.rb:4        test     Test
@@ -635,7 +708,7 @@ Index: thread.c
      rb_remove_event_hook(call_trace_func);
  
      if (NIL_P(trace)) {
-@@ -3912,7 +3942,13 @@
+@@ -3912,7 +3947,13 @@
  	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
      }
  
@@ -650,7 +723,7 @@ Index: thread.c
      return trace;
  }
  
-@@ -3977,6 +4013,8 @@
+@@ -3977,6 +4018,8 @@
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -659,7 +732,7 @@ Index: thread.c
        case RUBY_EVENT_CALL:
  	return "call";
        case RUBY_EVENT_RETURN:
-@@ -3987,6 +4025,14 @@
+@@ -3987,6 +4030,14 @@
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -674,7 +747,7 @@ Index: thread.c
        default:
  	return "unknown";
      }
-@@ -4008,6 +4054,11 @@
+@@ -4008,6 +4059,11 @@
      struct call_trace_func_args *p = (struct call_trace_func_args *)args;
      const char *srcfile = rb_sourcefile();
      VALUE eventname = rb_str_new2(get_event_name(p->event));
@@ -686,7 +759,7 @@ Index: thread.c
      VALUE filename = srcfile ? rb_str_new2(srcfile) : Qnil;
      VALUE argv[6];
      int line = rb_sourceline();
-@@ -4015,7 +4066,8 @@
+@@ -4015,7 +4071,8 @@
      VALUE klass = 0;
  
      if (p->event == RUBY_EVENT_C_CALL ||
@@ -696,7 +769,7 @@ Index: thread.c
  	id = p->id;
  	klass = p->klass;
      }
-@@ -4192,7 +4244,7 @@
+@@ -4192,7 +4249,7 @@
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -774,7 +847,7 @@ Index: vm_insnhelper.c
 ===================================================================
 --- vm_insnhelper.c	(revision 26821)
 +++ vm_insnhelper.c	(working copy)
-@@ -367,11 +367,19 @@
+@@ -367,11 +367,18 @@
      const rb_method_definition_t *def = me->def;
      rb_control_frame_t *cfp;
  
@@ -790,13 +863,12 @@ Index: vm_insnhelper.c
 +    cfp->block_iseq = (rb_iseq_t *) INT2FIX(num);
 +
      cfp->me = me;
-+    if (th->tracing == 0)
-+	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, me->called_id, me->klass);
++    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, me->called_id, me->klass);
 +
      reg_cfp->sp -= num + 1;
  
      val = call_cfunc(def->body.cfunc.func, recv, (int)def->body.cfunc.argc, num, reg_cfp->sp + 1);
-@@ -380,10 +388,15 @@
+@@ -380,10 +387,15 @@
  	rb_bug("cfp consistency error - send");
      }
  
