@@ -118,9 +118,22 @@ Rake::GemPackageTask.new(spec) do |pkg|
   pkg.need_tar = true
 end
 
+def install(spec, *opts)
+  args = ['gem', 'install', "pkg/#{spec.name}-#{spec.version}.gem"] + opts
+  args.unshift 'sudo' unless 0 == Process.uid
+  system(*args)
+end
+
 desc 'Install locally'
 task :install => :package do
   Dir.chdir(File::dirname(__FILE__)) do
-    system('gem', 'install', "pkg/#{spec.name}-#{spec.version}.gem")
+    # ri and rdoc take lots of time
+    install(spec, '--no-ri', '--no-rdoc')
+  end
+end    
+
+task :install_full => :package do
+  Dir.chdir(File::dirname(__FILE__)) do
+    install(spec)
   end
 end    
