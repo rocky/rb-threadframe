@@ -279,6 +279,26 @@ iseq_compile_options(VALUE iseqval)
 #endif
 
 /* 
+ * Document-method: RubyVM::InstructionSequence::encoded
+ * 
+ * call-seq:
+ *     RubyVM::InstructionSequence#iseq_encoded -> String
+ *
+ *  Returns a string of the encoded bytes of the instruction
+ *  sequence. Note that this is probably not usable as is, may be useful in
+ *  decoding instructions (using other info) or for getting a sha1
+ *  checksum.
+ */
+VALUE 
+iseq_iseq_encoded(VALUE iseqval)
+{
+    rb_iseq_t *iseq;
+    GetISeqPtr(iseqval, iseq);
+    return rb_str_new((char *) iseq->iseq_encoded, iseq->iseq_size);
+}
+
+
+/* 
  * Document-method: RubyVM::InstructionSequence::equal?
  * 
  * call-seq:
@@ -302,8 +322,8 @@ iseq_equal(VALUE iseqval1, VALUE iseqval2)
     GetISeqPtr(iseqval1, iseq1);
     GetISeqPtr(iseqval2, iseq2);
 
-    /* FIXME: the count 24 below  is bogus. I think this should be the fields
-       from "type" to  "mark_ary". 
+    /* FIXME: the count 28 below  is bogus. I think this should be the fields
+       from "type" to  "mark_ary". Should also include iseq->encoded.
      */
     if (0 == memcmp(iseq1, iseq2, 28))
 	return Qtrue;
@@ -563,6 +583,7 @@ Init_iseq_extra(void)
     rb_define_method(rb_cISeq, "brkpt_unset",      iseq_brkpt_unset, 1) ;
     rb_define_method(rb_cISeq, "brkpts",           iseq_brkpts, 0) ;
     rb_define_method(rb_cISeq, "equal?",           iseq_equal, 1) ;
+    rb_define_method(rb_cISeq, "encoded",          iseq_iseq_encoded, 0) ;
     rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
     rb_define_method(rb_cISeq, "killcache",        iseq_killcache, 0) ;
     rb_define_method(rb_cISeq, "klass",            iseq_klass, 0) ;

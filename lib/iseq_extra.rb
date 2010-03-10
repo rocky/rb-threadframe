@@ -1,3 +1,4 @@
+require 'digest/sha1'
 require_relative %w(.. ext thread_frame)
 class RubyVM::InstructionSequence
 
@@ -37,6 +38,11 @@ class RubyVM::InstructionSequence
       lines.member?(line_number) 
     end.keys
   end
+
+  def sha1
+    Digest::SHA1.hexdigest(encoded)
+  end
+
 end
 
 if __FILE__ == $0
@@ -45,6 +51,7 @@ if __FILE__ == $0
   puts iseq.format_args
   puts iseq.disassemble
   puts iseq.lineoffsets
+  puts iseq.sha1
   p iseq.line2offsets(__LINE__)
   p iseq.line2offsets(__LINE__+100)
 
