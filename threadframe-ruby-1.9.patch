@@ -1,6 +1,6 @@
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 26821)
+--- include/ruby/ruby.h	(revision 26851)
 +++ include/ruby/ruby.h	(working copy)
 @@ -1327,7 +1327,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
@@ -15,7 +15,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 26821)
+--- vm_core.h	(revision 26851)
 +++ vm_core.h	(working copy)
 @@ -34,7 +34,7 @@
  #ifndef ENABLE_VM_OBJSPACE
@@ -143,7 +143,7 @@ Index: vm_core.h
  #endif /* RUBY_VM_CORE_H */
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 26821)
+--- iseq.c	(revision 26851)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -455,7 +455,7 @@ Index: iseq.c
      /* rb_define_singleton_method(rb_cISeq, "load", iseq_s_load, -1); */
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 26821)
+--- iseq.h	(revision 26851)
 +++ iseq.h	(working copy)
 @@ -101,4 +101,10 @@
  #define DEFINED_ZSUPER INT2FIX(9)
@@ -470,7 +470,7 @@ Index: iseq.h
  #endif /* RUBY_COMPILE_H */
 Index: load.c
 ===================================================================
---- load.c	(revision 26821)
+--- load.c	(revision 26851)
 +++ load.c	(working copy)
 @@ -284,11 +284,14 @@
      if (state == 0) {
@@ -490,7 +490,7 @@ Index: load.c
      }
 Index: compile.c
 ===================================================================
---- compile.c	(revision 26821)
+--- compile.c	(revision 26851)
 +++ compile.c	(working copy)
 @@ -3360,6 +3360,9 @@
  	if (iseq->compile_data->redo_label != 0) {
@@ -504,7 +504,7 @@ Index: compile.c
  	    add_ensure_iseq(ret, iseq, 0);
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 26821)
+--- vm_eval.c	(revision 26851)
 +++ vm_eval.c	(working copy)
 @@ -67,22 +67,29 @@
  	break;
@@ -538,9 +538,32 @@ Index: vm_eval.c
  	break;
        }
        case VM_METHOD_TYPE_ATTRSET: {
+@@ -1017,7 +1024,21 @@
+     if (state) {
+ 	if (state == TAG_RAISE) {
+ 	    VALUE errinfo = th->errinfo;
+-	    if (strcmp(file, "(eval)") == 0) {
++	    /* The below test for eval is inadequate in several respects.
++	       First rather than testing on a string like "(eval" or "(eval)" as was done
++	       originally, there should be a more positive indicator that "file" is not
++	       a real file but say, a string. Then there is the harder issue of what should
++	       be done to show the backtrace for this. Personally, I think part of the string
++	       should be shown. Finally because "(eval)" is used as the "file" name, it is 
++	       harder to find this particular instruction sequence from the instruction sequence
++	       name over some other eval string. 
++
++	       To start to deal with instruction sequence name
++	       unhelpfulness, we will prepare for the day when we have
++	       a more descriptive container such as the leading part
++	       of the string we are about to eval, e.g. (eval "x = y + ...")
++	     */
++	    if (strncmp(file, "(eval", sizeof("(eval")-1) == 0) {
+ 		VALUE mesg, errat, bt2;
+ 		extern VALUE rb_get_backtrace(VALUE info);
+ 		ID id_mesg;
 Index: proc.c
 ===================================================================
---- proc.c	(revision 26821)
+--- proc.c	(revision 26851)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -617,7 +640,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 26821)
+--- thread.c	(revision 26851)
 +++ thread.c	(working copy)
 @@ -336,6 +336,16 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -636,7 +659,7 @@ Index: thread.c
  void
  rb_thread_terminate_all(void)
  {
-@@ -3765,11 +3775,16 @@
+@@ -3765,11 +3775,24 @@
      const rb_event_flag_t wait_event = th->event_flags;
  
      if (self == rb_mRubyVMFrozenCore) return;
@@ -650,14 +673,22 @@ Index: thread.c
 +    if (wait_event & RUBY_EVENT_VM && th->tracing <= 0)  {
 +        if (0 == th->exec_event_tracing) {
 +	    int event_tracing_save = th->exec_event_tracing;
++	    /* Running exec_event_hooks may call eval_string_with_cref
++	       which may zero th->base_block after it is done. So it
++	       is probably a safe thing to save/restore the value
++	       here. It is possible there's a bug elsewhere in Ruby here, but 
++	       trace hooks are used so infrequently that one wouldn't know.
++	     */
++	    rb_block_t * base_block_save = th->base_block;
 +	    th->exec_event_tracing = 1;
 +  	    exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
 +	    th->exec_event_tracing = event_tracing_save;
++	    th->base_block = base_block_save;
 +	}
      }
      th->errinfo = errinfo;
  }
-@@ -3858,8 +3873,9 @@
+@@ -3858,8 +3881,9 @@
  
  /*
   *  call-seq:
@@ -669,7 +700,7 @@ Index: thread.c
   *
   *  Establishes _proc_ as the handler for tracing, or disables
   *  tracing if the parameter is +nil+. _proc_ takes up
-@@ -3873,6 +3889,8 @@
+@@ -3873,6 +3897,8 @@
   *  <code>line</code> (execute code on a new line), <code>raise</code>
   *  (raise an exception), and <code>return</code> (return from a Ruby
   *  method). Tracing is disabled within the context of _proc_.
@@ -678,7 +709,7 @@ Index: thread.c
   *
   *      class Test
   *	def test
-@@ -3897,11 +3915,28 @@
+@@ -3897,11 +3923,28 @@
   *	  line prog.rb:3        test     Test
   *	  line prog.rb:4        test     Test
   *      return prog.rb:4        test     Test
@@ -708,7 +739,7 @@ Index: thread.c
      rb_remove_event_hook(call_trace_func);
  
      if (NIL_P(trace)) {
-@@ -3912,7 +3947,13 @@
+@@ -3912,7 +3955,13 @@
  	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
      }
  
@@ -723,7 +754,7 @@ Index: thread.c
      return trace;
  }
  
-@@ -3977,6 +4018,8 @@
+@@ -3977,6 +4026,8 @@
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -732,7 +763,7 @@ Index: thread.c
        case RUBY_EVENT_CALL:
  	return "call";
        case RUBY_EVENT_RETURN:
-@@ -3987,6 +4030,14 @@
+@@ -3987,6 +4038,14 @@
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -747,7 +778,7 @@ Index: thread.c
        default:
  	return "unknown";
      }
-@@ -4008,6 +4059,11 @@
+@@ -4008,6 +4067,11 @@
      struct call_trace_func_args *p = (struct call_trace_func_args *)args;
      const char *srcfile = rb_sourcefile();
      VALUE eventname = rb_str_new2(get_event_name(p->event));
@@ -759,7 +790,7 @@ Index: thread.c
      VALUE filename = srcfile ? rb_str_new2(srcfile) : Qnil;
      VALUE argv[6];
      int line = rb_sourceline();
-@@ -4015,7 +4071,8 @@
+@@ -4015,7 +4079,8 @@
      VALUE klass = 0;
  
      if (p->event == RUBY_EVENT_C_CALL ||
@@ -769,7 +800,7 @@ Index: thread.c
  	id = p->id;
  	klass = p->klass;
      }
-@@ -4192,7 +4249,7 @@
+@@ -4192,7 +4257,7 @@
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -780,7 +811,7 @@ Index: thread.c
  
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 26821)
+--- vm_exec.h	(revision 26851)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
@@ -845,7 +876,7 @@ Index: vm_exec.h
  #define debugs printf
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 26821)
+--- vm_insnhelper.c	(revision 26851)
 +++ vm_insnhelper.c	(working copy)
 @@ -367,11 +367,18 @@
      const rb_method_definition_t *def = me->def;
@@ -888,7 +919,7 @@ Index: vm_insnhelper.c
  
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 26821)
+--- tool/instruction.rb	(revision 26851)
 +++ tool/instruction.rb	(working copy)
 @@ -854,6 +854,17 @@
        commit "INSN_ENTRY(#{insn.name}){"
@@ -910,7 +941,7 @@ Index: tool/instruction.rb
        make_header_operands   insn
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 26821)
+--- test/ruby/test_settracefunc.rb	(revision 26851)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -23,8 +23,6 @@
       4: x = 1 + 1
@@ -977,7 +1008,7 @@ Index: test/ruby/test_settracefunc.rb
       ["c-call", 4, :each, Array],
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 26821)
+--- template/insns_info.inc.tmpl	(revision 26851)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -42,38 +42,6 @@
  }
