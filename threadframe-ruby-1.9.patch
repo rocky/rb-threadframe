@@ -1,6 +1,6 @@
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 26821)
+--- include/ruby/ruby.h	(revision 26862)
 +++ include/ruby/ruby.h	(working copy)
 @@ -1327,7 +1327,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
@@ -15,7 +15,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 26821)
+--- vm_core.h	(revision 26862)
 +++ vm_core.h	(working copy)
 @@ -34,7 +34,7 @@
  #ifndef ENABLE_VM_OBJSPACE
@@ -143,7 +143,7 @@ Index: vm_core.h
  #endif /* RUBY_VM_CORE_H */
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 26821)
+--- iseq.c	(revision 26862)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -455,7 +455,7 @@ Index: iseq.c
      /* rb_define_singleton_method(rb_cISeq, "load", iseq_s_load, -1); */
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 26821)
+--- iseq.h	(revision 26862)
 +++ iseq.h	(working copy)
 @@ -101,4 +101,10 @@
  #define DEFINED_ZSUPER INT2FIX(9)
@@ -470,7 +470,7 @@ Index: iseq.h
  #endif /* RUBY_COMPILE_H */
 Index: load.c
 ===================================================================
---- load.c	(revision 26821)
+--- load.c	(revision 26862)
 +++ load.c	(working copy)
 @@ -284,11 +284,14 @@
      if (state == 0) {
@@ -490,7 +490,7 @@ Index: load.c
      }
 Index: compile.c
 ===================================================================
---- compile.c	(revision 26821)
+--- compile.c	(revision 26862)
 +++ compile.c	(working copy)
 @@ -3360,6 +3360,9 @@
  	if (iseq->compile_data->redo_label != 0) {
@@ -504,7 +504,7 @@ Index: compile.c
  	    add_ensure_iseq(ret, iseq, 0);
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 26821)
+--- vm_eval.c	(revision 26862)
 +++ vm_eval.c	(working copy)
 @@ -67,22 +67,29 @@
  	break;
@@ -567,7 +567,7 @@ Index: vm_eval.c
  		ID id_mesg;
 Index: proc.c
 ===================================================================
---- proc.c	(revision 26821)
+--- proc.c	(revision 26862)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -644,7 +644,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 26821)
+--- thread.c	(revision 26862)
 +++ thread.c	(working copy)
 @@ -336,6 +336,16 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -794,7 +794,7 @@ Index: thread.c
      VALUE filename = srcfile ? rb_str_new2(srcfile) : Qnil;
      VALUE argv[6];
      int line = rb_sourceline();
-@@ -4015,10 +4079,13 @@
+@@ -4015,11 +4079,16 @@
      VALUE klass = 0;
  
      if (p->event == RUBY_EVENT_C_CALL ||
@@ -804,13 +804,17 @@ Index: thread.c
  	id = p->id;
  	klass = p->klass;
 -    }
-+    } else if (p->event == RUBY_EVENT_RAISE)
+-    else {
++    } else if (p->event == RUBY_EVENT_RAISE) {
 +	/* We have arranged to store the raise message in klass here. */
++	VALUE throwaway_klass;
++	rb_thread_method_id_and_class(GET_THREAD(), &id, &throwaway_klass);
 +	klass = p->klass;
-     else {
++    } else {
  	rb_thread_method_id_and_class(GET_THREAD(), &id, &klass);
      }
-@@ -4192,7 +4259,7 @@
+     if (id == ID_ALLOCATOR)
+@@ -4192,7 +4261,7 @@
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -821,7 +825,7 @@ Index: thread.c
  
 Index: eval.c
 ===================================================================
---- eval.c	(revision 26821)
+--- eval.c	(revision 26862)
 +++ eval.c	(working copy)
 @@ -429,7 +429,7 @@
      rb_trap_restore_mask();
@@ -834,7 +838,7 @@ Index: eval.c
  
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 26821)
+--- vm_exec.h	(revision 26862)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
@@ -899,7 +903,7 @@ Index: vm_exec.h
  #define debugs printf
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 26821)
+--- vm_insnhelper.c	(revision 26862)
 +++ vm_insnhelper.c	(working copy)
 @@ -367,11 +367,18 @@
      const rb_method_definition_t *def = me->def;
@@ -942,7 +946,7 @@ Index: vm_insnhelper.c
  
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 26821)
+--- tool/instruction.rb	(revision 26862)
 +++ tool/instruction.rb	(working copy)
 @@ -854,6 +854,17 @@
        commit "INSN_ENTRY(#{insn.name}){"
@@ -964,7 +968,7 @@ Index: tool/instruction.rb
        make_header_operands   insn
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 26821)
+--- test/ruby/test_settracefunc.rb	(revision 26862)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -23,8 +23,6 @@
       4: x = 1 + 1
@@ -1011,7 +1015,12 @@ Index: test/ruby/test_settracefunc.rb
      assert_equal(["line", 4, __method__, self.class],
                   events.shift)
      assert_equal(["c-call", 4, :method_added, Module],
-@@ -224,8 +214,6 @@
+@@ -220,12 +210,10 @@
+      3: })
+      4: begin
+      5:   raise TypeError, "error"
+-     6: rescue TypeError
++     6: rescue TypeError => $e
       7: end
       8: set_trace_func(nil)
      EOF
@@ -1020,6 +1029,15 @@ Index: test/ruby/test_settracefunc.rb
      assert_equal(["line", 4, __method__, self.class],
                   events.shift)
      assert_equal(["line", 5, __method__, self.class],
+@@ -248,7 +236,7 @@
+                  events.shift)
+     assert_equal(["c-return", 5, :set_backtrace, Exception],
+                  events.shift)
+-    assert_equal(["raise", 5, :test_raise, TestSetTraceFunc],
++    assert_equal(["raise", 5, :test_raise, $e], 
+                  events.shift)
+     assert_equal(["c-return", 5, :raise, Kernel],
+                  events.shift)
 @@ -273,7 +261,7 @@
       8: set_trace_func(nil)
      EOF
@@ -1031,7 +1049,7 @@ Index: test/ruby/test_settracefunc.rb
       ["c-call", 4, :each, Array],
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 26821)
+--- template/insns_info.inc.tmpl	(revision 26862)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -42,38 +42,6 @@
  }
