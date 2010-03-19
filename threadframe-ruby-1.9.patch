@@ -53,7 +53,7 @@ Index: vm_core.h
  };
  
  enum ruby_special_exceptions {
-@@ -377,6 +379,18 @@
+@@ -377,6 +379,25 @@
      /* passing state */
      int state;
  
@@ -62,7 +62,14 @@ Index: vm_core.h
 +    rb_event_flag_t event_flags;
 +    int tracing;  /* 0 if not tracing. If less than 0, skip that many
 +		     C call/return pairs */
-+    int exec_event_tracing;  /* 0 if not in rb_threadptr_evec_event_hooks. */
++
++    /* If nonnull we are currently inside rb_threadptr_event_event
++       hooks and don't want to trace inside that. We store the control
++       frame of where we started so that if an exception propagates
++       outside of the hook, exception recovery can reset this
++       indicator. */
++    rb_control_frame_t *exec_event_tracing; 
++
 +    int trace_skip_insn_count; /* # of VM instructions to skip */
 +
 +    /* misc */
@@ -72,7 +79,7 @@ Index: vm_core.h
      /* for rb_iterate */
      const rb_block_t *passed_block;
  
-@@ -396,6 +410,14 @@
+@@ -396,6 +417,14 @@
      int priority;
      int slice;
  
@@ -87,7 +94,7 @@ Index: vm_core.h
      native_thread_data_t native_thread_data;
      void *blocking_region_buffer;
  
-@@ -445,22 +467,6 @@
+@@ -445,22 +474,6 @@
      jmp_buf machine_regs;
      int mark_stack_len;
  
@@ -110,7 +117,7 @@ Index: vm_core.h
  } rb_thread_t;
  
  /* iseq.c */
-@@ -471,6 +477,7 @@
+@@ -471,6 +484,7 @@
  VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, const rb_compile_option_t*);
  VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
  VALUE rb_iseq_disasm(VALUE self);
@@ -118,7 +125,7 @@ Index: vm_core.h
  int rb_iseq_disasm_insn(VALUE str, VALUE *iseqval, size_t pos, rb_iseq_t *iseq, VALUE child);
  const char *ruby_node_name(int node);
  int rb_iseq_first_lineno(rb_iseq_t *iseq);
-@@ -671,13 +678,14 @@
+@@ -671,13 +685,14 @@
  void
  rb_threadptr_exec_event_hooks(rb_thread_t *th, rb_event_flag_t flag, VALUE self, ID id, VALUE klass);
  
@@ -675,8 +682,8 @@ Index: thread.c
 -    if (wait_event & RUBY_EVENT_VM) {
 -	exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
 +    if (wait_event & RUBY_EVENT_VM && th->tracing <= 0)  {
-+        if (0 == th->exec_event_tracing) {
-+	    int event_tracing_save = th->exec_event_tracing;
++        if (NULL == th->exec_event_tracing) {
++	    rb_control_frame_t *event_tracing_save = th->exec_event_tracing;
 +	    /* Running exec_event_hooks may call eval_string_with_cref
 +	       which may zero th->base_block after it is done. So it
 +	       is probably a safe thing to save/restore the value
@@ -684,7 +691,7 @@ Index: thread.c
 +	       trace hooks are used so infrequently that one wouldn't know.
 +	     */
 +	    rb_block_t * base_block_save = th->base_block;
-+	    th->exec_event_tracing = 1;
++	    th->exec_event_tracing = th->cfp;
 +  	    exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
 +	    th->exec_event_tracing = event_tracing_save;
 +	    th->base_block = base_block_save;
@@ -901,6 +908,24 @@ Index: vm_exec.h
  
  #if VMDEBUG > 0
  #define debugs printf
+Index: vm.c
+===================================================================
+--- vm.c	(revision 26862)
++++ vm.c	(working copy)
+@@ -1157,6 +1157,13 @@
+ 	    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
+ 	}
+ 
++	/* If we have an exception that propagates out of an event
++	 * hook, reset the tracing flag.
++	 */
++	if (UNLIKELY(th->exec_event_tracing && 
++		     th->exec_event_tracing <= th->cfp))
++	    th->exec_event_tracing = NULL;
++
+ 	cfp = th->cfp;
+ 	epc = cfp->pc - cfp->iseq->iseq_encoded;
+ 
 Index: vm_insnhelper.c
 ===================================================================
 --- vm_insnhelper.c	(revision 26862)
@@ -1047,6 +1072,32 @@ Index: test/ruby/test_settracefunc.rb
       ["line", 4, __method__, self.class],
       ["c-call", 4, :any?, Enumerable],
       ["c-call", 4, :each, Array],
+@@ -294,4 +282,25 @@
+     set_trace_func proc {raise rescue nil}
+     assert_equal(42, (raise rescue 42), '[ruby-core:24118]')
+   end
++
++  def test_trace_proc_that_raises_exception_recovery
++    $first_time = true
++    $traced = []
++    s = Proc.new {|event|
++      if $first_time
++        $first_time = false
++        raise RuntimeError
++      end
++      $traced << event
++    }
++    begin
++      set_trace_func(s)
++      assert_equal(false, 'hook should have raised error')
++    rescue RuntimeError
++      x = 1
++      set_trace_func(nil)
++      assert_equal(false, $traced.empty?, $traced)
++    end
++  end
++
+ end
 Index: template/insns_info.inc.tmpl
 ===================================================================
 --- template/insns_info.inc.tmpl	(revision 26862)
