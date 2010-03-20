@@ -282,14 +282,7 @@ typedef struct rb_thread_struct
     rb_event_flag_t event_flags;
     int tracing;  /* 0 if not tracing. If less than 0, skip that many
 		     C call/return pairs */
-
-    /* If nonnull we are currently inside rb_threadptr_event_event
-       hooks and don't want to trace inside that. We store the control
-       frame of where we started so that if an exception propagates
-       outside of the hook, exception recovery can reset this
-       indicator. */
-    rb_control_frame_t *exec_event_tracing; 
-
+    int exec_event_tracing;  /* 0 if not in rb_threadptr_evec_event_hooks. */
     int trace_skip_insn_count; /* # of VM instructions to skip */
 
     /* misc */

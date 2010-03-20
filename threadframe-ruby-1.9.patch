@@ -53,7 +53,7 @@ Index: vm_core.h
  };
  
  enum ruby_special_exceptions {
-@@ -377,6 +379,25 @@
+@@ -377,6 +379,18 @@
      /* passing state */
      int state;
  
@@ -62,14 +62,7 @@ Index: vm_core.h
 +    rb_event_flag_t event_flags;
 +    int tracing;  /* 0 if not tracing. If less than 0, skip that many
 +		     C call/return pairs */
-+
-+    /* If nonnull we are currently inside rb_threadptr_event_event
-+       hooks and don't want to trace inside that. We store the control
-+       frame of where we started so that if an exception propagates
-+       outside of the hook, exception recovery can reset this
-+       indicator. */
-+    rb_control_frame_t *exec_event_tracing; 
-+
++    int exec_event_tracing;  /* 0 if not in rb_threadptr_evec_event_hooks. */
 +    int trace_skip_insn_count; /* # of VM instructions to skip */
 +
 +    /* misc */
@@ -79,7 +72,7 @@ Index: vm_core.h
      /* for rb_iterate */
      const rb_block_t *passed_block;
  
-@@ -396,6 +417,14 @@
+@@ -396,6 +410,14 @@
      int priority;
      int slice;
  
@@ -94,7 +87,7 @@ Index: vm_core.h
      native_thread_data_t native_thread_data;
      void *blocking_region_buffer;
  
-@@ -445,22 +474,6 @@
+@@ -445,22 +467,6 @@
      jmp_buf machine_regs;
      int mark_stack_len;
  
@@ -117,7 +110,7 @@ Index: vm_core.h
  } rb_thread_t;
  
  /* iseq.c */
-@@ -471,6 +484,7 @@
+@@ -471,6 +477,7 @@
  VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, const rb_compile_option_t*);
  VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
  VALUE rb_iseq_disasm(VALUE self);
@@ -125,7 +118,7 @@ Index: vm_core.h
  int rb_iseq_disasm_insn(VALUE str, VALUE *iseqval, size_t pos, rb_iseq_t *iseq, VALUE child);
  const char *ruby_node_name(int node);
  int rb_iseq_first_lineno(rb_iseq_t *iseq);
-@@ -671,13 +685,14 @@
+@@ -671,13 +678,14 @@
  void
  rb_threadptr_exec_event_hooks(rb_thread_t *th, rb_event_flag_t flag, VALUE self, ID id, VALUE klass);
  
@@ -670,7 +663,7 @@ Index: thread.c
  void
  rb_thread_terminate_all(void)
  {
-@@ -3765,11 +3775,24 @@
+@@ -3765,11 +3775,34 @@
      const rb_event_flag_t wait_event = th->event_flags;
  
      if (self == rb_mRubyVMFrozenCore) return;
@@ -682,24 +675,34 @@ Index: thread.c
 -    if (wait_event & RUBY_EVENT_VM) {
 -	exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
 +    if (wait_event & RUBY_EVENT_VM && th->tracing <= 0)  {
-+        if (NULL == th->exec_event_tracing) {
-+	    rb_control_frame_t *event_tracing_save = th->exec_event_tracing;
-+	    /* Running exec_event_hooks may call eval_string_with_cref
-+	       which may zero th->base_block after it is done. So it
-+	       is probably a safe thing to save/restore the value
-+	       here. It is possible there's a bug elsewhere in Ruby here, but 
-+	       trace hooks are used so infrequently that one wouldn't know.
-+	     */
-+	    rb_block_t * base_block_save = th->base_block;
-+	    th->exec_event_tracing = th->cfp;
-+  	    exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
-+	    th->exec_event_tracing = event_tracing_save;
-+	    th->base_block = base_block_save;
++        if (0 == th->exec_event_tracing) {
++	    /* Modified from ruby_suppress_tracing */
++	    int state;
++	    volatile int raised = rb_threadptr_reset_raised(th);
++	    th->exec_event_tracing = 1;
++	
++	    PUSH_TAG();
++	    if ((state = EXEC_TAG()) == 0) {
++		exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
++	    }
++
++	    if (raised) {
++		rb_threadptr_set_raised(th);
++	    }
++	    POP_TAG();
++
++	    if (th->tracing > 0)
++		printf("Something is wrong\n");
++		       
++	    th->exec_event_tracing = NULL;
++	    if (state) {
++		JUMP_TAG(state);
++	    }
 +	}
      }
      th->errinfo = errinfo;
  }
-@@ -3858,8 +3881,9 @@
+@@ -3858,8 +3891,9 @@
  
  /*
   *  call-seq:
@@ -711,7 +714,7 @@ Index: thread.c
   *
   *  Establishes _proc_ as the handler for tracing, or disables
   *  tracing if the parameter is +nil+. _proc_ takes up
-@@ -3873,6 +3897,8 @@
+@@ -3873,6 +3907,8 @@
   *  <code>line</code> (execute code on a new line), <code>raise</code>
   *  (raise an exception), and <code>return</code> (return from a Ruby
   *  method). Tracing is disabled within the context of _proc_.
@@ -720,7 +723,7 @@ Index: thread.c
   *
   *      class Test
   *	def test
-@@ -3897,11 +3923,28 @@
+@@ -3897,11 +3933,28 @@
   *	  line prog.rb:3        test     Test
   *	  line prog.rb:4        test     Test
   *      return prog.rb:4        test     Test
@@ -750,7 +753,7 @@ Index: thread.c
      rb_remove_event_hook(call_trace_func);
  
      if (NIL_P(trace)) {
-@@ -3912,7 +3955,13 @@
+@@ -3912,7 +3965,13 @@
  	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
      }
  
@@ -765,7 +768,7 @@ Index: thread.c
      return trace;
  }
  
-@@ -3977,6 +4026,8 @@
+@@ -3977,6 +4036,8 @@
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -774,7 +777,7 @@ Index: thread.c
        case RUBY_EVENT_CALL:
  	return "call";
        case RUBY_EVENT_RETURN:
-@@ -3987,6 +4038,14 @@
+@@ -3987,6 +4048,14 @@
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -789,7 +792,7 @@ Index: thread.c
        default:
  	return "unknown";
      }
-@@ -4008,6 +4067,11 @@
+@@ -4008,6 +4077,11 @@
      struct call_trace_func_args *p = (struct call_trace_func_args *)args;
      const char *srcfile = rb_sourcefile();
      VALUE eventname = rb_str_new2(get_event_name(p->event));
@@ -801,7 +804,7 @@ Index: thread.c
      VALUE filename = srcfile ? rb_str_new2(srcfile) : Qnil;
      VALUE argv[6];
      int line = rb_sourceline();
-@@ -4015,11 +4079,16 @@
+@@ -4015,11 +4089,16 @@
      VALUE klass = 0;
  
      if (p->event == RUBY_EVENT_C_CALL ||
@@ -821,7 +824,7 @@ Index: thread.c
  	rb_thread_method_id_and_class(GET_THREAD(), &id, &klass);
      }
      if (id == ID_ALLOCATOR)
-@@ -4192,7 +4261,7 @@
+@@ -4192,7 +4271,7 @@
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -908,24 +911,6 @@ Index: vm_exec.h
  
  #if VMDEBUG > 0
  #define debugs printf
-Index: vm.c
-===================================================================
---- vm.c	(revision 26862)
-+++ vm.c	(working copy)
-@@ -1157,6 +1157,13 @@
- 	    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
- 	}
- 
-+	/* If we have an exception that propagates out of an event
-+	 * hook, reset the tracing flag.
-+	 */
-+	if (UNLIKELY(th->exec_event_tracing && 
-+		     th->exec_event_tracing <= th->cfp))
-+	    th->exec_event_tracing = NULL;
-+
- 	cfp = th->cfp;
- 	epc = cfp->pc - cfp->iseq->iseq_encoded;
- 
 Index: vm_insnhelper.c
 ===================================================================
 --- vm_insnhelper.c	(revision 26862)
