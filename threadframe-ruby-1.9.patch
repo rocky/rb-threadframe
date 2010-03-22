@@ -13,6 +13,19 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_VM       0x10000
  #define RUBY_EVENT_SWITCH   0x20000
  #define RUBY_EVENT_COVERAGE 0x40000
+Index: insns.def
+===================================================================
+--- insns.def	(revision 26862)
++++ insns.def	(working copy)
+@@ -15,7 +15,7 @@
+ 
+   instruction form:
+     DEFINE_INSN
+-    instrunction_name
++    instruction_name
+     (instruction_operands, ..)
+     (pop_values, ..)
+     (return value)
 Index: vm_core.h
 ===================================================================
 --- vm_core.h	(revision 26862)
@@ -130,14 +143,14 @@ Index: vm_core.h
 -	} \
 -    } \
 -} while (0)
-+#define EXEC_EVENT_HOOK(th, flag, self, id, klass)  \
-+    if (0 == th->tracing) {			    \
-+      rb_event_flag_t wait_event__ = th->event_flags; \
-+      if (UNLIKELY(wait_event__)) {		      \
-+	  if (wait_event__ & (flag | RUBY_EVENT_VM)) {		      \
-+	      rb_threadptr_exec_event_hooks(th, flag, self, id, klass); \
-+	  }								\
-+      }									\
++#define EXEC_EVENT_HOOK(th, flag, self, id, klass)			\
++    if (0 == th->tracing) {						\
++	rb_event_flag_t wait_event__ = th->event_flags;			\
++	if (UNLIKELY(wait_event__)) {					\
++	    if (wait_event__ & (flag | RUBY_EVENT_VM)) {		\
++		rb_threadptr_exec_event_hooks(th, flag, self, id, klass); \
++	    }								\
++	}								\
 +    }
  
  #endif /* RUBY_VM_CORE_H */
@@ -506,7 +519,7 @@ Index: vm_eval.c
 ===================================================================
 --- vm_eval.c	(revision 26862)
 +++ vm_eval.c	(working copy)
-@@ -67,22 +67,29 @@
+@@ -67,22 +67,32 @@
  	break;
        }
        case VM_METHOD_TYPE_CFUNC: {
@@ -531,6 +544,9 @@ Index: vm_eval.c
  	    if (reg_cfp != th->cfp + 1) {
  		rb_bug("cfp consistency error - call0");
  	    }
++	    /* rocky: FIXME: decide what to do for sp values, especially
++	       the return value. See vm_insnhelper.c for guidance.
++	    */
 +	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
  	    vm_pop_frame(th);
  	}
@@ -538,7 +554,7 @@ Index: vm_eval.c
  	break;
        }
        case VM_METHOD_TYPE_ATTRSET: {
-@@ -1017,7 +1024,25 @@
+@@ -1017,7 +1027,25 @@
      if (state) {
  	if (state == TAG_RAISE) {
  	    VALUE errinfo = th->errinfo;
@@ -845,6 +861,16 @@ Index: eval.c
      }
  }
  
+@@ -577,6 +577,9 @@
+ 
+     setup_exception(th, TAG_RAISE, mesg);
+ 
++    /* rocky: FIXME: decide what to do for sp values. Do we push mesg? 
++       See vm_insnhelper.c for guidance.
++     */
+     EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, self, mid, klass);
+     rb_thread_raised_clear(th);
+     JUMP_TAG(TAG_RAISE);
 Index: vm_exec.h
 ===================================================================
 --- vm_exec.h	(revision 26862)
@@ -935,14 +961,20 @@ Index: vm_insnhelper.c
      reg_cfp->sp -= num + 1;
  
      val = call_cfunc(def->body.cfunc.func, recv, (int)def->body.cfunc.argc, num, reg_cfp->sp + 1);
-@@ -380,10 +387,15 @@
+@@ -380,10 +387,21 @@
  	rb_bug("cfp consistency error - send");
      }
  
-+    if (th->tracing == 0) {
-+	reg_cfp->sp += num + 1;
-+	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, me->called_id, me->klass);
-+	reg_cfp->sp -= num + 1;
++    if (0 == th->tracing) {
++	rb_event_flag_t wait_event__ = th->event_flags;			
++	if (UNLIKELY(wait_event__)) {
++	    reg_cfp->sp += (num + 1);
++	    PUSH(val);
++	    rb_threadptr_exec_event_hooks(th, RUBY_EVENT_C_RETURN, recv, 
++					  me->called_id, me->klass);
++	    val = reg_cfp->sp[-1];    /* Allow for hook to change value */
++	    reg_cfp->sp -= (num + 2); /* +1 for above push */
++	}
 +    } else if (th->tracing < 0)
 +	th->tracing++;
 +

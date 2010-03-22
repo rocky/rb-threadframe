@@ -621,8 +621,8 @@ thread_frame_s_current(VALUE klass)
 
 /*
  *  call-seq:
- *     RubyVM::ThreadFrame#prev(thread)     -> threadframe_object
- *     RubyVM::ThreadFrame#prev(thread, n)   -> threadframe_object
+ *     RubyVM::ThreadFrame::prev(thread)     -> threadframe_object
+ *     RubyVM::ThreadFrame::prev(thread, n)   -> threadframe_object
  *
  *  Returns a RubyVM::ThreadFrame for the frame prior to the
  *  Thread object passed or nil if there is none. The default value for n
