@@ -519,7 +519,7 @@ Index: vm_eval.c
 ===================================================================
 --- vm_eval.c	(revision 26862)
 +++ vm_eval.c	(working copy)
-@@ -67,22 +67,32 @@
+@@ -67,22 +67,37 @@
  	break;
        }
        case VM_METHOD_TYPE_CFUNC: {
@@ -530,31 +530,46 @@ Index: vm_eval.c
  		vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
  			      recv, (VALUE)blockptr, 0, reg_cfp->sp, 0, 1);
  
-+	    /* Store actual argument count as the block_iseq pointer. cfunc.argc contains
-+	       the prototype value. Should formalize this by making block_iseq a union
-+	       in vm_core.h
++	    /* Store actual argument count as the block_iseq
++	       pointer. cfunc.argc contains the prototype
++	       value. Should formalize this by making block_iseq a
++	       union in vm_core.h
 +	    */
 +	    cfp->block_iseq = (rb_iseq_t *) INT2FIX(argc);
 +
  	    cfp->me = me;
-+	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
++	    if (0 == th->tracing)
++		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
 +
  	    val = call_cfunc(def->body.cfunc.func, recv, def->body.cfunc.argc, argc, argv);
  
  	    if (reg_cfp != th->cfp + 1) {
  		rb_bug("cfp consistency error - call0");
  	    }
-+	    /* rocky: FIXME: decide what to do for sp values, especially
-+	       the return value. See vm_insnhelper.c for guidance.
-+	    */
-+	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
++	    if (0 == th->tracing && 0 == th->exec_event_tracing) {
++		/* rocky: FIXME: decide what to do for sp values,
++		   especially the return value. See vm_insnhelper.c
++		   for guidance.
++		*/
++		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
++	    }
  	    vm_pop_frame(th);
  	}
 -	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
  	break;
        }
        case VM_METHOD_TYPE_ATTRSET: {
-@@ -1017,7 +1027,25 @@
+@@ -865,7 +880,8 @@
+ #endif
+ 		    if (UNLIKELY(VM_FRAME_TYPE(th->cfp) == VM_FRAME_MAGIC_CFUNC)) {
+ 			const rb_method_entry_t *me = th->cfp->me;
+-			EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, th->cfp->self, me->called_id, me->klass);
++			if (0 == th->tracing)
++			    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, th->cfp->self, me->called_id, me->klass);
+ 		    }
+ 
+ 		    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
+@@ -1017,7 +1033,25 @@
      if (state) {
  	if (state == TAG_RAISE) {
  	    VALUE errinfo = th->errinfo;
@@ -936,6 +951,33 @@ Index: vm_exec.h
  
  #if VMDEBUG > 0
  #define debugs printf
+Index: vm.c
+===================================================================
+--- vm.c	(revision 26862)
++++ vm.c	(working copy)
+@@ -1151,8 +1151,20 @@
+ 
+ 	while (th->cfp->pc == 0 || th->cfp->iseq == 0) {
+ 	    if (UNLIKELY(VM_FRAME_TYPE(th->cfp) == VM_FRAME_MAGIC_CFUNC)) {
+-		const rb_method_entry_t *me = th->cfp->me;
+-		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, th->cfp->self, me->called_id, me->klass);
++		/* rocky: The below tests and assignments are not
++		   quite right.  The problem I am having is when a
++		   there is an exception in hook code raised from a C
++		   return event. This causes the below EXEC_EVENT_HOOK to
++		   loop indefinitely. The below has the bad effect of
++		   not reseting exec_event_tracing sometimes.
++		 */
++		if (0 == th->tracing && 0 == th->exec_event_tracing) {
++		    const rb_method_entry_t *me = th->cfp->me;
++		    th->exec_event_tracing = 1;
++		    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, th->cfp->self, 
++				    me->called_id, me->klass);
++		    th->exec_event_tracing = 0;
++		}
+ 	    }
+ 	    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
+ 	}
 Index: vm_insnhelper.c
 ===================================================================
 --- vm_insnhelper.c	(revision 26862)
