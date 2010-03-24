@@ -49,8 +49,9 @@ class TestLibISeqExtra < Test::Unit::TestCase
   end
 
   def test_sha1
-    assert_equal('b361a73f9efd7dc4d2c5e86d4e94d40b36141d42',
-                 proc{ 5 }.iseq.sha1)
+    sha1 = proc{ 5 }.iseq.sha1
+    assert_equal(40, sha1.size)
+    assert_equal(0, sha1 =~ /^[0-9a-f]+$/)
   end
 
 end
