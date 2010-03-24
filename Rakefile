@@ -29,7 +29,7 @@ task :clean do
   cd 'ext' do
     if File.exist?('Makefile')
       sh 'make clean'
-      rm  'Makefile'
+      rm 'Makefile'
     end
     derived_files = Dir.glob('.o') + Dir.glob('*.so')
     rm derived_files unless derived_files.empty?
@@ -80,7 +80,7 @@ Rake::RDocTask.new('rdoc') do |rdoc|
   rdoc.options << '--inline-source' << '--line-numbers'
   # Make the readme file the start page for the generated html
   rdoc.options << '--main' << 'README.md'
-  rdoc.rdoc_files.include('ext/**/thread_frame.c',
+  rdoc.rdoc_files.include('ext/**/*.c',
                           'README.md')
 end
 
@@ -110,7 +110,8 @@ EOF
   
   # rdoc
   spec.has_rdoc = true
-  spec.extra_rdoc_files = ['README.md', 'threadframe.rd']
+  spec.extra_rdoc_files = ['README.md', 'threadframe.rd'] + 
+                           FileList['ext/*.c']
 end
 
 # Rake task to build the default package

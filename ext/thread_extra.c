@@ -5,16 +5,14 @@
 VALUE rb_cThread = rb_define_class("Method", ...)
 #endif
 
-/* 
- *  Additions to Thread class.
- */
-
 #include "vm_core_mini.h"  /* Pulls in ruby.h */
 #include "thread_extra.h"
 
 /* 
  *  call-seq:
- *  Thread#tracing - value of the thread event-hook tracing.
+ *  Thread#exec_event_tracing -> bool
+ *
+ *  Returns the value of the thread event-hook tracing.
  */
 VALUE
 thread_exec_event_tracing(VALUE self)
@@ -26,7 +24,9 @@ thread_exec_event_tracing(VALUE self)
 
 /* 
  *  call-seq:
- *  Thread#tracing_set - set_value of the thread event-hook tracing.
+ *  Thread#exec_event_tracing=(new_value)
+ * 
+ *  Sets the value of thread event-hook tracing.
  */
 VALUE
 thread_exec_event_tracing_set(VALUE self, VALUE new_value)
@@ -40,7 +40,9 @@ thread_exec_event_tracing_set(VALUE self, VALUE new_value)
 
 /* 
  *  call-seq:
- *  Thread#tracing - value of the thread event-hook tracing.
+ *  Thread#tracing -> bool
+ * 
+ *  Returns the value of the thread event-hook tracing.
  */
 VALUE
 thread_tracing(VALUE self)
@@ -52,7 +54,9 @@ thread_tracing(VALUE self)
 
 /* 
  *  call-seq:
- *  Thread#tracing_set - set_value of the thread event-hook tracing.
+ *  Thread#tracing= bool
+ * 
+ *  Sets the value of thread event-hook tracing.
  */
 VALUE
 thread_tracing_set(VALUE self, VALUE new_value)

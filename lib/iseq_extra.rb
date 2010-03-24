@@ -51,9 +51,11 @@ class RubyVM::InstructionSequence
   end
 
   # Returns a cryptographic checksum (in particluar a SHA1) for the
-  # encoded bytes of the instruction sequence. For example
-  # For example: 
-  #  proc{ 5 }.iseq.sha1 => 'b361a73f9efd7dc4d2c5e86d4e94d40b36141d42'
+  # encoded bytes of the instruction sequence.
+  # 
+  # ==== Example
+  # 
+  #   proc{ 5 }.iseq.sha1 => 'b361a73f9efd7dc4d2c5e86d4e94d40b36141d42'
   def sha1
     Digest::SHA1.hexdigest(encoded)
   end

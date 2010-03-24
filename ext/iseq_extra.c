@@ -20,10 +20,8 @@ struct iseq_insn_info_entry {
 
 
 /* 
- * Document-method: RubyVM::InstructionSequence::arity?
- *
- * call-seq:
- *     RubyVM::InstructionSequence#arity -> Fixnum
+ *  call-seq:
+ *  RubyVM::InstructionSequence#arity -> Fixnum
  *
  *  Returns the number of arguments that would not be ignored.
  *  See Ruby 1.9 proc_arity of proc.c
@@ -38,10 +36,8 @@ iseq_arity(VALUE iseqval)
 }
 
 /* 
- * Document-method: RubyVM::InstructionSequence::brkpt_alloc
- *
- * call-seq:
- *     RubyVM::InstructionSequence#brkpt_alloc -> bool
+ *  call-seq:
+ *  RubyVM::InstructionSequence#brkpt_alloc -> bool
  *
  *  Allocates a breakpoint byte vector of zeros for each 
  *  instruction in the instruction sequence. True is returned if 
@@ -64,9 +60,9 @@ iseq_brkpt_alloc(VALUE iseqval)
 }
 
 /* 
- * Document-method: RubyVM::InstructionSequence::brkpt_dealloc
+ *  Document-method: RubyVM::InstructionSequence::brkpt_dealloc -> bool
  *
- * call-seq:
+ *  call-seq:
  *     RubyVM::InstructionSequence#dealloc -> bool
  *
  *  DeAllocates a breakpoint byte vector of zeros for each 
@@ -123,9 +119,9 @@ iseq_get_offset_internal(rb_iseq_t *iseq, VALUE offsetval)
 }
 
 /* 
- * Document-method: RubyVM::InstructionSequence::brkpt_get(offset)
+ *  Document-method: RubyVM::InstructionSequence::brkpt_get(offset)
  *
- * call-seq:
+ *  call-seq:
  *     RubyVM::InstructionSequence#brkpt_get(offset) -> bool
  *
  *  Get a value of breakpoint of byte vector at +offset+.
@@ -179,16 +175,16 @@ iseq_brkpt_set_unset(VALUE iseqval, VALUE offsetval, char val)
 }
 
 /* 
- * Document-method: RubyVM::InstructionSequence::brkpt_set
+ *  Document-method: RubyVM::InstructionSequence::brkpt_set(offset) -> bool
  *
- * call-seq:
+ *  call-seq:
  *     RubyVM::InstructionSequence#brkpt_set(offset) -> bool
  *
  *  Set a breakpoint of byte vector at +offset+.
  *
- * True is returned if the breakpoint is now set. An IndexError can or a
+ * +true+ is returned if the breakpoint is now set. An IndexError can or a
  * TypeError can be raised if values are invalid.  Negative values of
- * <i>offset</i> count from the end of the instruction sequence.
+ * +offset+ count from the end of the instruction sequence.
  */
 VALUE
 iseq_brkpt_set(VALUE iseqval, VALUE offsetval)
@@ -197,9 +193,9 @@ iseq_brkpt_set(VALUE iseqval, VALUE offsetval)
 }
 
 /* 
- * Document-method: RubyVM::InstructionSequence::brkpt_unset
+ *  Document-method: RubyVM::InstructionSequence::brkpt_unset
  *
- * call-seq:
+ *  call-seq:
  *     RubyVM::InstructionSequence#brkpt_unset(offset) -> bool
  *
  *  Unsets breakpoint of byte vector at +offset+.
@@ -219,9 +215,9 @@ iseq_brkpt_unset(VALUE iseqval, VALUE offsetval)
 }
 
 /* 
- * Document-method: RubyVM::InstructionSequence::brkpts
+ *  Document-method: RubyVM::InstructionSequence::brkpts
  *
- * call-seq:
+ *  call-seq:
  *     RubyVM::InstructionSequence#brkpts -> Array
  *
  *  Returns a list of breakpoints in effect for this instruction sequence.
@@ -251,9 +247,9 @@ iseq_brkpts(VALUE iseqval)
 
 #ifdef HAVE_COMPILE_OPTIONS
 /* 
- * Document-method: RubyVM::InstructionSequence::compile_options
+ *  Document-method: RubyVM::InstructionSequence::compile_options
  *
- * call-seq:
+ *  call-seq:
  *     RubyVM::InstructionSequence#compile_options -> Hash
  *
  *  Returns a hash of the compiler options used to create the 
@@ -279,9 +275,9 @@ iseq_compile_options(VALUE iseqval)
 #endif
 
 /* 
- * Document-method: RubyVM::InstructionSequence::encoded
+ *  Document-method: RubyVM::InstructionSequence::encoded
  * 
- * call-seq:
+ *  call-seq:
  *     RubyVM::InstructionSequence#iseq_encoded -> String
  *
  *  Returns a string of the encoded bytes of the instruction
@@ -299,9 +295,9 @@ iseq_iseq_encoded(VALUE iseqval)
 
 
 /* 
- * Document-method: RubyVM::InstructionSequence::equal?
+ *  Document-method: RubyVM::InstructionSequence::equal?
  * 
- * call-seq:
+ *  call-seq:
  *     RubyVM::InstructionSequence#equal?(iseq2) -> bool
  *
  *  Returns true if the instruction sequences are equal.

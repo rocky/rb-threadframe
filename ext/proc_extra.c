@@ -1,13 +1,9 @@
 #if 0  /* The following is to fake out rdoc, until I find a better fix. */
 /* 
- *  Additions to the RubyVM::Method class
+ *  Additions to the RubyVM::Proc classes
  */
-VALUE rb_cIseq = rb_define_class("Method", ...)
+VALUE rb_cProc = rb_define_class("Proc", ...)
 #endif
-
-/* 
- *  Additions to Proc and Method classes.
- */
 
 #include "vm_core_mini.h"  /* Pulls in ruby.h */
 #include "ruby19_externs.h"
@@ -20,7 +16,10 @@ struct METHOD {
 };
 
 /* 
-   Proc#iseq - access instruction sequence of a Proc object.
+ *  call-seq:
+ *  Proc#iseq -> RubyVM::InstructionSequence
+ *
+ *  Returns the instruction sequence for a Proc object.
  */
 VALUE
 proc_iseq(VALUE self)
@@ -45,9 +44,17 @@ proc_iseq(VALUE self)
 /* Defined in Ruby 1.9 proc.c */
 extern rb_iseq_t *rb_method_get_iseq(VALUE method);
 
+#if 0  /* The following is to fake out rdoc, until I find a better fix. */
+/* 
+ *  Additions to the RubyVM::Method class
+ */
+VALUE rb_cIseq = rb_define_class("Method", ...)
+#endif
 /* 
  *  call-seq:
- *  Method#iseq - access instruction sequence of a Method object.
+ *  Method#iseq -> RubyVM::InstructionSequence
+ * 
+ *  Returns the instruction sequence of a Method object.
  */
 VALUE
 method_iseq(VALUE self)
@@ -62,7 +69,9 @@ method_iseq(VALUE self)
 
 /* 
  *  call-seq:
- *  Method#alias_count - number of aliases a method has
+ *  Method#alias_count -> Fixnum
+ *
+ *  number of aliases a method has
  */
 VALUE
 method_alias_count(VALUE self)
