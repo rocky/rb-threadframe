@@ -9,7 +9,7 @@ class RubyVM::InstructionSequence
   # Returns a String containing a list of arguments for the RubyVM::InstructionSequence
   # A semicolon separates required arguments from optional ones.
   # For example: for 
-  #   def evaluate(context, statements, file = __FILE__, line = __LINE__)
+  #  def evaluate(context, statements, file = __FILE__, line = __LINE__)
   # we return:
   #  context, statements; file, line
   def format_args
@@ -70,7 +70,7 @@ if __FILE__ == $0
   p iseq.line2offsets(__LINE__)
   p iseq.line2offsets(__LINE__+100)
 
-  def show_type
+  def show_type # :nodoc:
     tf = RubyVM::ThreadFrame.current
     while tf do
       is = tf.iseq
