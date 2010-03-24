@@ -37,4 +37,20 @@ class TestLibISeqExtra < Test::Unit::TestCase
     end
   end
 
+  def test_format_args
+    # These prototypes are from IRB
+    def evaluate(context, statements, file = __FILE__, line = __LINE__); end
+    def def_extend_command(cmd_name, load_file, *aliases); end
+
+    assert_equal('context, statements; file, line', 
+                 method(:evaluate).iseq.format_args)
+    assert_equal('cmd_name, load_file; aliases',
+                 method(:def_extend_command).iseq.format_args)
+  end
+
+  def test_sha1
+    assert_equal('b361a73f9efd7dc4d2c5e86d4e94d40b36141d42',
+                 proc{ 5 }.iseq.sha1)
+  end
+
 end
