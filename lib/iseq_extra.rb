@@ -1,5 +1,5 @@
 require 'digest/sha1'
-require_relative %w(.. ext thread_frame)
+require_relative '../ext/thread_frame'
 # Some additions to RubyVM::InstructionSequence
 class RubyVM::InstructionSequence
 

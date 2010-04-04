@@ -1,7 +1,7 @@
 require 'test/unit'
 
 # require 'thread_frame'  # To compare with previous version
-require_relative %w(.. .. ext thread_frame)
+require_relative '../../ext/thread_frame'
 
 # Test source_location and source_container.
 class TestSource < Test::Unit::TestCase

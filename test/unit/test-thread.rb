@@ -1,5 +1,5 @@
 require 'test/unit'
-require_relative %w(.. .. ext thread_frame)
+require_relative '../../ext/thread_frame'
 
 class TestThread < Test::Unit::TestCase
   def test_basic

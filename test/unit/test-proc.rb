@@ -1,6 +1,6 @@
 # Test of additional proc and method
 require 'test/unit'
-require_relative %w(.. .. ext thread_frame)
+require_relative '../../ext/thread_frame'
 
 class TestProcAndMethod < Test::Unit::TestCase
   def test_proc_iseq

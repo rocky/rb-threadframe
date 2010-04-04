@@ -81,6 +81,7 @@ typedef struct rb_iseq_struct {
     VALUE type;          /* instruction sequence type */
     VALUE name;	         /* String: iseq name */
     VALUE filename;      /* file information where this sequence from */
+    VALUE filepath;      /* real file path or nil */
     VALUE *iseq;         /* iseq (insn number and operands) */
     VALUE *iseq_encoded; /* encoded iseq */
     unsigned long iseq_size;

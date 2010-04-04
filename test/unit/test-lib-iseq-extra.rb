@@ -1,5 +1,5 @@
 require 'test/unit'
-require_relative %w(.. .. lib iseq_extra)
+require_relative '../../lib/iseq_extra'
 
 class TestLibISeqExtra < Test::Unit::TestCase
 
