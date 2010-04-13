@@ -1,6 +1,6 @@
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 27218)
+--- include/ruby/ruby.h	(revision 27329)
 +++ include/ruby/ruby.h	(working copy)
 @@ -1341,7 +1341,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
@@ -15,7 +15,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 Index: insns.def
 ===================================================================
---- insns.def	(revision 27218)
+--- insns.def	(revision 27329)
 +++ insns.def	(working copy)
 @@ -15,7 +15,7 @@
  
@@ -28,7 +28,7 @@ Index: insns.def
      (return value)
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 27218)
+--- vm_core.h	(revision 27329)
 +++ vm_core.h	(working copy)
 @@ -34,7 +34,7 @@
  #ifndef ENABLE_VM_OBJSPACE
@@ -39,7 +39,7 @@ Index: vm_core.h
   * socklist needs st_table in rb_w32_sysinit(), before object space
   * initialization.
   * It is too early now to change st_hash_type, since it breaks binary
-@@ -156,7 +156,7 @@
+@@ -162,7 +162,7 @@
      VALUE name;	         /* String: iseq name */
      VALUE filename;      /* file information where this sequence from */
      VALUE filepath;      /* real file path or nil */
@@ -48,7 +48,7 @@ Index: vm_core.h
      VALUE *iseq_encoded; /* encoded iseq */
      unsigned long iseq_size;
      VALUE mark_ary;	/* Array: includes operands which should be GC marked */
-@@ -180,7 +180,7 @@
+@@ -186,7 +186,7 @@
       * argument information
       *
       *  def m(a1, a2, ..., aM,                    # mandatory
@@ -57,7 +57,7 @@ Index: vm_core.h
       *        *c,                                 # rest
       *        d1, d2, ..., dO,                    # post
       *        &e)                                 # block
-@@ -243,6 +243,8 @@
+@@ -249,6 +249,8 @@
  
      /* used at compile time */
      struct iseq_compile_data *compile_data;
@@ -66,7 +66,7 @@ Index: vm_core.h
  };
  
  enum ruby_special_exceptions {
-@@ -378,6 +380,18 @@
+@@ -384,6 +386,18 @@
      /* passing state */
      int state;
  
@@ -85,7 +85,7 @@ Index: vm_core.h
      /* for rb_iterate */
      const rb_block_t *passed_block;
  
-@@ -397,6 +411,14 @@
+@@ -403,6 +417,14 @@
      int priority;
      int slice;
  
@@ -100,7 +100,7 @@ Index: vm_core.h
      native_thread_data_t native_thread_data;
      void *blocking_region_buffer;
  
-@@ -446,22 +468,6 @@
+@@ -452,22 +474,6 @@
      jmp_buf machine_regs;
      int mark_stack_len;
  
@@ -123,7 +123,7 @@ Index: vm_core.h
  } rb_thread_t;
  
  /* iseq.c */
-@@ -472,6 +478,7 @@
+@@ -478,6 +484,7 @@
  VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, VALUE, const rb_compile_option_t*);
  VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
  VALUE rb_iseq_disasm(VALUE self);
@@ -131,7 +131,7 @@ Index: vm_core.h
  int rb_iseq_disasm_insn(VALUE str, VALUE *iseqval, size_t pos, rb_iseq_t *iseq, VALUE child);
  const char *ruby_node_name(int node);
  int rb_iseq_first_lineno(rb_iseq_t *iseq);
-@@ -672,13 +679,14 @@
+@@ -678,13 +685,14 @@
  void
  rb_threadptr_exec_event_hooks(rb_thread_t *th, rb_event_flag_t flag, VALUE self, ID id, VALUE klass);
  
@@ -144,7 +144,7 @@ Index: vm_core.h
 -    } \
 -} while (0)
 +#define EXEC_EVENT_HOOK(th, flag, self, id, klass)			\
-+    if (0 == th->tracing) {						\
++    if (LIKELY(0 == th->tracing)) {					\
 +	rb_event_flag_t wait_event__ = th->event_flags;			\
 +	if (UNLIKELY(wait_event__)) {					\
 +	    if (wait_event__ & (flag | RUBY_EVENT_VM)) {		\
@@ -156,7 +156,7 @@ Index: vm_core.h
  #endif /* RUBY_VM_CORE_H */
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 27218)
+--- iseq.c	(revision 27329)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -468,7 +468,7 @@ Index: iseq.c
      /* rb_define_singleton_method(rb_cISeq, "load", iseq_s_load, -1); */
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 27218)
+--- iseq.h	(revision 27329)
 +++ iseq.h	(working copy)
 @@ -101,4 +101,10 @@
  #define DEFINED_ZSUPER INT2FIX(9)
@@ -483,7 +483,7 @@ Index: iseq.h
  #endif /* RUBY_COMPILE_H */
 Index: load.c
 ===================================================================
---- load.c	(revision 27218)
+--- load.c	(revision 27329)
 +++ load.c	(working copy)
 @@ -293,11 +293,14 @@
      if (state == 0) {
@@ -503,7 +503,7 @@ Index: load.c
      }
 Index: compile.c
 ===================================================================
---- compile.c	(revision 27218)
+--- compile.c	(revision 27329)
 +++ compile.c	(working copy)
 @@ -3363,6 +3363,9 @@
  	if (iseq->compile_data->redo_label != 0) {
@@ -517,7 +517,7 @@ Index: compile.c
  	    add_ensure_iseq(ret, iseq, 0);
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 27218)
+--- vm_eval.c	(revision 27329)
 +++ vm_eval.c	(working copy)
 @@ -67,22 +67,37 @@
  	break;
@@ -598,7 +598,7 @@ Index: vm_eval.c
  		ID id_mesg;
 Index: proc.c
 ===================================================================
---- proc.c	(revision 27218)
+--- proc.c	(revision 27329)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -675,7 +675,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 27218)
+--- thread.c	(revision 27329)
 +++ thread.c	(working copy)
 @@ -336,6 +336,16 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -694,7 +694,18 @@ Index: thread.c
  void
  rb_thread_terminate_all(void)
  {
-@@ -3769,15 +3779,37 @@
+@@ -3733,7 +3743,9 @@
+     GetThreadPtr(thval, th);
+ 
+     if (flag) {
+-	th->event_flags |= RUBY_EVENT_VM;
++        /* Rocky: Probably wrong to set RUBY_EVENT_BRKPT here. And why is RUBY_EVENT_VM
++           special? */
++        th->event_flags |= (RUBY_EVENT_VM | RUBY_EVENT_BRKPT);
+     }
+     else {
+ 	th->event_flags &= (~RUBY_EVENT_VM);
+@@ -3764,15 +3776,37 @@
      const rb_event_flag_t wait_event = th->event_flags;
  
      if (self == rb_mRubyVMFrozenCore) return;
@@ -736,7 +747,7 @@ Index: thread.c
  	}
      }
      th->errinfo = errinfo;
-@@ -3867,8 +3899,9 @@
+@@ -3862,8 +3896,9 @@
  
  /*
   *  call-seq:
@@ -748,7 +759,7 @@ Index: thread.c
   *
   *  Establishes _proc_ as the handler for tracing, or disables
   *  tracing if the parameter is +nil+. _proc_ takes up
-@@ -3882,6 +3915,8 @@
+@@ -3877,6 +3912,8 @@
   *  <code>line</code> (execute code on a new line), <code>raise</code>
   *  (raise an exception), and <code>return</code> (return from a Ruby
   *  method). Tracing is disabled within the context of _proc_.
@@ -757,7 +768,7 @@ Index: thread.c
   *
   *      class Test
   *	def test
-@@ -3906,11 +3941,28 @@
+@@ -3901,11 +3938,28 @@
   *	  line prog.rb:3        test     Test
   *	  line prog.rb:4        test     Test
   *      return prog.rb:4        test     Test
@@ -787,7 +798,7 @@ Index: thread.c
      rb_remove_event_hook(call_trace_func);
  
      if (NIL_P(trace)) {
-@@ -3921,7 +3973,13 @@
+@@ -3916,7 +3970,13 @@
  	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
      }
  
@@ -802,7 +813,7 @@ Index: thread.c
      return trace;
  }
  
-@@ -3986,6 +4044,8 @@
+@@ -3981,6 +4041,8 @@
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -811,7 +822,7 @@ Index: thread.c
        case RUBY_EVENT_CALL:
  	return "call";
        case RUBY_EVENT_RETURN:
-@@ -3996,6 +4056,14 @@
+@@ -3991,6 +4053,14 @@
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -826,7 +837,7 @@ Index: thread.c
        default:
  	return "unknown";
      }
-@@ -4017,6 +4085,11 @@
+@@ -4012,6 +4082,11 @@
      struct call_trace_func_args *p = (struct call_trace_func_args *)args;
      const char *srcfile = rb_sourcefile();
      VALUE eventname = rb_str_new2(get_event_name(p->event));
@@ -838,7 +849,7 @@ Index: thread.c
      VALUE filename = srcfile ? rb_str_new2(srcfile) : Qnil;
      VALUE argv[6];
      int line = rb_sourceline();
-@@ -4024,11 +4097,16 @@
+@@ -4019,11 +4094,16 @@
      VALUE klass = 0;
  
      if (p->event == RUBY_EVENT_C_CALL ||
@@ -858,7 +869,7 @@ Index: thread.c
  	rb_thread_method_id_and_class(GET_THREAD(), &id, &klass);
      }
      if (id == ID_ALLOCATOR)
-@@ -4201,7 +4279,7 @@
+@@ -4196,7 +4276,7 @@
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -869,7 +880,7 @@ Index: thread.c
  
 Index: eval.c
 ===================================================================
---- eval.c	(revision 27218)
+--- eval.c	(revision 27329)
 +++ eval.c	(working copy)
 @@ -429,7 +429,7 @@
      rb_trap_restore_mask();
@@ -892,7 +903,7 @@ Index: eval.c
      JUMP_TAG(TAG_RAISE);
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 27218)
+--- vm_exec.h	(revision 27329)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
@@ -935,29 +946,32 @@ Index: vm_exec.h
  #ifdef  COLLECT_USAGE_ANALYSIS
  #define USAGE_ANALYSIS_INSN(insn)           vm_analysis_insn(insn)
  #define USAGE_ANALYSIS_OPERAND(insn, n, op) vm_analysis_operand(insn, n, (VALUE)op)
-@@ -28,12 +62,14 @@
+@@ -28,12 +62,17 @@
  #define USAGE_ANALYSIS_REGISTER(reg, s)		/* none */
  #endif
  
 -#ifdef __GCC__
++/* Rocky: VM-assisted breakpoint handling. */
++#define TEST_AND_HANDLE_BREAKPOINT(cfp, pc)				\
++    if (UNLIKELY(cfp->iseq &&						\
++		 cfp->iseq->breakpoints &&				\
++		 cfp->iseq->breakpoints[pc - cfp->iseq->iseq_encoded])) \
++	EXEC_EVENT_HOOK(th, RUBY_EVENT_BRKPT, cfp->self,		\
++			0, 0)
++
  /* TODO: machine dependent prefetch instruction */
 -#define PREFETCH(pc)
 -#else
 -#define PREFETCH(pc)
 -#endif
-+/* Rocky: added breakpoint testing. */
 +#define PREFETCH(pc)							\
-+    if (UNLIKELY(GET_CFP()->iseq &&					\
-+		 GET_CFP()->iseq->breakpoints &&			\
-+		 GET_CFP()->iseq->breakpoints[pc - GET_CFP()->iseq->iseq_encoded])) \
-+	EXEC_EVENT_HOOK(th, RUBY_EVENT_BRKPT, GET_SELF(),		\
-+			0, 0)
++    TEST_AND_HANDLE_BREAKPOINT(GET_CFP(), pc)
  
  #if VMDEBUG > 0
  #define debugs printf
 Index: vm.c
 ===================================================================
---- vm.c	(revision 27218)
+--- vm.c	(revision 27329)
 +++ vm.c	(working copy)
 @@ -1151,8 +1151,20 @@
  
@@ -984,7 +998,7 @@ Index: vm.c
  	}
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 27218)
+--- vm_insnhelper.c	(revision 27329)
 +++ vm_insnhelper.c	(working copy)
 @@ -367,11 +367,18 @@
      const rb_method_definition_t *def = me->def;
@@ -1031,9 +1045,23 @@ Index: vm_insnhelper.c
      return val;
  }
  
+@@ -454,6 +472,13 @@
+ 		      iseq->iseq_encoded + opt_pc, sp, 0, 0);
+ 
+ 	cfp->sp = rsp - 1 /* recv */;
++	if (LIKELY(0 == th->tracing)) {
++	    EXEC_EVENT_HOOK(th, RUBY_EVENT_INSN, cfp->self, 0, 0);
++	    if (UNLIKELY(cfp->iseq &&
++			 cfp->iseq->breakpoints &&
++			 cfp->iseq->breakpoints[opt_pc]))
++		EXEC_EVENT_HOOK(th, RUBY_EVENT_BRKPT, cfp->self, 0, 0);
++	}
+     }
+     else {
+ 	VALUE *p_rsp;
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 27218)
+--- tool/instruction.rb	(revision 27329)
 +++ tool/instruction.rb	(working copy)
 @@ -854,6 +854,17 @@
        commit "INSN_ENTRY(#{insn.name}){"
@@ -1055,7 +1083,7 @@ Index: tool/instruction.rb
        make_header_operands   insn
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 27218)
+--- test/ruby/test_settracefunc.rb	(revision 27329)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -23,8 +23,6 @@
       4: x = 1 + 1
@@ -1162,7 +1190,7 @@ Index: test/ruby/test_settracefunc.rb
  end
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 27218)
+--- template/insns_info.inc.tmpl	(revision 27329)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -42,38 +42,6 @@
  }
