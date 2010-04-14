@@ -44,6 +44,26 @@ class TestThread < Test::Unit::TestCase
   end
     
 
+  def test_source_location
+    line = __LINE__
+    # There is a bug in Ruby 1.9.2 and before in reporting the source
+    # location when the PC is 0. Probably never reported before
+    # because the location is reported on a traceback
+    # and that probably can't happen at PC 0.
+    def bug_when_zero_pc
+      @not_first = true
+      tf = RubyVM::ThreadFrame::current.prev
+      pc_save = tf.pc_offset
+      tf.pc_offset = 0
+      loc = tf.source_location
+      tf.pc_offset = pc_save
+      loc
+    end
+    loc = bug_when_zero_pc unless @not_first
+    assert_equal([line - 1], loc)
+  end
+    
+
   def test_thread_tracing
     assert_equal(false, Thread.current.tracing)
     Thread.current.tracing = true
