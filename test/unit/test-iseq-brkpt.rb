@@ -42,12 +42,11 @@ class TestISeqBrkpt < Test::Unit::TestCase
   end
 
   def test_iseq_brkpt_set
-    set_trace_func(Proc.new { |event, file, lineno, mid, binding, klass|
+    add_trace_func(Proc.new { |event, file, lineno, mid, binding, klass|
                      if 'brkpt' == event
                        $saw_brkpt = true
                      end
                     })
-
 
     $saw_brkpt = false
     tf = RubyVM::ThreadFrame.current
@@ -55,7 +54,7 @@ class TestISeqBrkpt < Test::Unit::TestCase
       tf.iseq.brkpt_set(offset)
     end
     assert_equal(true, $saw_brkpt)
-    set_trace_func(nil)
+    clear_trace_func
   end
 
 
