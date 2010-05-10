@@ -23,6 +23,9 @@
 
 #define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)
 
+/* other frame flag */
+#define VM_FRAME_FLAG_PASSED 0x0100
+
 #define RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp) (cfp+1)
 #define RUBYVM_CFUNC_FRAME_P(cfp) \
   (VM_FRAME_TYPE(cfp) == VM_FRAME_MAGIC_CFUNC)
@@ -60,6 +63,12 @@
 typedef struct iseq_catch_table_entry iseq_catch_table_entry_t;
 typedef struct node NODE;
 
+#ifndef NSIG
+# define NSIG (_SIGMAX + 1)      /* For QNX */
+#endif
+
+#define RUBY_NSIG NSIG
+
 typedef struct rb_compile_option_struct {
     int inline_const_cache;
     int peephole_optimization;
@@ -79,13 +88,13 @@ typedef struct rb_iseq_struct {
     /***************/
 
     VALUE type;          /* instruction sequence type */
-    VALUE name;	         /* String: iseq name */
+    VALUE name;          /* String: iseq name */
     VALUE filename;      /* file information where this sequence from */
     VALUE filepath;      /* real file path or nil */
     VALUE *iseq;         /* iseq (insn number and operands) */
     VALUE *iseq_encoded; /* encoded iseq */
     unsigned long iseq_size;
-    VALUE mark_ary;	/* Array: includes operands which should be GC marked */
+    VALUE mark_ary;     /* Array: includes operands which should be GC marked */
     VALUE coverage;     /* coverage array */
     unsigned short line_no;
 
@@ -93,7 +102,7 @@ typedef struct rb_iseq_struct {
     struct iseq_insn_info_entry *insn_info_table;
     size_t insn_info_size;
 
-    ID *local_table;		/* must free */
+    ID *local_table;            /* must free */
     int local_table_size;
 
     /* method, class frame: sizeof(vars) + 1, block frame: sizeof(vars) */
@@ -150,7 +159,7 @@ typedef struct rb_iseq_struct {
     /****************/
 
     VALUE self;
-    VALUE orig;			/* non-NULL if its data have origin */
+    VALUE orig;                 /* non-NULL if its data have origin */
 
     /* block inlining */
     /*
@@ -165,37 +174,13 @@ typedef struct rb_iseq_struct {
     VALUE klass;
 
     /* misc */
-    ID defined_method_id;	/* for define_method */
+    ID defined_method_id;       /* for define_method */
 
     /* used at compile time */
     struct iseq_compile_data *compile_data;
     /* Used to set a breakpoint at a VM instruction */
     unsigned char *breakpoints; 
 } rb_iseq_t;
-
-#include "method_mini.h"
-
-typedef struct {
-    VALUE *pc;			/* cfp[0] */
-    VALUE *sp;			/* cfp[1] */
-    VALUE *bp;			/* cfp[2] */
-    rb_iseq_t *iseq;		/* cfp[3] */
-    VALUE flag;			/* cfp[4] */
-    VALUE self;			/* cfp[5] / block[0] */
-    VALUE *lfp;			/* cfp[6] / block[1] */
-    VALUE *dfp;			/* cfp[7] / block[2] */
-    rb_iseq_t *block_iseq;	/* cfp[8] / block[3] */
-    VALUE proc;			/* cfp[9] / block[4] */
-    const rb_method_entry_t *me;/* cfp[10] */
-} rb_control_frame_t;
-
-typedef struct rb_block_struct {
-    VALUE self;			/* share with method frame if it's only block */
-    VALUE *lfp;			/* share with method frame if it's only block */
-    VALUE *dfp;			/* share with method frame if it's only block */
-    rb_iseq_t *iseq;
-    VALUE proc;
-} rb_block_t;
 
 enum ruby_special_exceptions {
     ruby_error_reenter,
@@ -204,17 +189,6 @@ enum ruby_special_exceptions {
     ruby_special_error_count
 };
 
-#define GetThreadPtr(obj, ptr) \
-  GetCoreDataFromValue(obj, rb_thread_t, ptr)
-
-#define GetProcPtr(obj, ptr) \
-  GetCoreDataFromValue(obj, rb_proc_t, ptr)
-
-#ifndef NSIG
-# define NSIG (_SIGMAX + 1)      /* For QNX */
-#endif
-
-#define RUBY_NSIG NSIG
 typedef struct rb_vm_struct {
     VALUE self;
 
@@ -244,8 +218,8 @@ typedef struct rb_vm_struct {
 
     /* signal */
     struct {
-	VALUE cmd;
-	int safe;
+        VALUE cmd;
+        int safe;
     } trap_list[RUBY_NSIG];
 
     /* hook */
@@ -256,10 +230,42 @@ typedef struct rb_vm_struct {
     VALUE verbose, debug, progname;
     VALUE coverages;
 
+    struct unlinked_method_entry_list_entry *unlinked_method_entry_list;
+
 #if defined(ENABLE_VM_OBJSPACE) && ENABLE_VM_OBJSPACE
     struct rb_objspace *objspace;
 #endif
 } rb_vm_t;
+
+#include "method_mini.h"
+
+typedef struct {
+    VALUE *pc;                  /* cfp[0] */
+    VALUE *sp;                  /* cfp[1] */
+    VALUE *bp;                  /* cfp[2] */
+    rb_iseq_t *iseq;            /* cfp[3] */
+    VALUE flag;                 /* cfp[4] */
+    VALUE self;                 /* cfp[5] / block[0] */
+    VALUE *lfp;                 /* cfp[6] / block[1] */
+    VALUE *dfp;                 /* cfp[7] / block[2] */
+    rb_iseq_t *block_iseq;      /* cfp[8] / block[3] */
+    VALUE proc;                 /* cfp[9] / block[4] */
+    const rb_method_entry_t *me;/* cfp[10] */
+} rb_control_frame_t;
+
+typedef struct rb_block_struct {
+    VALUE self;                 /* share with method frame if it's only block */
+    VALUE *lfp;                 /* share with method frame if it's only block */
+    VALUE *dfp;                 /* share with method frame if it's only block */
+    rb_iseq_t *iseq;
+    VALUE proc;
+} rb_block_t;
+
+#define GetThreadPtr(obj, ptr) \
+  GetCoreDataFromValue(obj, rb_thread_t, ptr)
+
+#define GetProcPtr(obj, ptr) \
+  GetCoreDataFromValue(obj, rb_proc_t, ptr)
 
 typedef struct rb_thread_struct
 {
@@ -267,7 +273,7 @@ typedef struct rb_thread_struct
     rb_vm_t *vm;
 
     /* execution information */
-    VALUE *stack;		/* must free, must mark. rb: seems to be nil. */
+    VALUE *stack;               /* must free, must mark. rb: seems to be nil. */
     unsigned long stack_size;   /* Number of stack (or rb_control_frame_t) entries */
     rb_control_frame_t *cfp;
 
@@ -282,7 +288,7 @@ typedef struct rb_thread_struct
     rb_event_hook_t *event_hooks;
     rb_event_flag_t event_flags;
     int tracing;  /* 0 if not tracing. If less than 0, skip that many
-		     C call/return pairs */
+                     C call/return pairs */
     int exec_event_tracing;  /* 0 if not in rb_threadptr_evec_event_hooks. */
     int trace_skip_insn_count; /* # of VM instructions to skip */
 
@@ -290,13 +296,30 @@ typedef struct rb_thread_struct
     int method_missing_reason;
     int abort_on_exception;
 
-    /* Lot's of other stuff ... */
+    /* for rb_iterate */
+    const rb_block_t *passed_block;
+
+    /* for bmethod */
+    const rb_method_entry_t *passed_me;
+
+    /* for load(true) */
+    VALUE top_self;
+    VALUE top_wrapper;
+
+    /* eval env */
+    rb_block_t *base_block;
+
+    VALUE *local_lfp;
+    VALUE local_svar;
+
+    /* Lot's of other stuff ... 
+       thread control ... */
 } rb_thread_t;
 
 typedef struct {
     rb_block_t block;
 
-    VALUE envval;		/* for GC mark */
+    VALUE envval;               /* for GC mark */
     VALUE blockprocval;
     int safe_level;
     int is_from_method;
@@ -304,5 +327,3 @@ typedef struct {
 } rb_proc_t;
 
 extern rb_thread_t *ruby_current_thread;
-
-

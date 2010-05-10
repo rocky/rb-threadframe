@@ -1,6 +1,6 @@
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 27600)
+--- include/ruby/ruby.h	(revision 27660)
 +++ include/ruby/ruby.h	(working copy)
 @@ -1344,7 +1344,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
@@ -15,7 +15,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 Index: insns.def
 ===================================================================
---- insns.def	(revision 27600)
+--- insns.def	(revision 27660)
 +++ insns.def	(working copy)
 @@ -15,7 +15,7 @@
  
@@ -28,7 +28,7 @@ Index: insns.def
      (return value)
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 27600)
+--- vm_core.h	(revision 27660)
 +++ vm_core.h	(working copy)
 @@ -34,7 +34,7 @@
  #ifndef ENABLE_VM_OBJSPACE
@@ -66,7 +66,7 @@ Index: vm_core.h
  };
  
  enum ruby_special_exceptions {
-@@ -384,6 +386,18 @@
+@@ -386,6 +388,18 @@
      /* passing state */
      int state;
  
@@ -85,7 +85,7 @@ Index: vm_core.h
      /* for rb_iterate */
      const rb_block_t *passed_block;
  
-@@ -403,6 +417,14 @@
+@@ -408,6 +422,14 @@
      int priority;
      int slice;
  
@@ -100,7 +100,7 @@ Index: vm_core.h
      native_thread_data_t native_thread_data;
      void *blocking_region_buffer;
  
-@@ -452,22 +474,6 @@
+@@ -457,22 +479,6 @@
      jmp_buf machine_regs;
      int mark_stack_len;
  
@@ -123,7 +123,7 @@ Index: vm_core.h
  } rb_thread_t;
  
  /* iseq.c */
-@@ -478,6 +484,7 @@
+@@ -483,6 +489,7 @@
  VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, VALUE, const rb_compile_option_t*);
  VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
  VALUE rb_iseq_disasm(VALUE self);
@@ -131,7 +131,7 @@ Index: vm_core.h
  int rb_iseq_disasm_insn(VALUE str, VALUE *iseqval, size_t pos, rb_iseq_t *iseq, VALUE child);
  const char *ruby_node_name(int node);
  int rb_iseq_first_lineno(rb_iseq_t *iseq);
-@@ -678,13 +685,14 @@
+@@ -683,13 +690,14 @@
  void
  rb_threadptr_exec_event_hooks(rb_thread_t *th, rb_event_flag_t flag, VALUE self, ID id, VALUE klass);
  
@@ -156,7 +156,7 @@ Index: vm_core.h
  #endif /* RUBY_VM_CORE_H */
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 27600)
+--- iseq.c	(revision 27660)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -468,7 +468,7 @@ Index: iseq.c
      /* rb_define_singleton_method(rb_cISeq, "load", iseq_s_load, -1); */
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 27600)
+--- iseq.h	(revision 27660)
 +++ iseq.h	(working copy)
 @@ -101,4 +101,10 @@
  #define DEFINED_ZSUPER INT2FIX(9)
@@ -483,7 +483,7 @@ Index: iseq.h
  #endif /* RUBY_COMPILE_H */
 Index: load.c
 ===================================================================
---- load.c	(revision 27600)
+--- load.c	(revision 27660)
 +++ load.c	(working copy)
 @@ -293,11 +293,14 @@
      if (state == 0) {
@@ -503,7 +503,7 @@ Index: load.c
      }
 Index: compile.c
 ===================================================================
---- compile.c	(revision 27600)
+--- compile.c	(revision 27660)
 +++ compile.c	(working copy)
 @@ -3353,6 +3353,9 @@
  	if (iseq->compile_data->redo_label != 0) {
@@ -517,7 +517,7 @@ Index: compile.c
  	    add_ensure_iseq(ret, iseq, 0);
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 27600)
+--- vm_eval.c	(revision 27660)
 +++ vm_eval.c	(working copy)
 @@ -67,22 +67,37 @@
  	break;
@@ -598,7 +598,7 @@ Index: vm_eval.c
  		ID id_mesg;
 Index: proc.c
 ===================================================================
---- proc.c	(revision 27600)
+--- proc.c	(revision 27660)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -675,7 +675,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 27600)
+--- thread.c	(revision 27660)
 +++ thread.c	(working copy)
 @@ -336,6 +336,16 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -914,7 +914,7 @@ Index: thread.c
  
 Index: eval.c
 ===================================================================
---- eval.c	(revision 27600)
+--- eval.c	(revision 27660)
 +++ eval.c	(working copy)
 @@ -34,7 +34,7 @@
  
@@ -955,7 +955,7 @@ Index: eval.c
      JUMP_TAG(TAG_RAISE);
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 27600)
+--- vm_exec.h	(revision 27660)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
@@ -1023,9 +1023,9 @@ Index: vm_exec.h
  #define debugs printf
 Index: vm.c
 ===================================================================
---- vm.c	(revision 27600)
+--- vm.c	(revision 27660)
 +++ vm.c	(working copy)
-@@ -690,6 +690,7 @@
+@@ -693,6 +693,7 @@
      if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
  	rb_num_t i;
  	size_t pos = cfp->pc - cfp->iseq->iseq_encoded;
@@ -1033,7 +1033,7 @@ Index: vm.c
  
  	if (iseq->insn_info_table[0].position == pos) goto found;
  	for (i = 1; i < iseq->insn_info_size; i++) {
-@@ -1152,8 +1153,20 @@
+@@ -1155,8 +1156,20 @@
  
  	while (th->cfp->pc == 0 || th->cfp->iseq == 0) {
  	    if (UNLIKELY(VM_FRAME_TYPE(th->cfp) == VM_FRAME_MAGIC_CFUNC)) {
@@ -1058,9 +1058,9 @@ Index: vm.c
  	}
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 27600)
+--- vm_insnhelper.c	(revision 27660)
 +++ vm_insnhelper.c	(working copy)
-@@ -367,11 +367,18 @@
+@@ -391,11 +391,18 @@
      const rb_method_definition_t *def = me->def;
      rb_control_frame_t *cfp;
  
@@ -1081,7 +1081,7 @@ Index: vm_insnhelper.c
      reg_cfp->sp -= num + 1;
  
      val = call_cfunc(def->body.cfunc.func, recv, (int)def->body.cfunc.argc, num, reg_cfp->sp + 1);
-@@ -380,10 +387,21 @@
+@@ -404,10 +411,21 @@
  	rb_bug("cfp consistency error - send");
      }
  
@@ -1105,7 +1105,7 @@ Index: vm_insnhelper.c
      return val;
  }
  
-@@ -454,6 +472,13 @@
+@@ -478,6 +496,13 @@
  		      iseq->iseq_encoded + opt_pc, sp, 0, 0);
  
  	cfp->sp = rsp - 1 /* recv */;
@@ -1121,7 +1121,7 @@ Index: vm_insnhelper.c
  	VALUE *p_rsp;
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 27600)
+--- tool/instruction.rb	(revision 27660)
 +++ tool/instruction.rb	(working copy)
 @@ -854,6 +854,17 @@
        commit "INSN_ENTRY(#{insn.name}){"
@@ -1143,7 +1143,7 @@ Index: tool/instruction.rb
        make_header_operands   insn
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 27600)
+--- test/ruby/test_settracefunc.rb	(revision 27660)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -23,8 +23,6 @@
       4: x = 1 + 1
@@ -1271,7 +1271,7 @@ Index: test/ruby/test_settracefunc.rb
  end
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 27600)
+--- template/insns_info.inc.tmpl	(revision 27660)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -42,38 +42,6 @@
  }
