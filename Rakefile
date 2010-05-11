@@ -5,6 +5,12 @@ require 'rake/gempackagetask'
 require 'rake/rdoctask'
 require 'rake/testtask'
 
+rake_dir = File.dirname(__FILE__)
+
+require 'rbconfig'
+RUBY_PATH = File.join(Config::CONFIG['bindir'],  
+                      Config::CONFIG['RUBY_INSTALL_NAME'])
+
 SO_NAME = 'thread_frame.so'
 
 PACKAGE_VERSION = open("ext/thread_frame.c") do |f| 
@@ -33,6 +39,16 @@ task :clean do
     end
     derived_files = Dir.glob('.o') + Dir.glob('*.so')
     rm derived_files unless derived_files.empty?
+  end
+end
+
+def run_standalone_ruby_file(directory)
+  puts ('*' * 10) + ' ' + directory + ' ' + ('*' * 10)
+  Dir.chdir(directory) do
+    Dir.glob('*.rb').each do |ruby_file|
+      puts ('-' * 20) + ' ' + ruby_file + ' ' + ('-' * 20)
+      system(RUBY_PATH, ruby_file)
+    end
   end
 end
 
@@ -69,7 +85,10 @@ task :test do
 end
 
 desc "Test everything - same as test."
-task :check => :test
+
+task :'check' do
+  run_standalone_ruby_file(File.join(%W(#{rake_dir} test unit)))
+end
 
 # ---------  RDoc Documentation ------
 desc 'Generate rdoc documentation'
