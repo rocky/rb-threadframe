@@ -1,4 +1,11 @@
-/* From method.h. */
+/**********************************************************************
+ From Ruby 1.9's method.h. 
+
+  Copyright (C) 2009 Koichi Sasada
+
+**********************************************************************/
+#ifndef METHOD_H
+#define METHOD_H
 
 typedef enum {
     NOEX_PUBLIC    = 0x00,
@@ -10,8 +17,13 @@ typedef enum {
     NOEX_UNDEF     = NOEX_NOSUPER,
     NOEX_MODFUNC   = 0x12,
     NOEX_SUPER     = 0x20,
-    NOEX_VCALL     = 0x40
+    NOEX_VCALL     = 0x40,
+    NOEX_RESPONDS  = 0x80
 } rb_method_flag_t;
+
+#define NOEX_SAFE(n) ((int)((n) >> 8) & 0x0F)
+#define NOEX_WITH(n, s) ((s << 8) | (n) | (ruby_running ? 0 : NOEX_BASIC))
+#define NOEX_WITH_SAFE(n) NOEX_WITH(n, rb_safe_level())
 
 /* method data type */
 
@@ -24,7 +36,8 @@ typedef enum {
     VM_METHOD_TYPE_ZSUPER,
     VM_METHOD_TYPE_UNDEF,
     VM_METHOD_TYPE_NOTIMPLEMENTED,
-    VM_METHOD_TYPE_OPTIMIZED /* Kernel#send, Proc#call, etc */
+    VM_METHOD_TYPE_OPTIMIZED, /* Kernel#send, Proc#call, etc */
+    VM_METHOD_TYPE_MISSING   /* wrapper for method_missing(id) */
 } rb_method_type_t;
 
 typedef struct rb_method_cfunc_struct {
@@ -32,13 +45,20 @@ typedef struct rb_method_cfunc_struct {
     int argc;
 } rb_method_cfunc_t;
 
+typedef struct rb_method_attr_struct {
+    ID id;
+    VALUE location;
+} rb_method_attr_t;
+
+/* typedef struct rb_iseq_struct rb_iseq_t; */
+
 typedef struct rb_method_definition_struct {
     rb_method_type_t type; /* method type */
     ID original_id;
     union {
 	rb_iseq_t *iseq;            /* should be mark */
 	rb_method_cfunc_t cfunc;
-	ID attr_id;
+	rb_method_attr_t attr;
 	VALUE proc;                 /* should be mark */
 	enum method_optimized_type {
 	    OPTIMIZED_METHOD_TYPE_SEND,
@@ -52,8 +72,8 @@ typedef struct rb_method_entry_struct {
     rb_method_flag_t flag;
     char mark;
     rb_method_definition_t *def;
-    rb_method_type_t type; /* method type */
     ID called_id;
+    VALUE klass;                    /* should be mark */
 } rb_method_entry_t;
 
 struct unlinked_method_entry_list_entry {
@@ -63,3 +83,4 @@ struct unlinked_method_entry_list_entry {
 
 #define UNDEFINED_METHOD_ENTRY_P(me) (!(me) || !(me)->def || (me)->def->type == VM_METHOD_TYPE_UNDEF)
 
+#endif /* METHOD_H */
