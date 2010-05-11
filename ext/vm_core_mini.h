@@ -326,4 +326,24 @@ typedef struct {
     int is_lambda;
 } rb_proc_t;
 
+#define GetEnvPtr(obj, ptr) \
+  GetCoreDataFromValue(obj, rb_env_t, ptr)
+
+typedef struct {
+    VALUE *env;
+    int env_size;
+    int local_size;
+    VALUE prev_envval;		/* for GC mark */
+    rb_block_t block;
+} rb_env_t;
+
+#define GetBindingPtr(obj, ptr) \
+  GetCoreDataFromValue(obj, rb_binding_t, ptr)
+
+typedef struct {
+    VALUE env;
+    VALUE filename;
+    unsigned short line_no;
+} rb_binding_t;
+
 extern rb_thread_t *ruby_current_thread;

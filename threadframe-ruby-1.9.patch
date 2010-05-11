@@ -1,8 +1,8 @@
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 27690)
+--- include/ruby/ruby.h	(revision 27720)
 +++ include/ruby/ruby.h	(working copy)
-@@ -1344,7 +1344,9 @@
+@@ -1345,7 +1345,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
  #define RUBY_EVENT_C_RETURN  0x0040
  #define RUBY_EVENT_RAISE     0x0080
@@ -15,7 +15,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 Index: insns.def
 ===================================================================
---- insns.def	(revision 27690)
+--- insns.def	(revision 27720)
 +++ insns.def	(working copy)
 @@ -15,7 +15,7 @@
  
@@ -28,7 +28,7 @@ Index: insns.def
      (return value)
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 27690)
+--- vm_core.h	(revision 27720)
 +++ vm_core.h	(working copy)
 @@ -34,7 +34,7 @@
  #ifndef ENABLE_VM_OBJSPACE
@@ -156,7 +156,7 @@ Index: vm_core.h
  #endif /* RUBY_VM_CORE_H */
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 27690)
+--- iseq.c	(revision 27720)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -468,7 +468,7 @@ Index: iseq.c
      /* rb_define_singleton_method(rb_cISeq, "load", iseq_s_load, -1); */
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 27690)
+--- iseq.h	(revision 27720)
 +++ iseq.h	(working copy)
 @@ -101,4 +101,10 @@
  #define DEFINED_ZSUPER INT2FIX(9)
@@ -483,7 +483,7 @@ Index: iseq.h
  #endif /* RUBY_COMPILE_H */
 Index: load.c
 ===================================================================
---- load.c	(revision 27690)
+--- load.c	(revision 27720)
 +++ load.c	(working copy)
 @@ -293,11 +293,14 @@
      if (state == 0) {
@@ -503,7 +503,7 @@ Index: load.c
      }
 Index: compile.c
 ===================================================================
---- compile.c	(revision 27690)
+--- compile.c	(revision 27720)
 +++ compile.c	(working copy)
 @@ -3353,6 +3353,9 @@
  	if (iseq->compile_data->redo_label != 0) {
@@ -517,7 +517,7 @@ Index: compile.c
  	    add_ensure_iseq(ret, iseq, 0);
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 27690)
+--- vm_eval.c	(revision 27720)
 +++ vm_eval.c	(working copy)
 @@ -67,22 +67,37 @@
  	break;
@@ -569,7 +569,7 @@ Index: vm_eval.c
  		    }
  
  		    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
-@@ -1017,7 +1033,25 @@
+@@ -1021,7 +1037,25 @@
      if (state) {
  	if (state == TAG_RAISE) {
  	    VALUE errinfo = th->errinfo;
@@ -598,7 +598,7 @@ Index: vm_eval.c
  		ID id_mesg;
 Index: proc.c
 ===================================================================
---- proc.c	(revision 27690)
+--- proc.c	(revision 27720)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -609,7 +609,7 @@ Index: proc.c
  static int rb_obj_is_method(VALUE m);
  rb_iseq_t *rb_method_get_iseq(VALUE method);
  
-@@ -318,6 +318,24 @@
+@@ -324,6 +324,24 @@
      return bindval;
  }
  
@@ -634,7 +634,7 @@ Index: proc.c
  /*
   *  call-seq:
   *     binding -> a_binding
-@@ -621,6 +639,29 @@
+@@ -625,6 +643,29 @@
      return INT2FIX(arity);
  }
  
@@ -664,7 +664,7 @@ Index: proc.c
  int
  rb_proc_arity(VALUE self)
  {
-@@ -1621,7 +1662,7 @@
+@@ -1625,7 +1666,7 @@
      return INT2FIX(n);
  }
  
@@ -675,7 +675,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 27690)
+--- thread.c	(revision 27720)
 +++ thread.c	(working copy)
 @@ -336,6 +336,16 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -914,7 +914,7 @@ Index: thread.c
  
 Index: eval.c
 ===================================================================
---- eval.c	(revision 27690)
+--- eval.c	(revision 27720)
 +++ eval.c	(working copy)
 @@ -34,7 +34,7 @@
  
@@ -955,7 +955,7 @@ Index: eval.c
      JUMP_TAG(TAG_RAISE);
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 27690)
+--- vm_exec.h	(revision 27720)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
@@ -1023,9 +1023,9 @@ Index: vm_exec.h
  #define debugs printf
 Index: vm.c
 ===================================================================
---- vm.c	(revision 27690)
+--- vm.c	(revision 27720)
 +++ vm.c	(working copy)
-@@ -693,6 +693,7 @@
+@@ -691,6 +691,7 @@
      if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
  	rb_num_t i;
  	size_t pos = cfp->pc - cfp->iseq->iseq_encoded;
@@ -1033,7 +1033,7 @@ Index: vm.c
  
  	if (iseq->insn_info_table[0].position == pos) goto found;
  	for (i = 1; i < iseq->insn_info_size; i++) {
-@@ -1155,8 +1156,20 @@
+@@ -1153,8 +1154,20 @@
  
  	while (th->cfp->pc == 0 || th->cfp->iseq == 0) {
  	    if (UNLIKELY(VM_FRAME_TYPE(th->cfp) == VM_FRAME_MAGIC_CFUNC)) {
@@ -1058,7 +1058,7 @@ Index: vm.c
  	}
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 27690)
+--- vm_insnhelper.c	(revision 27720)
 +++ vm_insnhelper.c	(working copy)
 @@ -391,11 +391,18 @@
      const rb_method_definition_t *def = me->def;
@@ -1121,7 +1121,7 @@ Index: vm_insnhelper.c
  	VALUE *p_rsp;
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 27690)
+--- tool/instruction.rb	(revision 27720)
 +++ tool/instruction.rb	(working copy)
 @@ -854,6 +854,17 @@
        commit "INSN_ENTRY(#{insn.name}){"
@@ -1143,7 +1143,7 @@ Index: tool/instruction.rb
        make_header_operands   insn
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 27690)
+--- test/ruby/test_settracefunc.rb	(revision 27720)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -23,8 +23,6 @@
       4: x = 1 + 1
@@ -1271,7 +1271,7 @@ Index: test/ruby/test_settracefunc.rb
  end
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 27690)
+--- template/insns_info.inc.tmpl	(revision 27720)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -42,38 +42,6 @@
  }

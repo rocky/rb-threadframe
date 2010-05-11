@@ -321,8 +321,18 @@ thread_frame_binding(VALUE klass)
     THREAD_FRAME_SETUP ;
     if (Qtrue == thread_frame_invalid_internal(tf))
 	rb_raise(rb_eThreadFrameError, "invalid frame");
-    else
-	return rb_binding_frame_new(tf->th, tf->cfp);
+    else {
+	rb_binding_t *bind = 0;
+	VALUE bindval = rb_binding_frame_new(tf->th, tf->cfp);
+	GetBindingPtr(bindval, bind);
+	bind->line_no = rb_vm_get_sourceline(tf->cfp);
+	if (tf->cfp->iseq) {
+	    bind->filename = tf->cfp->iseq->filename;
+	} else {
+	    bind->filename = tf->th->vm->progname;
+	}
+	return bindval;
+    }    
     /* NOTREACHED */
     return Qnil;
 }
