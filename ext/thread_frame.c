@@ -417,6 +417,20 @@ thread_frame_invalid(VALUE klass)
     return thread_frame_invalid_internal(tf);
 }
 
+static VALUE
+thread_frame_is_return_stop(VALUE klass)
+{
+    THREAD_FRAME_SETUP ;
+    return (tf->cfp->tracing & VM_FRAME_TRACE_RETURN) ? Qtrue : Qfalse;
+}
+
+static VALUE
+thread_frame_is_trace_off(VALUE klass)
+{
+    THREAD_FRAME_SETUP ;
+    return (tf->cfp->tracing & VM_FRAME_TRACE_OFF) ? Qtrue : Qfalse;
+}
+
 /*
  *  call-seq:
  *     ThreadFrame#method  -> String
@@ -613,6 +627,32 @@ thread_frame_prev_internal(rb_control_frame_t *prev_cfp, rb_thread_t *th,
 
 THREAD_FRAME_FIELD_METHOD(proc) ;
 THREAD_FRAME_FIELD_METHOD(self) ;
+
+static VALUE
+thread_frame_return_stop_set(VALUE klass, VALUE boolval)
+{
+    short int boolmask = !(NIL_P(boolval) || Qfalse == boolval);
+    THREAD_FRAME_SETUP ;
+    
+    if (boolmask)
+	tf->cfp->tracing |=  VM_FRAME_TRACE_RETURN;
+    else
+	tf->cfp->tracing &= ~VM_FRAME_TRACE_RETURN;
+    return boolval;
+}
+
+static VALUE
+thread_frame_trace_off_set(VALUE klass, VALUE boolval)
+{
+    short int boolmask = !(NIL_P(boolval) || Qfalse == boolval);
+    THREAD_FRAME_SETUP ;
+    
+    if (boolmask)
+	tf->cfp->tracing |=  VM_FRAME_TRACE_OFF;
+    else
+	tf->cfp->tracing &= ~VM_FRAME_TRACE_OFF;
+    return boolval;
+}
 
 /*
  *  call-seq:
@@ -877,6 +917,8 @@ Init_thread_frame(void)
     rb_define_method(rb_cThreadFrame, "pc_offset", thread_frame_pc_offset, 0);
     rb_define_method(rb_cThreadFrame, "prev", thread_frame_prev, -1);
     rb_define_method(rb_cThreadFrame, "proc", thread_frame_proc, 0);
+    rb_define_method(rb_cThreadFrame, "return_stop=", thread_frame_return_stop_set, 1);
+    rb_define_method(rb_cThreadFrame, "return_stop?", thread_frame_is_return_stop, 0);
     rb_define_method(rb_cThreadFrame, "self", thread_frame_self, 0);
     rb_define_method(rb_cThreadFrame, "source_container", 
 		     thread_frame_source_container, 0);
@@ -894,6 +936,8 @@ Init_thread_frame(void)
 		     thread_frame_stack_size, 0);
 
     rb_define_method(rb_cThreadFrame, "thread", thread_frame_thread, 0);
+    rb_define_method(rb_cThreadFrame, "trace_off?", thread_frame_is_trace_off, 0);
+    rb_define_method(rb_cThreadFrame, "trace_off=", thread_frame_trace_off_set, 1);
     rb_define_method(rb_cThreadFrame, "type", thread_frame_type, 0);
 
     rb_define_method(rb_cThreadFrame, "equal?", 

@@ -23,6 +23,10 @@
 
 #define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)
 
+#define VM_FRAME_TRACE_RETURN 0x01  /* Call trace hook on return. */
+#define VM_FRAME_TRACE_OFF    0x02  /* Turn of event hook tracing in this frame
+				       and any frames created from this one. */
+
 /* other frame flag */
 #define VM_FRAME_FLAG_PASSED 0x0100
 
@@ -251,6 +255,9 @@ typedef struct {
     rb_iseq_t *block_iseq;      /* cfp[8] / block[3] */
     VALUE proc;                 /* cfp[9] / block[4] */
     const rb_method_entry_t *me;/* cfp[10] */
+    short int tracing;          /* Bits to control per-frame event tracing. 
+				   See VM_FRAME_TRACE_xxx defines.
+				 */
 } rb_control_frame_t;
 
 typedef struct rb_block_struct {
