@@ -1,6 +1,6 @@
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 27742)
+--- include/ruby/ruby.h	(revision 27790)
 +++ include/ruby/ruby.h	(working copy)
 @@ -1345,7 +1345,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
@@ -15,7 +15,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 Index: insns.def
 ===================================================================
---- insns.def	(revision 27742)
+--- insns.def	(revision 27790)
 +++ insns.def	(working copy)
 @@ -15,7 +15,7 @@
  
@@ -28,7 +28,7 @@ Index: insns.def
      (return value)
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 27742)
+--- vm_core.h	(revision 27790)
 +++ vm_core.h	(working copy)
 @@ -34,7 +34,7 @@
  #ifndef ENABLE_VM_OBJSPACE
@@ -39,7 +39,7 @@ Index: vm_core.h
   * socklist needs st_table in rb_w32_sysinit(), before object space
   * initialization.
   * It is too early now to change st_hash_type, since it breaks binary
-@@ -162,7 +162,7 @@
+@@ -166,7 +166,7 @@
      VALUE name;	         /* String: iseq name */
      VALUE filename;      /* file information where this sequence from */
      VALUE filepath;      /* real file path or nil */
@@ -48,7 +48,7 @@ Index: vm_core.h
      VALUE *iseq_encoded; /* encoded iseq */
      unsigned long iseq_size;
      VALUE mark_ary;	/* Array: includes operands which should be GC marked */
-@@ -186,7 +186,7 @@
+@@ -190,7 +190,7 @@
       * argument information
       *
       *  def m(a1, a2, ..., aM,                    # mandatory
@@ -57,7 +57,7 @@ Index: vm_core.h
       *        *c,                                 # rest
       *        d1, d2, ..., dO,                    # post
       *        &e)                                 # block
-@@ -249,6 +249,8 @@
+@@ -253,6 +253,8 @@
  
      /* used at compile time */
      struct iseq_compile_data *compile_data;
@@ -66,7 +66,7 @@ Index: vm_core.h
  };
  
  enum ruby_special_exceptions {
-@@ -326,6 +328,9 @@
+@@ -330,6 +332,9 @@
      rb_iseq_t *block_iseq;	/* cfp[8] / block[3] */
      VALUE proc;			/* cfp[9] / block[4] */
      const rb_method_entry_t *me;/* cfp[10] */
@@ -76,7 +76,7 @@ Index: vm_core.h
  } rb_control_frame_t;
  
  typedef struct rb_block_struct {
-@@ -386,6 +391,18 @@
+@@ -390,6 +395,18 @@
      /* passing state */
      int state;
  
@@ -95,7 +95,7 @@ Index: vm_core.h
      /* for rb_iterate */
      const rb_block_t *passed_block;
  
-@@ -408,6 +425,14 @@
+@@ -412,6 +429,14 @@
      int priority;
      int slice;
  
@@ -110,7 +110,7 @@ Index: vm_core.h
      native_thread_data_t native_thread_data;
      void *blocking_region_buffer;
  
-@@ -457,22 +482,6 @@
+@@ -461,22 +486,7 @@
      jmp_buf machine_regs;
      int mark_stack_len;
  
@@ -127,13 +127,13 @@ Index: vm_core.h
 -    VALUE root_fiber;
 -    rb_jmpbuf_t root_jmpbuf;
 -
--    /* misc */
+     /* misc */
 -    int method_missing_reason;
 -    int abort_on_exception;
- } rb_thread_t;
- 
- /* iseq.c */
-@@ -483,6 +492,7 @@
+ #ifdef USE_SIGALTSTACK
+     void *altstack;
+ #endif
+@@ -490,6 +500,7 @@
  VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, VALUE, const rb_compile_option_t*);
  VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
  VALUE rb_iseq_disasm(VALUE self);
@@ -141,7 +141,7 @@ Index: vm_core.h
  int rb_iseq_disasm_insn(VALUE str, VALUE *iseqval, size_t pos, rb_iseq_t *iseq, VALUE child);
  const char *ruby_node_name(int node);
  int rb_iseq_first_lineno(rb_iseq_t *iseq);
-@@ -557,6 +567,10 @@
+@@ -564,6 +575,10 @@
  
  #define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)
  
@@ -152,7 +152,7 @@ Index: vm_core.h
  /* other frame flag */
  #define VM_FRAME_FLAG_PASSED 0x0100
  
-@@ -683,13 +697,30 @@
+@@ -691,13 +706,30 @@
  void
  rb_threadptr_exec_event_hooks(rb_thread_t *th, rb_event_flag_t flag, VALUE self, ID id, VALUE klass);
  
@@ -193,7 +193,7 @@ Index: vm_core.h
  #endif /* RUBY_VM_CORE_H */
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 27742)
+--- iseq.c	(revision 27790)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -505,7 +505,7 @@ Index: iseq.c
      /* rb_define_singleton_method(rb_cISeq, "load", iseq_s_load, -1); */
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 27742)
+--- iseq.h	(revision 27790)
 +++ iseq.h	(working copy)
 @@ -101,4 +101,10 @@
  #define DEFINED_ZSUPER INT2FIX(9)
@@ -520,7 +520,7 @@ Index: iseq.h
  #endif /* RUBY_COMPILE_H */
 Index: load.c
 ===================================================================
---- load.c	(revision 27742)
+--- load.c	(revision 27790)
 +++ load.c	(working copy)
 @@ -293,11 +293,14 @@
      if (state == 0) {
@@ -540,7 +540,7 @@ Index: load.c
      }
 Index: compile.c
 ===================================================================
---- compile.c	(revision 27742)
+--- compile.c	(revision 27790)
 +++ compile.c	(working copy)
 @@ -3353,6 +3353,9 @@
  	if (iseq->compile_data->redo_label != 0) {
@@ -554,7 +554,7 @@ Index: compile.c
  	    add_ensure_iseq(ret, iseq, 0);
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 27742)
+--- vm_eval.c	(revision 27790)
 +++ vm_eval.c	(working copy)
 @@ -67,22 +67,37 @@
  	break;
@@ -596,7 +596,7 @@ Index: vm_eval.c
  	break;
        }
        case VM_METHOD_TYPE_ATTRSET: {
-@@ -865,7 +880,8 @@
+@@ -868,7 +883,8 @@
  #endif
  		    if (UNLIKELY(VM_FRAME_TYPE(th->cfp) == VM_FRAME_MAGIC_CFUNC)) {
  			const rb_method_entry_t *me = th->cfp->me;
@@ -606,7 +606,7 @@ Index: vm_eval.c
  		    }
  
  		    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
-@@ -1021,7 +1037,25 @@
+@@ -1024,7 +1040,25 @@
      if (state) {
  	if (state == TAG_RAISE) {
  	    VALUE errinfo = th->errinfo;
@@ -635,7 +635,7 @@ Index: vm_eval.c
  		ID id_mesg;
 Index: proc.c
 ===================================================================
---- proc.c	(revision 27742)
+--- proc.c	(revision 27790)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -712,7 +712,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 27742)
+--- thread.c	(revision 27790)
 +++ thread.c	(working copy)
 @@ -336,6 +336,16 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -731,7 +731,7 @@ Index: thread.c
  void
  rb_thread_terminate_all(void)
  {
-@@ -3749,7 +3759,9 @@
+@@ -3754,7 +3764,9 @@
      GetThreadPtr(thval, th);
  
      if (flag) {
@@ -742,7 +742,7 @@ Index: thread.c
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -3780,15 +3792,37 @@
+@@ -3785,15 +3797,37 @@
      const rb_event_flag_t wait_event = th->event_flags;
  
      if (self == rb_mRubyVMFrozenCore) return;
@@ -784,7 +784,7 @@ Index: thread.c
  	}
      }
      th->errinfo = errinfo;
-@@ -3867,19 +3901,49 @@
+@@ -3872,19 +3906,49 @@
      return ST_CONTINUE;
  }
  
@@ -837,7 +837,7 @@ Index: thread.c
   *
   *  Establishes _proc_ as the handler for tracing, or disables
   *  tracing if the parameter is +nil+. _proc_ takes up
-@@ -3893,6 +3957,8 @@
+@@ -3898,6 +3962,8 @@
   *  <code>line</code> (execute code on a new line), <code>raise</code>
   *  (raise an exception), and <code>return</code> (return from a Ruby
   *  method). Tracing is disabled within the context of _proc_.
@@ -846,7 +846,7 @@ Index: thread.c
   *
   *      class Test
   *	def test
-@@ -3917,23 +3983,23 @@
+@@ -3922,23 +3988,23 @@
   *	  line prog.rb:3        test     Test
   *	  line prog.rb:4        test     Test
   *      return prog.rb:4        test     Test
@@ -882,7 +882,7 @@ Index: thread.c
  }
  
  static void
-@@ -3997,6 +4063,8 @@
+@@ -4002,6 +4068,8 @@
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -891,7 +891,7 @@ Index: thread.c
        case RUBY_EVENT_CALL:
  	return "call";
        case RUBY_EVENT_RETURN:
-@@ -4007,6 +4075,14 @@
+@@ -4012,6 +4080,14 @@
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -906,7 +906,7 @@ Index: thread.c
        default:
  	return "unknown";
      }
-@@ -4028,6 +4104,11 @@
+@@ -4033,6 +4109,11 @@
      struct call_trace_func_args *p = (struct call_trace_func_args *)args;
      const char *srcfile = rb_sourcefile();
      VALUE eventname = rb_str_new2(get_event_name(p->event));
@@ -918,7 +918,7 @@ Index: thread.c
      VALUE filename = srcfile ? rb_str_new2(srcfile) : Qnil;
      VALUE argv[6];
      int line = rb_sourceline();
-@@ -4035,11 +4116,16 @@
+@@ -4040,11 +4121,16 @@
      VALUE klass = 0;
  
      if (p->event == RUBY_EVENT_C_CALL ||
@@ -938,7 +938,7 @@ Index: thread.c
  	rb_thread_method_id_and_class(GET_THREAD(), &id, &klass);
      }
      if (id == ID_ALLOCATOR)
-@@ -4226,7 +4312,9 @@
+@@ -4231,7 +4317,9 @@
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -951,7 +951,7 @@ Index: thread.c
  
 Index: eval.c
 ===================================================================
---- eval.c	(revision 27742)
+--- eval.c	(revision 27790)
 +++ eval.c	(working copy)
 @@ -34,7 +34,7 @@
  
@@ -994,7 +994,7 @@ Index: eval.c
  }
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 27742)
+--- vm_exec.h	(revision 27790)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
@@ -1062,7 +1062,7 @@ Index: vm_exec.h
  #define debugs printf
 Index: vm.c
 ===================================================================
---- vm.c	(revision 27742)
+--- vm.c	(revision 27790)
 +++ vm.c	(working copy)
 @@ -691,6 +691,7 @@
      if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
@@ -1106,7 +1106,7 @@ Index: vm.c
  		EXEC_EVENT_HOOK(th, RUBY_EVENT_END, th->cfp->self, 0, 0);
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 27742)
+--- vm_insnhelper.c	(revision 27790)
 +++ vm_insnhelper.c	(working copy)
 @@ -26,6 +26,7 @@
  	      const VALUE *pc, VALUE *sp, VALUE *lfp,
@@ -1185,7 +1185,7 @@ Index: vm_insnhelper.c
  	VALUE *p_rsp;
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 27742)
+--- tool/instruction.rb	(revision 27790)
 +++ tool/instruction.rb	(working copy)
 @@ -854,6 +854,17 @@
        commit "INSN_ENTRY(#{insn.name}){"
@@ -1207,7 +1207,7 @@ Index: tool/instruction.rb
        make_header_operands   insn
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 27742)
+--- test/ruby/test_settracefunc.rb	(revision 27790)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -23,8 +23,6 @@
       4: x = 1 + 1
@@ -1335,7 +1335,7 @@ Index: test/ruby/test_settracefunc.rb
  end
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 27742)
+--- template/insns_info.inc.tmpl	(revision 27790)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -42,38 +42,6 @@
  }
