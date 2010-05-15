@@ -152,7 +152,7 @@ Index: vm_core.h
  /* other frame flag */
  #define VM_FRAME_FLAG_PASSED 0x0100
  
-@@ -691,13 +706,30 @@
+@@ -691,13 +706,29 @@
  void
  rb_threadptr_exec_event_hooks(rb_thread_t *th, rb_event_flag_t flag, VALUE self, ID id, VALUE klass);
  
@@ -165,8 +165,7 @@ Index: vm_core.h
 -    } \
 -} while (0)
 +#define EXEC_EVENT_HOOK(th, flag, self, id, klass)			\
-+    if (LIKELY(0 == th->tracing &&					\
-+	       !(th->cfp->tracing & VM_FRAME_TRACE_OFF))) {		\
++  if (LIKELY(0 == th->tracing)) {					\
 +	rb_event_flag_t wait_event__ = th->event_flags;			\
 +	if (UNLIKELY(wait_event__)) {					\
 +	    if (wait_event__ & (flag | RUBY_EVENT_VM)) {		\
@@ -588,7 +587,7 @@ Index: vm_eval.c
 +		   especially the return value. See vm_insnhelper.c
 +		   for guidance.
 +		*/
-+		EXEC_EVENT_RETURN_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
++		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
 +	    }
  	    vm_pop_frame(th);
  	}
@@ -601,8 +600,8 @@ Index: vm_eval.c
  		    if (UNLIKELY(VM_FRAME_TYPE(th->cfp) == VM_FRAME_MAGIC_CFUNC)) {
  			const rb_method_entry_t *me = th->cfp->me;
 -			EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, th->cfp->self, me->called_id, me->klass);
-+			EXEC_EVENT_RETURN_HOOK(th, RUBY_EVENT_C_RETURN, 
-+					       th->cfp->self, me->called_id, me->klass);
++			EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, 
++					th->cfp->self, me->called_id, me->klass);
  		    }
  
  		    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
@@ -731,6 +730,15 @@ Index: thread.c
  void
  rb_thread_terminate_all(void)
  {
+@@ -3723,7 +3733,7 @@
+ 
+ static void
+ rb_threadptr_add_event_hook(rb_thread_t *th, 
+-			 rb_event_hook_func_t func, rb_event_flag_t events, VALUE data)
++			    rb_event_hook_func_t func, rb_event_flag_t events, VALUE data)
+ {
+     rb_event_hook_t *hook = alloc_event_hook(func, events, data);
+     hook->next = th->event_hooks;
 @@ -3754,7 +3764,9 @@
      GetThreadPtr(thval, th);
  
@@ -742,14 +750,15 @@ Index: thread.c
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -3785,15 +3797,37 @@
+@@ -3785,15 +3797,38 @@
      const rb_event_flag_t wait_event = th->event_flags;
  
      if (self == rb_mRubyVMFrozenCore) return;
 -    if (wait_event & flag) {
 -	exec_event_hooks(th->event_hooks, flag, self, id, klass);
 +    if (wait_event & flag && th->tracing <= 0) {
-+        exec_event_hooks(th->event_hooks, flag, self, id, klass);
++	if (!(th->cfp->tracing & VM_FRAME_TRACE_OFF))
++	    exec_event_hooks(th->event_hooks, flag, self, id, klass);
      }
 -    if (wait_event & RUBY_EVENT_VM) {
 +    if (wait_event & RUBY_EVENT_VM && th->tracing <= 0) {
@@ -784,7 +793,7 @@ Index: thread.c
  	}
      }
      th->errinfo = errinfo;
-@@ -3872,19 +3906,49 @@
+@@ -3872,19 +3907,49 @@
      return ST_CONTINUE;
  }
  
@@ -837,7 +846,7 @@ Index: thread.c
   *
   *  Establishes _proc_ as the handler for tracing, or disables
   *  tracing if the parameter is +nil+. _proc_ takes up
-@@ -3898,6 +3962,8 @@
+@@ -3898,6 +3963,8 @@
   *  <code>line</code> (execute code on a new line), <code>raise</code>
   *  (raise an exception), and <code>return</code> (return from a Ruby
   *  method). Tracing is disabled within the context of _proc_.
@@ -846,7 +855,7 @@ Index: thread.c
   *
   *      class Test
   *	def test
-@@ -3922,23 +3988,23 @@
+@@ -3922,55 +3989,62 @@
   *	  line prog.rb:3        test     Test
   *	  line prog.rb:4        test     Test
   *      return prog.rb:4        test     Test
@@ -882,7 +891,80 @@ Index: thread.c
  }
  
  static void
-@@ -4002,6 +4068,8 @@
+-thread_add_trace_func(rb_thread_t *th, VALUE trace)
++thread_add_trace_func(rb_thread_t *th, VALUE trace, rb_event_flag_t events)
+ {
+     if (!rb_obj_is_proc(trace)) {
+ 	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
+     }
+-
+-    rb_threadptr_add_event_hook(th, call_trace_func, RUBY_EVENT_ALL, trace);
++    rb_threadptr_add_event_hook(th, call_trace_func, events, trace);
+ }
+ 
+ /*
+  *  call-seq:
+- *     thr.add_trace_func(proc)    => proc
++ *     thr.add_trace_func(proc, events=RUBY_EVENT_ALL)    => proc
+  *
+  *  Adds _proc_ as a handler for tracing.
+  *  See <code>Thread#set_trace_func</code> and +set_trace_func+.
+  */
+ 
+ static VALUE
+-thread_add_trace_func_m(VALUE obj, VALUE trace)
++thread_add_trace_func_m(int argc, VALUE *argv, VALUE obj)    /* (VALUE obj, VALUE trace, VALUE events=RUBY_EVENT_ALL) */
+ {
++    VALUE trace;
++    VALUE event_maskval;
++    rb_event_flag_t events=RUBY_EVENT_ALL;
+     rb_thread_t *th;
++
++    if (2 == rb_scan_args(argc, argv, "11", &trace, &event_maskval)) {
++        events = NUM2INT(event_maskval);
++    }
++
+     GetThreadPtr(obj, th);
+-    thread_add_trace_func(th, trace);
++    thread_add_trace_func(th, trace, events);
+     return trace;
+ }
+ 
+ /*
+  *  call-seq:
+- *     thr.set_trace_func(proc)    => proc
++ *     thr.set_trace_func(proc, events=RB_EVENT_ALL)    => proc
+  *     thr.set_trace_func(nil)     => nil
+  *
+  *  Establishes _proc_ on _thr_ as the handler for tracing, or
+@@ -3979,16 +4053,24 @@
+  */
+ 
+ static VALUE
+-thread_set_trace_func_m(VALUE obj, VALUE trace)
++thread_set_trace_func_m(int argc, VALUE *argv, VALUE obj)   /* (VALUE obj, VALUE trace, events) */
+ {
++    VALUE trace;
++    VALUE event_maskval;
++    rb_event_flag_t events=RUBY_EVENT_ALL;
+     rb_thread_t *th;
++
++    if (2 == rb_scan_args(argc, argv, "11", &trace, &event_maskval)) {
++        events = NUM2INT(event_maskval);
++    }
++
+     GetThreadPtr(obj, th);
+     rb_threadptr_revmove_event_hook(th, call_trace_func);
+ 
+     if (NIL_P(trace)) {
+ 	return Qnil;
+     }
+-    thread_add_trace_func(th, trace);
++    thread_add_trace_func(th, trace, events);
+     return trace;
+ }
+ 
+@@ -4002,6 +4084,8 @@
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -891,7 +973,7 @@ Index: thread.c
        case RUBY_EVENT_CALL:
  	return "call";
        case RUBY_EVENT_RETURN:
-@@ -4012,6 +4080,14 @@
+@@ -4012,6 +4096,14 @@
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -906,7 +988,7 @@ Index: thread.c
        default:
  	return "unknown";
      }
-@@ -4033,6 +4109,11 @@
+@@ -4033,6 +4125,11 @@
      struct call_trace_func_args *p = (struct call_trace_func_args *)args;
      const char *srcfile = rb_sourcefile();
      VALUE eventname = rb_str_new2(get_event_name(p->event));
@@ -918,7 +1000,7 @@ Index: thread.c
      VALUE filename = srcfile ? rb_str_new2(srcfile) : Qnil;
      VALUE argv[6];
      int line = rb_sourceline();
-@@ -4040,11 +4121,16 @@
+@@ -4040,11 +4137,16 @@
      VALUE klass = 0;
  
      if (p->event == RUBY_EVENT_C_CALL ||
@@ -938,17 +1020,21 @@ Index: thread.c
  	rb_thread_method_id_and_class(GET_THREAD(), &id, &klass);
      }
      if (id == ID_ALLOCATOR)
-@@ -4231,7 +4317,9 @@
+@@ -4231,9 +4333,11 @@
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
 -    rb_define_global_function("set_trace_func", set_trace_func, 1);
+-    rb_define_method(rb_cThread, "set_trace_func", thread_set_trace_func_m, 1);
+-    rb_define_method(rb_cThread, "add_trace_func", thread_add_trace_func_m, 1);
 +    rb_define_global_function("add_trace_func", add_trace_func, -1);
 +    rb_define_global_function("set_trace_func", set_trace_func, -1);
 +    rb_define_global_function("clear_trace_func", rb_clear_trace_func, 0);
-     rb_define_method(rb_cThread, "set_trace_func", thread_set_trace_func_m, 1);
-     rb_define_method(rb_cThread, "add_trace_func", thread_add_trace_func_m, 1);
++    rb_define_method(rb_cThread, "set_trace_func", thread_set_trace_func_m, -1);
++    rb_define_method(rb_cThread, "add_trace_func", thread_add_trace_func_m, -1);
  
+     /* init thread core */
+     Init_native_thread();
 Index: eval.c
 ===================================================================
 --- eval.c	(revision 27790)
@@ -980,18 +1066,16 @@ Index: eval.c
      }
  }
  
-@@ -587,7 +587,10 @@
+@@ -587,6 +587,9 @@
  
      setup_exception(th, TAG_RAISE, mesg);
  
--    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, self, mid, klass);
 +    /* rocky: FIXME: decide what to do for sp values. Do we push mesg? 
 +       See vm_insnhelper.c for guidance.
 +     */
-+    EXEC_EVENT_RETURN_HOOK(th, RUBY_EVENT_C_RETURN, self, mid, klass);
+     EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, self, mid, klass);
      rb_thread_raised_clear(th);
      JUMP_TAG(TAG_RAISE);
- }
 Index: vm_exec.h
 ===================================================================
 --- vm_exec.h	(revision 27790)
@@ -1088,8 +1172,8 @@ Index: vm.c
 +		if (0 == th->tracing && 0 == th->exec_event_tracing) {
 +		    const rb_method_entry_t *me = th->cfp->me;
 +		    th->exec_event_tracing = 1;
-+		    EXEC_EVENT_RETURN_HOOK(th, RUBY_EVENT_C_RETURN, th->cfp->self, 
-+					   me->called_id, me->klass);
++		    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, th->cfp->self, 
++				    me->called_id, me->klass);
 +		    th->exec_event_tracing = 0;
 +		}
  	    }
@@ -1298,16 +1382,66 @@ Index: test/ruby/test_settracefunc.rb
                   events.shift)
      assert_equal(["c-return", 5, :raise, Kernel],
                   events.shift)
-@@ -273,7 +261,7 @@
+@@ -263,6 +251,15 @@
+     assert_equal([], events)
+   end
+ 
++  def chunk(list, char)
++    sep = char * 30 + "\n"
++    sep + list.map{|e| e.join(' ')}.join("\n") + "\n"
++  end
++
++  def showit(actual, expected)
++    chunk(actual, '-') + chunk(expected, '=')
++  end
++
+   def test_break # [ruby-core:27606] [Bug #2610]
+     events = []
+     eval <<-EOF.gsub(/^.*?: /, "")
+@@ -273,17 +270,15 @@
       8: set_trace_func(nil)
      EOF
  
 -    [["c-return", 3, :set_trace_func, Kernel],
-+    [
-      ["line", 4, __method__, self.class],
-      ["c-call", 4, :any?, Enumerable],
-      ["c-call", 4, :each, Array],
-@@ -354,4 +342,25 @@
+-     ["line", 4, __method__, self.class],
+-     ["c-call", 4, :any?, Enumerable],
+-     ["c-call", 4, :each, Array],
+-     ["line", 4, __method__, self.class],
+-     ["c-return", 4, :each, Array],
+-     ["c-return", 4, :any?, Enumerable],
+-     ["line", 5, __method__, self.class],
+-     ["c-call", 5, :set_trace_func, Kernel]].each{|e|
+-      assert_equal(e, events.shift)
+-    }
++    expected = [["line", 4, __method__, self.class],
++                ["c-call", 4, :any?, Enumerable],
++                ["c-call", 4, :each, Array],
++                ["line", 4, __method__, self.class],
++                ["c-return", 4, :any?, Enumerable],
++                ["line", 5, __method__, self.class],
++                ["c-call", 5, :set_trace_func, Kernel]]
++    events.each_with_index{|e, i|
++      assert_equal(e, events[i], showit(events, expected))}
+   end
+ 
+   def test_invalid_proc
+@@ -320,10 +315,11 @@
+     end
+     th.join
+ 
+-    [["c-return", 1, :set_trace_func, Thread, :set],
+-     ["line", 2, __method__, self.class, :set],
+-     ["c-call", 2, :add_trace_func, Thread, :set]].each do |e|
+-      assert_equal(e, events[:set].shift)
++    expected = [["c-return", 1, :set_trace_func, Thread, :set],
++                ["line", 2, __method__, self.class, :set],
++                ["c-call", 2, :add_trace_func, Thread, :set]]
++    expected.each do |e|
++      assert_equal(e, events[:set].shift, showit(events, expected))
+     end
+ 
+     [["c-return", 2, :add_trace_func, Thread],
+@@ -354,4 +350,25 @@
      assert_equal([], events[:set])
      assert_equal([], events[:add])
    end

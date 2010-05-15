@@ -22,34 +22,34 @@ class TestTracing < Test::Unit::TestCase
     assert_equal(false, tf.return_stop?)
   end
 
-  def test_return_stop
+  def test_trace_off
     @levels = []
     def trace_hook(event, file, line, id, binding, klass)
       @levels << RubyVM::ThreadFrame::current.stack_size
     end
 
-    def bar
+    def baz
+      6
+    end
+    def bar(set_off)
+      RubyVM::ThreadFrame::current.trace_off = true if set_off
+      baz
       5
     end
-    def foo(set_stop)
-      if set_stop
-        tf = RubyVM::ThreadFrame::current
-        tf.return_stop = true
-      end
-      bar
+    def foo(set_off)
+      bar(set_off)
     end
     # 0x10 is the mask for tracing return events
-    Kernel.set_trace_func(method(:trace_hook).to_proc, 0x10)
+    Thread.current.set_trace_func(method(:trace_hook).to_proc, 0x10)
     foo(false)
-    Kernel.set_trace_func(nil)
-    assert_equal(2,  @levels.size)
+    assert_equal(3,  @levels.size)
 
     # FIXME:
-    # @levels = []
-    # Kernel.set_trace_func(method(:trace_hook).to_proc, 16)
-    # foo(true)
-    # Kernel.set_trace_func(nil)
-    # assert_equal(1,  @levels)
+    @levels = []
+    Thread.current.set_trace_func(method(:trace_hook).to_proc, 0x10)
+    foo(true)
+    Thread.current.set_trace_func(nil)
+    assert_equal(1,  @levels.size)
 
   end
 
