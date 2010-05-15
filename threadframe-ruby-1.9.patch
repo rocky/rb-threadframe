@@ -1,6 +1,6 @@
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 27790)
+--- include/ruby/ruby.h	(revision 27800)
 +++ include/ruby/ruby.h	(working copy)
 @@ -1345,7 +1345,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
@@ -15,7 +15,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 Index: insns.def
 ===================================================================
---- insns.def	(revision 27790)
+--- insns.def	(revision 27800)
 +++ insns.def	(working copy)
 @@ -15,7 +15,7 @@
  
@@ -28,7 +28,7 @@ Index: insns.def
      (return value)
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 27790)
+--- vm_core.h	(revision 27800)
 +++ vm_core.h	(working copy)
 @@ -34,7 +34,7 @@
  #ifndef ENABLE_VM_OBJSPACE
@@ -192,7 +192,7 @@ Index: vm_core.h
  #endif /* RUBY_VM_CORE_H */
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 27790)
+--- iseq.c	(revision 27800)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -504,7 +504,7 @@ Index: iseq.c
      /* rb_define_singleton_method(rb_cISeq, "load", iseq_s_load, -1); */
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 27790)
+--- iseq.h	(revision 27800)
 +++ iseq.h	(working copy)
 @@ -101,4 +101,10 @@
  #define DEFINED_ZSUPER INT2FIX(9)
@@ -519,7 +519,7 @@ Index: iseq.h
  #endif /* RUBY_COMPILE_H */
 Index: load.c
 ===================================================================
---- load.c	(revision 27790)
+--- load.c	(revision 27800)
 +++ load.c	(working copy)
 @@ -293,11 +293,14 @@
      if (state == 0) {
@@ -539,7 +539,7 @@ Index: load.c
      }
 Index: compile.c
 ===================================================================
---- compile.c	(revision 27790)
+--- compile.c	(revision 27800)
 +++ compile.c	(working copy)
 @@ -3353,6 +3353,9 @@
  	if (iseq->compile_data->redo_label != 0) {
@@ -553,7 +553,7 @@ Index: compile.c
  	    add_ensure_iseq(ret, iseq, 0);
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 27790)
+--- vm_eval.c	(revision 27800)
 +++ vm_eval.c	(working copy)
 @@ -67,22 +67,37 @@
  	break;
@@ -634,7 +634,7 @@ Index: vm_eval.c
  		ID id_mesg;
 Index: proc.c
 ===================================================================
---- proc.c	(revision 27790)
+--- proc.c	(revision 27800)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -711,7 +711,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 27790)
+--- thread.c	(revision 27800)
 +++ thread.c	(working copy)
 @@ -336,6 +336,16 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -750,14 +750,15 @@ Index: thread.c
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -3785,15 +3797,38 @@
+@@ -3785,15 +3797,39 @@
      const rb_event_flag_t wait_event = th->event_flags;
  
      if (self == rb_mRubyVMFrozenCore) return;
 -    if (wait_event & flag) {
 -	exec_event_hooks(th->event_hooks, flag, self, id, klass);
 +    if (wait_event & flag && th->tracing <= 0) {
-+	if (!(th->cfp->tracing & VM_FRAME_TRACE_OFF))
++	if (!RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, th->cfp)
++	      && !(th->cfp->tracing & VM_FRAME_TRACE_OFF))
 +	    exec_event_hooks(th->event_hooks, flag, self, id, klass);
      }
 -    if (wait_event & RUBY_EVENT_VM) {
@@ -793,7 +794,7 @@ Index: thread.c
  	}
      }
      th->errinfo = errinfo;
-@@ -3872,19 +3907,49 @@
+@@ -3872,19 +3908,49 @@
      return ST_CONTINUE;
  }
  
@@ -846,7 +847,7 @@ Index: thread.c
   *
   *  Establishes _proc_ as the handler for tracing, or disables
   *  tracing if the parameter is +nil+. _proc_ takes up
-@@ -3898,6 +3963,8 @@
+@@ -3898,6 +3964,8 @@
   *  <code>line</code> (execute code on a new line), <code>raise</code>
   *  (raise an exception), and <code>return</code> (return from a Ruby
   *  method). Tracing is disabled within the context of _proc_.
@@ -855,7 +856,7 @@ Index: thread.c
   *
   *      class Test
   *	def test
-@@ -3922,55 +3989,62 @@
+@@ -3922,55 +3990,62 @@
   *	  line prog.rb:3        test     Test
   *	  line prog.rb:4        test     Test
   *      return prog.rb:4        test     Test
@@ -937,7 +938,7 @@ Index: thread.c
   *     thr.set_trace_func(nil)     => nil
   *
   *  Establishes _proc_ on _thr_ as the handler for tracing, or
-@@ -3979,16 +4053,24 @@
+@@ -3979,16 +4054,24 @@
   */
  
  static VALUE
@@ -964,7 +965,7 @@ Index: thread.c
      return trace;
  }
  
-@@ -4002,6 +4084,8 @@
+@@ -4002,6 +4085,8 @@
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -973,7 +974,7 @@ Index: thread.c
        case RUBY_EVENT_CALL:
  	return "call";
        case RUBY_EVENT_RETURN:
-@@ -4012,6 +4096,14 @@
+@@ -4012,6 +4097,14 @@
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -988,7 +989,7 @@ Index: thread.c
        default:
  	return "unknown";
      }
-@@ -4033,6 +4125,11 @@
+@@ -4033,6 +4126,11 @@
      struct call_trace_func_args *p = (struct call_trace_func_args *)args;
      const char *srcfile = rb_sourcefile();
      VALUE eventname = rb_str_new2(get_event_name(p->event));
@@ -1000,7 +1001,7 @@ Index: thread.c
      VALUE filename = srcfile ? rb_str_new2(srcfile) : Qnil;
      VALUE argv[6];
      int line = rb_sourceline();
-@@ -4040,11 +4137,16 @@
+@@ -4040,11 +4138,16 @@
      VALUE klass = 0;
  
      if (p->event == RUBY_EVENT_C_CALL ||
@@ -1020,7 +1021,7 @@ Index: thread.c
  	rb_thread_method_id_and_class(GET_THREAD(), &id, &klass);
      }
      if (id == ID_ALLOCATOR)
-@@ -4231,9 +4333,11 @@
+@@ -4231,9 +4334,11 @@
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -1037,7 +1038,7 @@ Index: thread.c
      Init_native_thread();
 Index: eval.c
 ===================================================================
---- eval.c	(revision 27790)
+--- eval.c	(revision 27800)
 +++ eval.c	(working copy)
 @@ -34,7 +34,7 @@
  
@@ -1078,7 +1079,7 @@ Index: eval.c
      JUMP_TAG(TAG_RAISE);
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 27790)
+--- vm_exec.h	(revision 27800)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
@@ -1146,7 +1147,7 @@ Index: vm_exec.h
  #define debugs printf
 Index: vm.c
 ===================================================================
---- vm.c	(revision 27790)
+--- vm.c	(revision 27800)
 +++ vm.c	(working copy)
 @@ -691,6 +691,7 @@
      if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
@@ -1190,13 +1191,13 @@ Index: vm.c
  		EXEC_EVENT_HOOK(th, RUBY_EVENT_END, th->cfp->self, 0, 0);
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 27790)
+--- vm_insnhelper.c	(revision 27800)
 +++ vm_insnhelper.c	(working copy)
 @@ -26,9 +26,12 @@
  	      const VALUE *pc, VALUE *sp, VALUE *lfp,
  	      int local_size)
  {
-+    short int tracing;
++    short int tracing = 0;
      rb_control_frame_t * const cfp = th->cfp - 1;
      int i;
  
@@ -1205,16 +1206,15 @@ Index: vm_insnhelper.c
      if ((void *)(sp + local_size) >= (void *)cfp) {
  	rb_exc_raise(sysstack_error);
      }
-@@ -60,6 +63,8 @@
+@@ -60,6 +63,7 @@
      cfp->dfp = sp;
      cfp->proc = 0;
      cfp->me = 0;
-+    if (type != VM_FRAME_MAGIC_TOP)
-+	cfp->tracing = tracing & VM_FRAME_TRACE_OFF;
++    cfp->tracing = tracing;
  
  #define COLLECT_PROFILE 0
  #if COLLECT_PROFILE
-@@ -391,11 +396,18 @@
+@@ -391,11 +395,18 @@
      const rb_method_definition_t *def = me->def;
      rb_control_frame_t *cfp;
  
@@ -1235,7 +1235,7 @@ Index: vm_insnhelper.c
      reg_cfp->sp -= num + 1;
  
      val = call_cfunc(def->body.cfunc.func, recv, (int)def->body.cfunc.argc, num, reg_cfp->sp + 1);
-@@ -404,10 +416,21 @@
+@@ -404,10 +415,21 @@
  	rb_bug("cfp consistency error - send");
      }
  
@@ -1259,7 +1259,7 @@ Index: vm_insnhelper.c
      return val;
  }
  
-@@ -477,6 +500,13 @@
+@@ -477,6 +499,13 @@
  		      iseq->iseq_encoded + opt_pc, sp, 0, 0);
  
  	cfp->sp = rsp - 1 /* recv */;
@@ -1275,7 +1275,7 @@ Index: vm_insnhelper.c
  	VALUE *p_rsp;
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 27790)
+--- tool/instruction.rb	(revision 27800)
 +++ tool/instruction.rb	(working copy)
 @@ -854,6 +854,17 @@
        commit "INSN_ENTRY(#{insn.name}){"
@@ -1297,7 +1297,7 @@ Index: tool/instruction.rb
        make_header_operands   insn
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 27790)
+--- test/ruby/test_settracefunc.rb	(revision 27800)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -23,8 +23,6 @@
       4: x = 1 + 1
@@ -1475,7 +1475,7 @@ Index: test/ruby/test_settracefunc.rb
  end
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 27790)
+--- template/insns_info.inc.tmpl	(revision 27800)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -42,38 +42,6 @@
  }
