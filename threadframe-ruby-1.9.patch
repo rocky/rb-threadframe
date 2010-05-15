@@ -1192,23 +1192,29 @@ Index: vm_insnhelper.c
 ===================================================================
 --- vm_insnhelper.c	(revision 27790)
 +++ vm_insnhelper.c	(working copy)
-@@ -26,6 +26,7 @@
+@@ -26,9 +26,12 @@
  	      const VALUE *pc, VALUE *sp, VALUE *lfp,
  	      int local_size)
  {
-+    short int tracing = th->cfp->tracing;
++    short int tracing;
      rb_control_frame_t * const cfp = th->cfp - 1;
      int i;
  
-@@ -60,6 +61,7 @@
++    if (type != VM_FRAME_MAGIC_TOP) tracing = th->cfp->tracing;
++
+     if ((void *)(sp + local_size) >= (void *)cfp) {
+ 	rb_exc_raise(sysstack_error);
+     }
+@@ -60,6 +63,8 @@
      cfp->dfp = sp;
      cfp->proc = 0;
      cfp->me = 0;
-+    cfp->tracing = tracing & VM_FRAME_TRACE_OFF;
++    if (type != VM_FRAME_MAGIC_TOP)
++	cfp->tracing = tracing & VM_FRAME_TRACE_OFF;
  
  #define COLLECT_PROFILE 0
  #if COLLECT_PROFILE
-@@ -391,11 +393,18 @@
+@@ -391,11 +396,18 @@
      const rb_method_definition_t *def = me->def;
      rb_control_frame_t *cfp;
  
@@ -1229,7 +1235,7 @@ Index: vm_insnhelper.c
      reg_cfp->sp -= num + 1;
  
      val = call_cfunc(def->body.cfunc.func, recv, (int)def->body.cfunc.argc, num, reg_cfp->sp + 1);
-@@ -404,10 +413,21 @@
+@@ -404,10 +416,21 @@
  	rb_bug("cfp consistency error - send");
      }
  
@@ -1253,7 +1259,7 @@ Index: vm_insnhelper.c
      return val;
  }
  
-@@ -477,6 +497,13 @@
+@@ -477,6 +500,13 @@
  		      iseq->iseq_encoded + opt_pc, sp, 0, 0);
  
  	cfp->sp = rsp - 1 /* recv */;
