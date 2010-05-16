@@ -20,7 +20,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
     RubyVM::InstructionSequence.compile_option = @original_compile_option
   end
 
-  def chunk(list, char)
+  def chunk(list, char='-')
     sep = char * 30 + "\n"
     sep + list.map{|e| e.join(' ')}.join("\n") + "\n"
   end

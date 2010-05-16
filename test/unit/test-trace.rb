@@ -5,17 +5,17 @@ require_relative '../../ext/thread_frame'
 class TestTracing < Test::Unit::TestCase
   def test_basic_query_set_unset
     tf = RubyVM::ThreadFrame::current
-    # Default values
+    # Test default values
     assert_equal(false, tf.trace_off?)
     assert_equal(false, tf.return_stop?)
 
-    # Set true
+    # Test set true
     tf.trace_off = true
     assert_equal(true, tf.trace_off?)
     tf.return_stop = true
     assert_equal(true, tf.return_stop?)
 
-    # Set off when on
+    # Test setting off when on
     tf.trace_off = nil
     assert_equal(false, tf.trace_off?)
     tf.return_stop = false
@@ -44,7 +44,6 @@ class TestTracing < Test::Unit::TestCase
     foo(false)
     assert_equal(3,  @levels.size)
 
-    # FIXME:
     @levels = []
     Thread.current.set_trace_func(method(:trace_hook).to_proc, 0x10)
     foo(true)
