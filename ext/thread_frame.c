@@ -433,7 +433,7 @@ thread_frame_is_trace_off(VALUE klass)
 
 /*
  *  call-seq:
- *     ThreadFrame#method  -> String
+ *     ThreadFrame#method  -> String or nil
  * 
  * Returns the method associated with the frame or nil of none.
  * ThreadFrameError can be raised if the threadframe
@@ -454,7 +454,7 @@ thread_frame_method(VALUE klass)
 	if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) 
 	    return tf->cfp->iseq->name;
 	else
-	    return rb_str_new2("unknown");
+	    return Qnil; /* unknown */
     case VM_FRAME_MAGIC_CFUNC: {
           const char *method_name = rb_id2name(tf->cfp->me->def->original_id);
 	  return rb_str_new2((NULL == method_name) ? "" : method_name );
