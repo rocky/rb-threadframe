@@ -1,6 +1,6 @@
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 27874)
+--- include/ruby/ruby.h	(revision 27984)
 +++ include/ruby/ruby.h	(working copy)
 @@ -1345,7 +1345,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
@@ -15,7 +15,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 Index: insns.def
 ===================================================================
---- insns.def	(revision 27874)
+--- insns.def	(revision 27984)
 +++ insns.def	(working copy)
 @@ -15,7 +15,7 @@
  
@@ -28,7 +28,7 @@ Index: insns.def
      (return value)
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 27874)
+--- vm_core.h	(revision 27984)
 +++ vm_core.h	(working copy)
 @@ -34,7 +34,7 @@
  #ifndef ENABLE_VM_OBJSPACE
@@ -192,7 +192,7 @@ Index: vm_core.h
  #endif /* RUBY_VM_CORE_H */
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 27874)
+--- iseq.c	(revision 27984)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -504,7 +504,7 @@ Index: iseq.c
      /* rb_define_singleton_method(rb_cISeq, "load", iseq_s_load, -1); */
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 27874)
+--- iseq.h	(revision 27984)
 +++ iseq.h	(working copy)
 @@ -101,4 +101,10 @@
  #define DEFINED_ZSUPER INT2FIX(9)
@@ -519,7 +519,7 @@ Index: iseq.h
  #endif /* RUBY_COMPILE_H */
 Index: load.c
 ===================================================================
---- load.c	(revision 27874)
+--- load.c	(revision 27984)
 +++ load.c	(working copy)
 @@ -293,11 +293,14 @@
      if (state == 0) {
@@ -539,7 +539,7 @@ Index: load.c
      }
 Index: compile.c
 ===================================================================
---- compile.c	(revision 27874)
+--- compile.c	(revision 27984)
 +++ compile.c	(working copy)
 @@ -3353,6 +3353,9 @@
  	if (iseq->compile_data->redo_label != 0) {
@@ -553,7 +553,7 @@ Index: compile.c
  	    add_ensure_iseq(ret, iseq, 0);
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 27874)
+--- vm_eval.c	(revision 27984)
 +++ vm_eval.c	(working copy)
 @@ -67,22 +67,37 @@
  	break;
@@ -634,7 +634,7 @@ Index: vm_eval.c
  		ID id_mesg;
 Index: proc.c
 ===================================================================
---- proc.c	(revision 27874)
+--- proc.c	(revision 27984)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -711,7 +711,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 27874)
+--- thread.c	(revision 27984)
 +++ thread.c	(working copy)
 @@ -94,7 +94,7 @@
  };
@@ -1895,9 +1895,9 @@ Index: thread.c
  
  #endif
  
-@@ -2412,11 +2422,11 @@
- subtract_tv(struct timeval *rest, const struct timeval *wait)
- {
+@@ -2415,11 +2425,11 @@
+ 	return 0;
+     }
      while (rest->tv_usec < wait->tv_usec) {
 -	if (rest->tv_sec <= wait->tv_sec) {
 -	    return 0;
@@ -1912,7 +1912,7 @@ Index: thread.c
      }
      rest->tv_sec -= wait->tv_sec;
      rest->tv_usec -= wait->tv_usec;
-@@ -2426,7 +2436,7 @@
+@@ -2429,7 +2439,7 @@
  
  static int
  do_select(int n, fd_set *read, fd_set *write, fd_set *except,
@@ -1921,7 +1921,7 @@ Index: thread.c
  {
      int result, lerrno;
      fd_set UNINITIALIZED_VAR(orig_read);
-@@ -2442,14 +2452,14 @@
+@@ -2445,14 +2455,14 @@
  
      if (timeout) {
  # if defined(__CYGWIN__) || defined(_WIN32)
@@ -1942,7 +1942,7 @@ Index: thread.c
      }
  #endif
  
-@@ -2462,70 +2472,70 @@
+@@ -2465,70 +2475,70 @@
  
  #if defined(__CYGWIN__) || defined(_WIN32)
      {
@@ -2061,7 +2061,7 @@ Index: thread.c
      }
      return result;
  }
-@@ -2537,26 +2547,26 @@
+@@ -2540,26 +2550,26 @@
      thread_debug("rb_thread_wait_fd_rw(%d, %s)\n", fd, read ? "read" : "write");
  
      if (fd < 0) {
@@ -2102,7 +2102,7 @@ Index: thread.c
      }
  
      thread_debug("rb_thread_wait_fd_rw(%d, %s): done\n", fd, read ? "read" : "write");
-@@ -2577,35 +2587,35 @@
+@@ -2580,35 +2590,35 @@
  
  int
  rb_thread_select(int max, fd_set * read, fd_set * write, fd_set * except,
@@ -2153,7 +2153,7 @@ Index: thread.c
      }
  
      if (read) {
-@@ -2661,13 +2671,13 @@
+@@ -2664,13 +2674,13 @@
      /* mth must be main_thread */
  
      if (!mth->exec_signal && (sig = rb_get_next_signal()) > 0) {
@@ -2174,7 +2174,7 @@ Index: thread.c
      }
  }
  
-@@ -2685,11 +2695,11 @@
+@@ -2688,11 +2698,11 @@
  #if 0
      /* prove profiler */
      if (vm->prove_profile.enable) {
@@ -2190,7 +2190,7 @@ Index: thread.c
      }
  #endif
  }
-@@ -2698,7 +2708,7 @@
+@@ -2701,7 +2711,7 @@
  rb_thread_stop_timer_thread(void)
  {
      if (timer_thread_id && native_stop_timer_thread()) {
@@ -2199,7 +2199,7 @@ Index: thread.c
      }
  }
  
-@@ -2722,9 +2732,9 @@
+@@ -2725,9 +2735,9 @@
      VALUE lines = (VALUE)val;
  
      for (i = 0; i < RARRAY_LEN(lines); i++) {
@@ -2212,7 +2212,7 @@ Index: thread.c
      }
      return ST_CONTINUE;
  }
-@@ -2735,7 +2745,7 @@
+@@ -2738,7 +2748,7 @@
      extern VALUE rb_get_coverages(void);
      VALUE coverages = rb_get_coverages();
      if (RTEST(coverages)) {
@@ -2221,7 +2221,7 @@ Index: thread.c
      }
  }
  
-@@ -2763,11 +2773,11 @@
+@@ -2766,11 +2776,11 @@
      GetThreadPtr(thval, th);
  
      if (th != (rb_thread_t *)current_th) {
@@ -2238,7 +2238,7 @@ Index: thread.c
      }
      return ST_CONTINUE;
  }
-@@ -2788,7 +2798,7 @@
+@@ -2791,7 +2801,7 @@
      GetThreadPtr(thval, th);
  
      if (th != (rb_thread_t *)current_th) {
@@ -2247,7 +2247,7 @@ Index: thread.c
      }
      return ST_CONTINUE;
  }
-@@ -2855,7 +2865,7 @@
+@@ -2858,7 +2868,7 @@
      GetThreadPtr(thread, th);
  
      if (th->thgroup == group) {
@@ -2256,7 +2256,7 @@ Index: thread.c
      }
      return ST_CONTINUE;
  }
-@@ -2928,7 +2938,7 @@
+@@ -2931,7 +2941,7 @@
  
      TypedData_Get_Struct(group, struct thgroup, &thgroup_data_type, data);
      if (data->enclosed)
@@ -2265,7 +2265,7 @@ Index: thread.c
      return Qfalse;
  }
  
-@@ -2969,24 +2979,24 @@
+@@ -2972,24 +2982,24 @@
      GetThreadPtr(thread, th);
  
      if (OBJ_FROZEN(group)) {
@@ -2296,7 +2296,7 @@ Index: thread.c
      }
  
      th->thgroup = group;
-@@ -3030,14 +3040,14 @@
+@@ -3033,14 +3043,14 @@
  mutex_free(void *ptr)
  {
      if (ptr) {
@@ -2319,7 +2319,7 @@ Index: thread.c
      }
      ruby_xfree(ptr);
  }
-@@ -3104,7 +3114,7 @@
+@@ -3107,7 +3117,7 @@
      GetMutexPtr(self, mutex);
  
      if (th->keeping_mutexes) {
@@ -2328,7 +2328,7 @@ Index: thread.c
      }
      th->keeping_mutexes = mutex;
  }
-@@ -3125,10 +3135,10 @@
+@@ -3128,10 +3138,10 @@
  
      native_mutex_lock(&mutex->lock);
      if (mutex->th == 0) {
@@ -2342,7 +2342,7 @@ Index: thread.c
      }
      native_mutex_unlock(&mutex->lock);
  
-@@ -3146,19 +3156,19 @@
+@@ -3149,19 +3159,19 @@
      native_mutex_lock(&mutex->lock);
      th->transition_for_lock = 0;
      while (mutex->th || (mutex->th = th, 0)) {
@@ -2373,7 +2373,7 @@ Index: thread.c
      }
      th->transition_for_lock = 1;
      native_mutex_unlock(&mutex->lock);
-@@ -3177,9 +3187,9 @@
+@@ -3180,9 +3190,9 @@
      mutex_t *mutex = (mutex_t *)ptr;
      native_mutex_lock(&mutex->lock);
      if (mutex->cond_waiting > 0) {
@@ -2386,7 +2386,7 @@ Index: thread.c
      }
      native_mutex_unlock(&mutex->lock);
  }
-@@ -3196,51 +3206,51 @@
+@@ -3199,51 +3209,51 @@
  {
  
      if (rb_mutex_trylock(self) == Qfalse) {
@@ -2476,7 +2476,7 @@ Index: thread.c
      }
      return self;
  }
-@@ -3254,40 +3264,40 @@
+@@ -3257,40 +3267,40 @@
      native_mutex_lock(&mutex->lock);
  
      if (mutex->th == 0) {
@@ -2542,7 +2542,7 @@ Index: thread.c
      }
  
      return err;
-@@ -3320,12 +3330,12 @@
+@@ -3323,12 +3333,12 @@
      mutex_t *mutex;
  
      while (mutexes) {
@@ -2561,7 +2561,7 @@ Index: thread.c
      }
  }
  
-@@ -3335,10 +3345,10 @@
+@@ -3338,10 +3348,10 @@
      mutex_t *mutex;
  
      while (mutexes) {
@@ -2576,7 +2576,7 @@ Index: thread.c
      }
  }
  
-@@ -3369,10 +3379,10 @@
+@@ -3372,10 +3382,10 @@
      rb_mutex_unlock(self);
      beg = time(0);
      if (NIL_P(timeout)) {
@@ -2589,7 +2589,7 @@ Index: thread.c
      }
      end = time(0) - beg;
      return INT2FIX(end);
-@@ -3485,18 +3495,18 @@
+@@ -3488,18 +3498,18 @@
      VALUE sym = ID2SYM(rb_frame_this_func());
      VALUE list;
      if (NIL_P(hash) || TYPE(hash) != T_HASH) {
@@ -2616,7 +2616,7 @@ Index: thread.c
      }
      return list;
  }
-@@ -3512,16 +3522,16 @@
+@@ -3515,16 +3525,16 @@
  {
      VALUE pair_list = rb_hash_lookup2(list, obj_id, Qundef);
      if (pair_list == Qundef)
@@ -2642,7 +2642,7 @@ Index: thread.c
      }
      return Qtrue;
  }
-@@ -3541,20 +3551,20 @@
+@@ -3544,20 +3554,20 @@
      VALUE pair_list;
  
      if (!paired_obj) {
@@ -2673,7 +2673,7 @@ Index: thread.c
      }
  }
  
-@@ -3570,19 +3580,19 @@
+@@ -3573,19 +3583,19 @@
  recursive_pop(VALUE list, VALUE obj, VALUE paired_obj)
  {
      if (paired_obj) {
@@ -2706,7 +2706,7 @@ Index: thread.c
      }
      rb_hash_delete(list, obj);
  }
-@@ -3605,12 +3615,12 @@
+@@ -3608,12 +3618,12 @@
      recursive_push(p->list, p->objid, p->pairid);
      PUSH_TAG();
      if ((state = EXEC_TAG()) == 0) {
@@ -2721,7 +2721,7 @@ Index: thread.c
      return result;
  }
  
-@@ -3635,30 +3645,30 @@
+@@ -3638,30 +3648,30 @@
      outermost = outer && !recursive_check(p.list, ID2SYM(recursive_key), 0);
  
      if (recursive_check(p.list, p.objid, pairid)) {
@@ -2773,7 +2773,7 @@ Index: thread.c
      }
  }
  
-@@ -3715,15 +3725,15 @@
+@@ -3718,15 +3728,15 @@
      rb_event_flag_t flag = th->event_flags & RUBY_EVENT_VM;
  
      while (hook) {
@@ -2792,7 +2792,7 @@ Index: thread.c
  {
      rb_event_hook_t *hook = alloc_event_hook(func, events, data);
      hook->next = th->event_hooks;
-@@ -3741,7 +3751,7 @@
+@@ -3744,7 +3754,7 @@
  
  void
  rb_thread_add_event_hook(VALUE thval,
@@ -2801,7 +2801,7 @@ Index: thread.c
  {
      rb_threadptr_add_event_hook(thval2thread_t(thval), func, events, data);
  }
-@@ -3754,10 +3764,12 @@
+@@ -3757,10 +3767,12 @@
      GetThreadPtr(thval, th);
  
      if (flag) {
@@ -2816,7 +2816,7 @@ Index: thread.c
      }
      return ST_CONTINUE;
  }
-@@ -3772,9 +3784,9 @@
+@@ -3775,9 +3787,9 @@
  exec_event_hooks(const rb_event_hook_t *hook, rb_event_flag_t flag, VALUE self, ID id, VALUE klass)
  {
      for (; hook; hook = hook->next) {
@@ -2829,7 +2829,7 @@ Index: thread.c
      }
  }
  
-@@ -3785,16 +3797,40 @@
+@@ -3788,16 +3800,40 @@
      const rb_event_flag_t wait_event = th->event_flags;
  
      if (self == rb_mRubyVMFrozenCore) return;
@@ -2879,7 +2879,7 @@ Index: thread.c
      }
      th->errinfo = errinfo;
  }
-@@ -3817,20 +3853,20 @@
+@@ -3820,20 +3856,20 @@
      rb_event_hook_t *prev = NULL, *hook = *root, *next;
  
      while (hook) {
@@ -2914,7 +2914,7 @@ Index: thread.c
      }
      return -1;
  }
-@@ -3857,7 +3893,7 @@
+@@ -3860,7 +3896,7 @@
      int ret = remove_event_hook(&vm->event_hooks, func);
  
      if (hook != NULL && vm->event_hooks == NULL) {
@@ -2923,7 +2923,7 @@ Index: thread.c
      }
  
      return ret;
-@@ -3872,19 +3908,49 @@
+@@ -3875,19 +3911,49 @@
      return ST_CONTINUE;
  }
  
@@ -2976,7 +2976,7 @@ Index: thread.c
   *
   *  Establishes _proc_ as the handler for tracing, or disables
   *  tracing if the parameter is +nil+. _proc_ takes up
-@@ -3898,79 +3964,88 @@
+@@ -3901,79 +3967,88 @@
   *  <code>line</code> (execute code on a new line), <code>raise</code>
   *  (raise an exception), and <code>return</code> (return from a Ruby
   *  method). Tracing is disabled within the context of _proc_.
@@ -3094,7 +3094,7 @@ Index: thread.c
   *     thr.set_trace_func(nil)     -> nil
   *
   *  Establishes _proc_ on _thr_ as the handler for tracing, or
-@@ -3979,16 +4054,24 @@
+@@ -3982,16 +4057,24 @@
   */
  
  static VALUE
@@ -3122,7 +3122,7 @@ Index: thread.c
      return trace;
  }
  
-@@ -3997,23 +4080,33 @@
+@@ -4000,23 +4083,33 @@
  {
      switch (event) {
        case RUBY_EVENT_LINE:
@@ -3165,7 +3165,7 @@ Index: thread.c
      }
  }
  
-@@ -4033,6 +4126,11 @@
+@@ -4036,6 +4129,11 @@
      struct call_trace_func_args *p = (struct call_trace_func_args *)args;
      const char *srcfile = rb_sourcefile();
      VALUE eventname = rb_str_new2(get_event_name(p->event));
@@ -3177,7 +3177,7 @@ Index: thread.c
      VALUE filename = srcfile ? rb_str_new2(srcfile) : Qnil;
      VALUE argv[6];
      int line = rb_sourceline();
-@@ -4040,22 +4138,27 @@
+@@ -4043,22 +4141,27 @@
      VALUE klass = 0;
  
      if (p->event == RUBY_EVENT_C_CALL ||
@@ -3217,7 +3217,7 @@ Index: thread.c
      }
  
      argv[0] = eventname;
-@@ -4090,27 +4193,27 @@
+@@ -4093,27 +4196,27 @@
      VALUE result = Qnil;
  
      if ((tracing = th->tracing) != 0 && !always) {
@@ -3250,7 +3250,7 @@ Index: thread.c
      }
  
      return result;
-@@ -4213,9 +4316,9 @@
+@@ -4216,9 +4319,9 @@
      rb_define_method(cThGroup, "add", thgroup_add, 1);
  
      {
@@ -3263,7 +3263,7 @@ Index: thread.c
      }
  
      rb_cMutex = rb_define_class("Mutex", rb_cObject);
-@@ -4231,21 +4334,23 @@
+@@ -4234,21 +4337,23 @@
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -3298,7 +3298,7 @@ Index: thread.c
      }
  
      rb_thread_create_timer_thread();
-@@ -4270,17 +4375,17 @@
+@@ -4273,17 +4378,17 @@
      GetThreadPtr(thval, th);
  
      if (th->status != THREAD_STOPPED_FOREVER || RUBY_VM_INTERRUPTED(th) || th->transition_for_lock) {
@@ -3324,7 +3324,7 @@ Index: thread.c
      }
  
      return (*found) ? ST_STOP : ST_CONTINUE;
-@@ -4296,12 +4401,12 @@
+@@ -4299,12 +4404,12 @@
  
      printf("th:%p %d %d %d", th, th->status, th->interrupt_flag, th->transition_for_lock);
      if (th->locking_mutex) {
@@ -3342,7 +3342,7 @@ Index: thread.c
      }
      else puts("");
  
-@@ -4320,15 +4425,15 @@
+@@ -4323,15 +4428,15 @@
      st_foreach(vm->living_threads, check_deadlock_i, (st_data_t)&found);
  
      if (!found) {
@@ -3365,7 +3365,7 @@ Index: thread.c
      }
  }
  
-@@ -4337,15 +4442,15 @@
+@@ -4340,15 +4445,15 @@
  {
      VALUE coverage = GET_THREAD()->cfp->iseq->coverage;
      if (coverage && RBASIC(coverage)->klass == 0) {
@@ -3392,7 +3392,7 @@ Index: thread.c
  
 Index: eval.c
 ===================================================================
---- eval.c	(revision 27874)
+--- eval.c	(revision 27984)
 +++ eval.c	(working copy)
 @@ -34,7 +34,7 @@
  
@@ -3433,7 +3433,7 @@ Index: eval.c
      JUMP_TAG(TAG_RAISE);
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 27874)
+--- vm_exec.h	(revision 27984)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
@@ -3501,7 +3501,7 @@ Index: vm_exec.h
  #define debugs printf
 Index: vm.c
 ===================================================================
---- vm.c	(revision 27874)
+--- vm.c	(revision 27984)
 +++ vm.c	(working copy)
 @@ -691,6 +691,7 @@
      if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
@@ -3511,7 +3511,7 @@ Index: vm.c
  
  	if (iseq->insn_info_table[0].position == pos) goto found;
  	for (i = 1; i < iseq->insn_info_size; i++) {
-@@ -1153,8 +1154,20 @@
+@@ -1158,8 +1159,20 @@
  
  	while (th->cfp->pc == 0 || th->cfp->iseq == 0) {
  	    if (UNLIKELY(VM_FRAME_TYPE(th->cfp) == VM_FRAME_MAGIC_CFUNC)) {
@@ -3534,7 +3534,7 @@ Index: vm.c
  	    }
  	    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
  	}
-@@ -1322,7 +1335,7 @@
+@@ -1327,7 +1340,7 @@
  
  	    switch (VM_FRAME_TYPE(th->cfp)) {
  	      case VM_FRAME_MAGIC_METHOD:
@@ -3545,7 +3545,7 @@ Index: vm.c
  		EXEC_EVENT_HOOK(th, RUBY_EVENT_END, th->cfp->self, 0, 0);
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 27874)
+--- vm_insnhelper.c	(revision 27984)
 +++ vm_insnhelper.c	(working copy)
 @@ -26,9 +26,12 @@
  	      const VALUE *pc, VALUE *sp, VALUE *lfp,
@@ -3629,7 +3629,7 @@ Index: vm_insnhelper.c
  	VALUE *p_rsp;
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 27874)
+--- tool/instruction.rb	(revision 27984)
 +++ tool/instruction.rb	(working copy)
 @@ -854,6 +854,17 @@
        commit "INSN_ENTRY(#{insn.name}){"
@@ -3651,7 +3651,7 @@ Index: tool/instruction.rb
        make_header_operands   insn
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 27874)
+--- test/ruby/test_settracefunc.rb	(revision 27984)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -23,8 +23,6 @@
       4: x = 1 + 1
@@ -3829,7 +3829,7 @@ Index: test/ruby/test_settracefunc.rb
  end
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 27874)
+--- template/insns_info.inc.tmpl	(revision 27984)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -42,38 +42,6 @@
  }
