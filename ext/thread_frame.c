@@ -11,6 +11,7 @@
 #include "proc_extra.h"
 #include "iseq_extra.h"
 #include "thread_extra.h"
+#include "parse_tree.h"
 
 /* Frames can't be detached from the control frame they live in.
    So we create a structure to contain the pair. 
@@ -962,4 +963,6 @@ Init_thread_frame(void)
     Init_iseq_extra();
     Init_proc_extra();
     Init_thread_extra();
+    Init_thread_extra();
+    Init_ParseTree();
 }

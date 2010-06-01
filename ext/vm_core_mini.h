@@ -4,6 +4,7 @@
 #include <ruby.h>
 #include <signal.h>
 #include "thread_pthread.h"
+#include "node.h"
 
 /* From vm_core.h: */
 
@@ -65,7 +66,6 @@
 
 /* Opaque types (for now at least) */
 typedef struct iseq_catch_table_entry iseq_catch_table_entry_t;
-typedef struct node NODE;
 
 #ifndef NSIG
 # define NSIG (_SIGMAX + 1)      /* For QNX */
@@ -353,4 +353,5 @@ typedef struct {
     unsigned short line_no;
 } rb_binding_t;
 
+#define GET_THREAD() ruby_current_thread
 extern rb_thread_t *ruby_current_thread;
