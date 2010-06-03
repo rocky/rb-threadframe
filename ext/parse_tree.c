@@ -973,7 +973,7 @@ parse_tree_for_str(VALUE self, VALUE _source, VALUE _filename, VALUE _line)
 
 void Init_ParseTree() 
 {
-    VALUE c = rb_define_class("ParseTree", rb_cObject);
+    VALUE c = rb_define_class("ParseTreeTest", rb_cObject);
     rb_define_method(c, "parse_tree_for_meth", 
 		     (VALUE(*)(ANYARGS))parse_tree_for_meth, 3);
     rb_define_method(c, "parse_tree_for_str", 
