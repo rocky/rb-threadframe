@@ -15,9 +15,17 @@ class TestSource < Test::Unit::TestCase
     eval('def foo; 5 end')
     tup = method(:foo).iseq.source_container    
     assert_equal('string',  tup[0])
+    # puts tup[1]
 
     iseq = RubyVM::InstructionSequence.compile("1+2")
     assert_equal('string',  iseq.source_container[0])
+    # puts iseq.source_container[1]
+
+    eval_str = '  RubyVM::ThreadFrame.current.source_container # test'
+    tuple = eval(eval_str)
+    assert_equal('string',  tuple[0])
+    assert_equal(eval_str,  tuple[1])
+
   end
 
   def test_basic

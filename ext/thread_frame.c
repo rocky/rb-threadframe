@@ -127,7 +127,7 @@ thread_frame_##FIELD(VALUE klass)		\
 }
 
 #define THREAD_FRAME_FP_METHOD(REG)				\
-static VALUE						        \
+VALUE						                \
 thread_frame_##REG(VALUE klass, VALUE index)			\
 {								\
     if (!FIXNUM_P(index)) {					\
@@ -148,7 +148,8 @@ thread_frame_##REG(VALUE klass, VALUE index)			\
  * Returns a RubyVM object stored at dfp position <i>i</i>. The top object
  * is position 0. 
  */
-static VALUE thread_frame_dfp(VALUE klass, VALUE index) 
+static VALUE 
+thread_frame_dfp(VALUE klass, VALUE index) 
 {
     /* handled by THREAD_FRAME_FP_METHOD macro;  */
 }
@@ -163,7 +164,8 @@ THREAD_FRAME_FP_METHOD(dfp)
  * Returns a RubyVM object stored at lfp position <i>i</i>. The top object
  * is position 0. Negative values of <i>i</i> count from the end.
  */
-static VALUE thread_frame_lfp(VALUE klass, VALUE index) 
+static VALUE 
+thread_frame_lfp(VALUE klass, VALUE index) 
 {
   if (!FIXNUM_P(index)) {
     rb_raise(rb_eTypeError, "integer argument expected");
@@ -193,7 +195,8 @@ static VALUE thread_frame_lfp(VALUE klass, VALUE index)
  * Returns a RubyVM object stored at stack position <i>i</i>. The top object
  * is position 0. 1 is the next object.
  */
-static VALUE thread_frame_sp(VALUE klass, VALUE index) 
+VALUE 
+thread_frame_sp(VALUE klass, VALUE index) 
 {
     /* handled by THREAD_FRAME_FP_METHOD macro;  */
 }
@@ -208,7 +211,8 @@ THREAD_FRAME_FP_METHOD(sp)
  * Returns a RubyVM object stored at stack position <i>i</i>. The top object
  * is position 0. 1 is the next object.
  */
-static VALUE thread_frame_sp_set(VALUE klass, VALUE index, VALUE newvalue)
+static VALUE 
+thread_frame_sp_set(VALUE klass, VALUE index, VALUE newvalue)
 {
     if (!FIXNUM_P(index)) {
 	rb_raise(rb_eTypeError, "integer argument expected");
@@ -559,7 +563,7 @@ thread_frame_next(VALUE klass)
  *  return nil.
  *
  */
-static VALUE
+VALUE
 thread_frame_prev(int argc, VALUE *argv, VALUE klass)
 {
     VALUE nv;
@@ -723,35 +727,43 @@ thread_frame_s_prev(int argc, VALUE *argv, VALUE klass)
 static VALUE
 thread_frame_source_container(VALUE klass)
 {
-    VALUE file;
+    VALUE file = Qnil;
     const char *contain_type;
     rb_control_frame_t *cfp;
+    int is_eval = 0;
 
     THREAD_FRAME_SETUP ;
 
     for ( cfp = tf->cfp; cfp && !cfp->iseq && RUBYVM_CFUNC_FRAME_P(cfp); 
 	  cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp) ) ;
 
-    if (cfp->iseq) 
-	return iseq_source_container_internal(cfp->iseq);
-	
-    if (tf->th->vm->progname) 
-	file = tf->th->vm->progname;
-    else
-	return Qnil;
+    if (tf->th->vm->progname) file = tf->th->vm->progname;
 
     /* FIXME: Is this right? Do more?  Initially I had &&
        VM_FRAME_MAGIC_EVAL. I think apparently the misinformation
        regarding (eval) propagates back to other kinds of frames such
        as VM_MAGIC_BLOCK and so on.
      */
-    if (0 == strncmp(RSTRING_PTR(file), "(eval", sizeof("(eval")) 
-	|| 0 == strncmp(RSTRING_PTR(file), "<compiled>", sizeof("<compiled>")) 
-	|| (VM_FRAME_MAGIC_EVAL == VM_FRAME_TYPE(tf->cfp))
-	)
+    if ( file != Qnil && 
+	 (0 == strncmp(RSTRING_PTR(file), "(eval", sizeof("(eval")) 
+	  || 0 == strncmp(RSTRING_PTR(file), "<compiled>", sizeof("<compiled>")) 
+	  || (VM_FRAME_MAGIC_EVAL == VM_FRAME_TYPE(tf->cfp)))
+	) {
+	VALUE prev   = 	thread_frame_prev_internal(tf->cfp, tf->th, 1);
 	contain_type = "string";
-    else
+	is_eval      = 1;
+	if (prev) file = thread_frame_sp(prev, INT2FIX(3));
+    } else
 	contain_type = "file";
+
+    if (cfp->iseq) {
+	VALUE ary = iseq_source_container_internal(cfp->iseq);
+	if (is_eval) rb_ary_store(ary, 1, file);
+	return ary;
+    }
+	
+    if (!tf->th->vm->progname) return Qnil;
+
     return rb_ary_new3(2, rb_str_new2(contain_type), file);
 }
 
