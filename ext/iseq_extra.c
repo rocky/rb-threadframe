@@ -5,11 +5,11 @@
 VALUE rb_cIseq = rb_define_class_under(rb_cRubyVM, "InstructionSequence", ...)
 #endif
 
-#include "vm_core_mini.h"  /* Pulls in ruby.h */
+#include "../include/vm_core_mini.h"   /* Pulls in ruby.h and node.h */
 #ifdef HAVE_COMPILE_OPTIONS
 #endif
 #include "iseq_mini.h"  /* Pulls in ruby.h */
-#include "ruby19_externs.h"
+#include "../include/ruby19_externs.h"
 #include <string.h>       /* For strlen() */
 
 struct iseq_insn_info_entry {

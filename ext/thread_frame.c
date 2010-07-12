@@ -7,7 +7,7 @@
 #define THREADFRAME_VERSION "0.2"  
 
 #include <string.h>
-#include "vm_core_mini.h"  /* Pulls in ruby.h */
+#include "../include/vm_core_mini.h"   /* Pulls in ruby.h and node.h */
 #include "proc_extra.h"
 #include "iseq_extra.h"
 #include "thread_extra.h"
@@ -29,7 +29,7 @@ typedef struct
     VALUE *signature2[1]; /* proc */
 } thread_frame_t;
 
-#include "ruby19_externs.h"
+#include "../include/ruby19_externs.h"
 
 VALUE rb_cThreadFrame;       /* ThreadFrame class */
 VALUE rb_eThreadFrameError;  /* Error raised on invalid frames. */

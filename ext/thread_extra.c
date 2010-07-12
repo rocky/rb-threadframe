@@ -5,7 +5,7 @@
 VALUE rb_cThread = rb_define_class("Method", ...)
 #endif
 
-#include "vm_core_mini.h"  /* Pulls in ruby.h */
+#include "../include/vm_core_mini.h"   /* Pulls in ruby.h and node.h */
 #include "thread_extra.h"
 
 /* 

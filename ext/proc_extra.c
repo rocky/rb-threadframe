@@ -5,8 +5,8 @@
 VALUE rb_cProc = rb_define_class("Proc", ...)
 #endif
 
-#include "vm_core_mini.h"  /* Pulls in ruby.h */
-#include "ruby19_externs.h"
+#include "../include/vm_core_mini.h"   /* Pulls in ruby.h and node.h */
+#include "../include/ruby19_externs.h"
 
 struct METHOD {
     VALUE recv;
