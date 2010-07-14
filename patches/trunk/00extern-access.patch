@@ -1,0 +1,144 @@
+This patch allows a C extension -- maintained outside of to Ruby -- to get access to some methods inside Ruby and some of the fields inside vm_core.h.
+
+Also some minor spelling corrections have been made.
+
+For vm_core.h, a number of the changes just move some struct fields before #ifdefs to make it easier for a C extension to access those fields.
+
+An external C extension may have to copy a bit of the vm_core.h header. See for example ext/vm_core_mini.h of rb-threadframe. 
+
+Without this patch, access to some fields is difficult because there are configuration-specific #ifdef's that change the size of various structures. For example in rb_thread_struct there is:
+  #ifdef __ia64
+        VALUE ...
+  #endif
+  ...
+  /* tracer */
+  rb_event_hook_t *event_hooks;
+  rb_event_hook_t *event_flags;
+
+As a result, fields defined after the #ifdefs like event_flags are inaccessible to a C extension unless it has access the C-preprocessor flags used to build Ruby. 
+
+For proc.c we allow external access to method_arity by removing "static".
+
+Index: insns.def
+===================================================================
+--- insns.def	(revision 28642)
++++ insns.def	(working copy)
+@@ -15,7 +15,7 @@
+ 
+   instruction form:
+     DEFINE_INSN
+-    instrunction_name
++    instruction_name
+     (instruction_operands, ..)
+     (pop_values, ..)
+     (return value)
+Index: vm_core.h
+===================================================================
+--- vm_core.h	(revision 28642)
++++ vm_core.h	(working copy)
+@@ -34,7 +34,7 @@
+ #ifndef ENABLE_VM_OBJSPACE
+ #ifdef _WIN32
+ /*
+- * TODO: object space indenpendent st_table.
++ * TODO: object space independent st_table.
+  * socklist needs st_table in rb_w32_sysinit(), before object space
+  * initialization.
+  * It is too early now to change st_hash_type, since it breaks binary
+@@ -166,7 +166,7 @@
+     VALUE name;	         /* String: iseq name */
+     VALUE filename;      /* file information where this sequence from */
+     VALUE filepath;      /* real file path or nil */
+-    VALUE *iseq;         /* iseq (insn number and openrads) */
++    VALUE *iseq;         /* iseq (insn number and operands) */
+     VALUE *iseq_encoded; /* encoded iseq */
+     unsigned long iseq_size;
+     VALUE mark_ary;	/* Array: includes operands which should be GC marked */
+@@ -190,7 +190,7 @@
+      * argument information
+      *
+      *  def m(a1, a2, ..., aM,                    # mandatory
+-     *        b1=(...), b2=(...), ..., bN=(...),  # optinal
++     *        b1=(...), b2=(...), ..., bN=(...),  # optional
+      *        *c,                                 # rest
+      *        d1, d2, ..., dO,                    # post
+      *        &e)                                 # block
+@@ -390,6 +395,18 @@
+     /* passing state */
+     int state;
+ 
++    /* tracer */
++    rb_event_hook_t *event_hooks;
++    rb_event_flag_t event_flags;
++    int tracing;  /* 0 if not tracing. If less than 0, skip that many
++		     C call/return pairs */
++    int exec_event_tracing;  /* 0 if not in rb_threadptr_evec_event_hooks. */
++    int trace_skip_insn_count; /* # of VM instructions to skip */
++
++    /* misc */
++    int method_missing_reason;
++    int abort_on_exception;
++
+     /* for rb_iterate */
+     const rb_block_t *passed_block;
+ 
+@@ -412,6 +429,14 @@
+     int priority;
+     int slice;
+ 
++    /* statistics data for profiler */
++    VALUE stat_insn_usage;
++
++    /* fiber */
++    VALUE fiber;
++    VALUE root_fiber;
++    rb_jmpbuf_t root_jmpbuf;
++
+     native_thread_data_t native_thread_data;
+     void *blocking_region_buffer;
+ 
+@@ -461,22 +486,7 @@
+     jmp_buf machine_regs;
+     int mark_stack_len;
+ 
+-    /* statistics data for profiler */
+-    VALUE stat_insn_usage;
+-
+-    /* tracer */
+-    rb_event_hook_t *event_hooks;
+-    rb_event_flag_t event_flags;
+-    int tracing;
+-
+-    /* fiber */
+-    VALUE fiber;
+-    VALUE root_fiber;
+-    rb_jmpbuf_t root_jmpbuf;
+-
+     /* misc */
+-    int method_missing_reason;
+-    int abort_on_exception;
+ #ifdef USE_SIGALTSTACK
+     void *altstack;
+ #endif
+Index: proc.c
+===================================================================
+--- proc.c	(revision 28642)
++++ proc.c	(working copy)
+@@ -27,7 +27,7 @@
+ VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
+ 
+ static VALUE bmcall(VALUE, VALUE);
+-static int method_arity(VALUE);
++int method_arity(VALUE);
+ static int rb_obj_is_method(VALUE m);
+ rb_iseq_t *rb_method_get_iseq(VALUE method);
+ 
+@@ -1629,7 +1670,7 @@
+     return INT2FIX(n);
+ }
+ 
+-static int
++int
+ method_arity(VALUE method)
+ {
+     struct METHOD *data;
