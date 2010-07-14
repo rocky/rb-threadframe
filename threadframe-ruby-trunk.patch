@@ -233,25 +233,7 @@ Index: iseq.c
  static inline VALUE
  obj_resurrect(VALUE obj)
  {
-@@ -118,6 +150,17 @@
-     RUBY_MARK_LEAVE("iseq");
- }
- 
-+VALUE
-+iseq_alloc_shared(VALUE klass)
-+{
-+    VALUE volatile obj;
-+    rb_iseq_t *iseq;
-+
-+    obj = Data_Make_Struct(klass, rb_iseq_t, iseq_mark, NULL, iseq);
-+    MEMZERO(iseq, rb_iseq_t, 1);
-+    return obj;
-+}
-+
- static size_t
- iseq_memsize(const void *ptr)
- {
-@@ -395,6 +438,35 @@
+@@ -395,6 +427,35 @@
  				parent, ISEQ_TYPE_MAIN, &COMPILE_OPTION_DEFAULT);
  }
  
@@ -287,7 +269,7 @@ Index: iseq.c
  static VALUE
  rb_iseq_new_with_bopt_and_opt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
  				VALUE parent, VALUE type, VALUE bopt,
-@@ -409,6 +481,7 @@
+@@ -409,6 +470,7 @@
      prepare_iseq_build(iseq, name, filename, filepath, line_no, parent, type, bopt, option);
      rb_iseq_compile_node(self, node);
      cleanup_iseq_build(iseq);
@@ -295,7 +277,7 @@ Index: iseq.c
      return self;
  }
  
-@@ -654,9 +727,13 @@
+@@ -654,9 +716,13 @@
          return rb_sprintf("#<%s: uninitialized>", rb_obj_classname(self));
      }
  
@@ -312,7 +294,7 @@ Index: iseq.c
  }
  
  static
-@@ -726,6 +803,117 @@
+@@ -726,6 +792,117 @@
      return 0;
  }
  
@@ -430,7 +412,7 @@ Index: iseq.c
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -915,9 +1103,8 @@
+@@ -915,9 +1092,8 @@
  }
  
  VALUE
@@ -441,7 +423,7 @@ Index: iseq.c
      VALUE *iseq;
      VALUE str = rb_str_new(0, 0);
      VALUE child = rb_ary_new();
-@@ -1009,14 +1196,44 @@
+@@ -1009,14 +1185,44 @@
  	n += rb_iseq_disasm_insn(str, iseq, n, iseqdat, child);
      }
  
@@ -490,7 +472,7 @@ Index: iseq.c
  static VALUE
  iseq_s_disasm(VALUE klass, VALUE body)
  {
-@@ -1502,9 +1719,11 @@
+@@ -1502,9 +1708,11 @@
      rb_define_alloc_func(rb_cISeq, iseq_alloc);
      rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
      rb_define_method(rb_cISeq, "disasm", rb_iseq_disasm, 0);
