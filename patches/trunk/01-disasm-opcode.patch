@@ -1,6 +1,6 @@
 Add more access to VM opcodes and finer control of disassembly.
 
-rb_iseq_disasm_no_children() disassembles just the given instruction sequence, not any child instruction sequences (such as those of nested procedures).
+rb_iseq_disasm_nochildren() disassembles just the given instruction sequence, not any child instruction sequences (such as those of nested procedures).
 rb_child_iseqs (Ruby iseq#child_iseqs) returns and array of child instruction sequences of "iseq".
 
 Also adds access to an instruction's length, name, operand types. 
@@ -13,7 +13,7 @@ Index: vm_core.h
  VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, VALUE, const rb_compile_option_t*);
  VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
  VALUE rb_iseq_disasm(VALUE self);
-+VALUE rb_iseq_disasm_no_children(VALUE self);
++VALUE rb_iseq_disasm_nochildren(VALUE self);
  int rb_iseq_disasm_insn(VALUE str, VALUE *iseqval, size_t pos, rb_iseq_t *iseq, VALUE child);
  const char *ruby_node_name(int node);
  int rb_iseq_first_lineno(rb_iseq_t *iseq);
@@ -59,24 +59,6 @@ Index: iseq.c
 +
  static inline VALUE
  obj_resurrect(VALUE obj)
- {
-@@ -118,6 +150,17 @@
-     RUBY_MARK_LEAVE("iseq");
- }
- 
-+VALUE
-+iseq_alloc_shared(VALUE klass)
-+{
-+    VALUE volatile obj;
-+    rb_iseq_t *iseq;
-+
-+    obj = Data_Make_Struct(klass, rb_iseq_t, iseq_mark, NULL, iseq);
-+    MEMZERO(iseq, rb_iseq_t, 1);
-+    return obj;
-+}
-+
- static size_t
- iseq_memsize(const void *ptr)
  {
 @@ -726,6 +769,117 @@
      return 0;
