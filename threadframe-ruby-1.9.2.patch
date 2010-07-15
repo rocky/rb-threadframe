@@ -233,24 +233,6 @@ Index: iseq.c
  static inline VALUE
  obj_resurrect(VALUE obj)
  {
-@@ -118,6 +150,17 @@
-     RUBY_MARK_LEAVE("iseq");
- }
- 
-+VALUE
-+iseq_alloc_shared(VALUE klass)
-+{
-+    VALUE volatile obj;
-+    rb_iseq_t *iseq;
-+
-+    obj = Data_Make_Struct(klass, rb_iseq_t, iseq_mark, NULL, iseq);
-+    MEMZERO(iseq, rb_iseq_t, 1);
-+    return obj;
-+}
-+
- static size_t
- iseq_memsize(const void *ptr)
- {
 @@ -395,6 +438,35 @@
  				parent, ISEQ_TYPE_MAIN, &COMPILE_OPTION_DEFAULT);
  }
@@ -375,7 +357,7 @@ Index: iseq.c
 +}
 +
 +/**
-+ * Add to child array all instruction sequences fond in an instruction.
++ * Add to child array all instruction sequences found in an instruction.
 + */
 +static int
 +rb_iseq_insn_add_child(VALUE *iseq, size_t pos,
