@@ -308,3 +308,25 @@ Index: template/insns_info.inc.tmpl
  #ifdef USE_INSN_RET_NUM
  static int
  insn_ret_num(VALUE insn)
+Index: test/test_disam.rb
+===================================================================
+--- test/test_disasm.rb	(revision 28642)
++++ test/test_disasm.rb	(working copy)
+@@ -0,0 +1,17 @@
++# Some simple tests of RubyVM::InstructionSequence#disasm, and
++# #disasm_nochildren
++require 'test/unit'
++
++class TestDisasmClass < Test::Unit::TestCase
++
++  def test_basic
++    assert_equal(RubyVM::InstructionSequence.compile('1+2').disassemble,
++                 RubyVM::InstructionSequence.compile('1+2').disasm)
++
++    p='def five; 5 end; five'
++    s1=RubyVM::InstructionSequence.compile(p).disasm
++    assert_equal String, s1.class, 'disasm output should be a string'
++    s2=RubyVM::InstructionSequence.compile(p).disasm_nochildren
++    assert_equal true, s1.size > s2.size
++  end
++end
