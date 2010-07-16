@@ -233,6 +233,30 @@ Index: iseq.c
  static inline VALUE
  obj_resurrect(VALUE obj)
  {
+@@ -118,6 +150,23 @@
+     RUBY_MARK_LEAVE("iseq");
+ }
+ 
++/* 
++ * This routine is here to allow an external C extension to create a
++ * RubyVM::InstructionSequence object sequence from its own C pointer
++ * of type rb_iseq_t *. For example, the rb-threadframe uses this
++ * routine to implement Method#iseq and Proc#iseq.
++ */
++VALUE
++iseq_alloc_shared(VALUE klass)
++{
++    VALUE volatile obj;
++    rb_iseq_t *iseq;
++
++    obj = Data_Make_Struct(klass, rb_iseq_t, iseq_mark, NULL, iseq);
++    MEMZERO(iseq, rb_iseq_t, 1);
++    return obj;
++}
++
+ static size_t
+ iseq_memsize(const void *ptr)
+ {
 @@ -395,6 +427,48 @@
  				parent, ISEQ_TYPE_MAIN, &COMPILE_OPTION_DEFAULT);
  }
