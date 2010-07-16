@@ -1,8 +1,8 @@
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 28642)
+--- include/ruby/ruby.h	(revision 28647)
 +++ include/ruby/ruby.h	(working copy)
-@@ -1352,7 +1352,9 @@
+@@ -1351,7 +1351,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
  #define RUBY_EVENT_C_RETURN  0x0040
  #define RUBY_EVENT_RAISE     0x0080
@@ -15,7 +15,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 Index: insns.def
 ===================================================================
---- insns.def	(revision 28642)
+--- insns.def	(revision 28647)
 +++ insns.def	(working copy)
 @@ -15,7 +15,7 @@
  
@@ -28,7 +28,7 @@ Index: insns.def
      (return value)
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 28642)
+--- vm_core.h	(revision 28647)
 +++ vm_core.h	(working copy)
 @@ -34,7 +34,7 @@
  #ifndef ENABLE_VM_OBJSPACE
@@ -137,7 +137,7 @@ Index: vm_core.h
  VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, VALUE, const rb_compile_option_t*);
  VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
  VALUE rb_iseq_disasm(VALUE self);
-+VALUE rb_iseq_disasm_no_children(VALUE self);
++VALUE rb_iseq_disasm_nochildren(VALUE self);
  int rb_iseq_disasm_insn(VALUE str, VALUE *iseqval, size_t pos, rb_iseq_t *iseq, VALUE child);
  const char *ruby_node_name(int node);
  int rb_iseq_first_lineno(rb_iseq_t *iseq);
@@ -192,7 +192,7 @@ Index: vm_core.h
  #endif /* RUBY_VM_CORE_H */
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 28642)
+--- iseq.c	(revision 28647)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -233,10 +233,23 @@ Index: iseq.c
  static inline VALUE
  obj_resurrect(VALUE obj)
  {
-@@ -395,6 +427,35 @@
+@@ -395,6 +427,48 @@
  				parent, ISEQ_TYPE_MAIN, &COMPILE_OPTION_DEFAULT);
  }
  
++/* A debugger or similar introspection tool needs to be able to find
++ * all instruction sequences and access them. We facilitate this by
++ * adding the following behavior, analogous to SCRIPT_LINES__ for
++ * capturing source-code lines.
++ * 
++ * If SCRIPT_ISEQS__ is defined and is a hash, then every time a new
++ * instruction sequence is added, it is accessible from SCRIPT_ISEQS__
++ * using the "filename" as a key.
++ * 
++ * Similarly, if ISEQS__ is defined and is a hash, then every time a
++ * new instruction sequence is added, it is accessible from ISEQS__
++ * using its iseq_name as a key.  
++ */
 +static void
 +update_file_iseq(VALUE filename, VALUE iseq_name, VALUE iseq)
 +{
@@ -277,7 +290,7 @@ Index: iseq.c
      return self;
  }
  
-@@ -654,9 +716,13 @@
+@@ -653,9 +715,13 @@
          return rb_sprintf("#<%s: uninitialized>", rb_obj_classname(self));
      }
  
@@ -294,7 +307,7 @@ Index: iseq.c
  }
  
  static
-@@ -726,6 +792,117 @@
+@@ -725,6 +791,117 @@
      return 0;
  }
  
@@ -357,7 +370,7 @@ Index: iseq.c
 +}
 +
 +/**
-+ * Add to child array all instruction sequences fond in an instruction.
++ * Add to child array all instruction sequences found in an instruction.
 + */
 +static int
 +rb_iseq_insn_add_child(VALUE *iseq, size_t pos,
@@ -412,7 +425,7 @@ Index: iseq.c
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -915,9 +1092,8 @@
+@@ -914,9 +1091,8 @@
  }
  
  VALUE
@@ -423,7 +436,7 @@ Index: iseq.c
      VALUE *iseq;
      VALUE str = rb_str_new(0, 0);
      VALUE child = rb_ary_new();
-@@ -1009,14 +1185,44 @@
+@@ -1008,14 +1184,44 @@
  	n += rb_iseq_disasm_insn(str, iseq, n, iseqdat, child);
      }
  
@@ -472,7 +485,7 @@ Index: iseq.c
  static VALUE
  iseq_s_disasm(VALUE klass, VALUE body)
  {
-@@ -1502,9 +1708,11 @@
+@@ -1501,9 +1707,11 @@
      rb_define_alloc_func(rb_cISeq, iseq_alloc);
      rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
      rb_define_method(rb_cISeq, "disasm", rb_iseq_disasm, 0);
@@ -486,7 +499,7 @@ Index: iseq.c
      /* rb_define_singleton_method(rb_cISeq, "load", iseq_s_load, -1); */
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 28642)
+--- iseq.h	(revision 28647)
 +++ iseq.h	(working copy)
 @@ -101,4 +101,10 @@
  #define DEFINED_ZSUPER INT2FIX(9)
@@ -501,9 +514,9 @@ Index: iseq.h
  #endif /* RUBY_COMPILE_H */
 Index: load.c
 ===================================================================
---- load.c	(revision 28642)
+--- load.c	(revision 28647)
 +++ load.c	(working copy)
-@@ -294,11 +294,13 @@
+@@ -293,11 +293,14 @@
      if (state == 0) {
  	NODE *node;
  	VALUE iseq;
@@ -512,15 +525,16 @@ Index: load.c
  	th->mild_compile_error++;
  	node = (NODE *)rb_load_file(RSTRING_PTR(fname));
  	loaded = TRUE;
--	iseq = rb_iseq_new_top(node, rb_str_new2("<top (required)>"), fname, rb_realpath_internal(Qnil, fname, 1), Qfalse);
+-	iseq = rb_iseq_new_top(node, rb_str_new2("<top (required)>"), fname, fname, Qfalse);
++	
 +	snprintf(iseq_name, sizeof(iseq_name), "<top %s>", RSTRING_PTR(fname));
-+	iseq = rb_iseq_new_top(node, rb_str_new2(iseq_name), fname, rb_realpath_internal(Qnil, fname, 1), Qfalse);
++	iseq = rb_iseq_new_top(node, rb_str_new2(iseq_name), fname, fname, Qfalse);
  	th->mild_compile_error--;
  	rb_iseq_eval(iseq);
      }
 Index: compile.c
 ===================================================================
---- compile.c	(revision 28642)
+--- compile.c	(revision 28647)
 +++ compile.c	(working copy)
 @@ -3353,6 +3353,9 @@
  	if (iseq->compile_data->redo_label != 0) {
@@ -534,7 +548,7 @@ Index: compile.c
  	    add_ensure_iseq(ret, iseq, 0);
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 28642)
+--- vm_eval.c	(revision 28647)
 +++ vm_eval.c	(working copy)
 @@ -67,22 +67,37 @@
  	break;
@@ -576,7 +590,7 @@ Index: vm_eval.c
  	break;
        }
        case VM_METHOD_TYPE_ATTRSET: {
-@@ -869,7 +884,8 @@
+@@ -868,7 +883,8 @@
  #endif
  		    if (UNLIKELY(VM_FRAME_TYPE(th->cfp) == VM_FRAME_MAGIC_CFUNC)) {
  			const rb_method_entry_t *me = th->cfp->me;
@@ -586,7 +600,7 @@ Index: vm_eval.c
  		    }
  
  		    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
-@@ -1025,7 +1041,25 @@
+@@ -1024,7 +1040,25 @@
      if (state) {
  	if (state == TAG_RAISE) {
  	    VALUE errinfo = th->errinfo;
@@ -615,7 +629,7 @@ Index: vm_eval.c
  		ID id_mesg;
 Index: proc.c
 ===================================================================
---- proc.c	(revision 28642)
+--- proc.c	(revision 28647)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -692,7 +706,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 28642)
+--- thread.c	(revision 28647)
 +++ thread.c	(working copy)
 @@ -336,6 +336,16 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -1009,7 +1023,7 @@ Index: thread.c
      {
 Index: eval.c
 ===================================================================
---- eval.c	(revision 28642)
+--- eval.c	(revision 28647)
 +++ eval.c	(working copy)
 @@ -34,7 +34,7 @@
  
@@ -1050,7 +1064,7 @@ Index: eval.c
      JUMP_TAG(TAG_RAISE);
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 28642)
+--- vm_exec.h	(revision 28647)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
@@ -1118,7 +1132,7 @@ Index: vm_exec.h
  #define debugs printf
 Index: vm.c
 ===================================================================
---- vm.c	(revision 28642)
+--- vm.c	(revision 28647)
 +++ vm.c	(working copy)
 @@ -691,6 +691,7 @@
      if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
@@ -1162,7 +1176,7 @@ Index: vm.c
  		EXEC_EVENT_HOOK(th, RUBY_EVENT_END, th->cfp->self, 0, 0);
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 28642)
+--- vm_insnhelper.c	(revision 28647)
 +++ vm_insnhelper.c	(working copy)
 @@ -26,9 +26,12 @@
  	      const VALUE *pc, VALUE *sp, VALUE *lfp,
@@ -1246,7 +1260,7 @@ Index: vm_insnhelper.c
  	VALUE *p_rsp;
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 28642)
+--- tool/instruction.rb	(revision 28647)
 +++ tool/instruction.rb	(working copy)
 @@ -854,6 +854,17 @@
        commit "INSN_ENTRY(#{insn.name}){"
@@ -1268,7 +1282,7 @@ Index: tool/instruction.rb
        make_header_operands   insn
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 28642)
+--- test/ruby/test_settracefunc.rb	(revision 28647)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -23,8 +23,6 @@
       4: x = 1 + 1
@@ -1446,7 +1460,7 @@ Index: test/ruby/test_settracefunc.rb
  end
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 28642)
+--- template/insns_info.inc.tmpl	(revision 28647)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -42,38 +42,6 @@
  }
@@ -1487,3 +1501,58 @@ Index: template/insns_info.inc.tmpl
  #ifdef USE_INSN_RET_NUM
  static int
  insn_ret_num(VALUE insn)
+Index: test/ruby/test_disam.rb
+===================================================================
+--- test/ruby/test_disasm.rb	(revision 28642)
++++ test/ruby/test_disasm.rb	(working copy)
+@@ -0,0 +1,17 @@
++# Some simple tests of RubyVM::InstructionSequence#disasm, and
++# #disasm_nochildren
++require 'test/unit'
++
++class TestDisasmClass < Test::Unit::TestCase
++
++  def test_basic
++    assert_equal(RubyVM::InstructionSequence.compile('1+2').disassemble,
++                 RubyVM::InstructionSequence.compile('1+2').disasm)
++
++    p='def five; 5 end; five'
++    s1=RubyVM::InstructionSequence.compile(p).disasm
++    assert_equal String, s1.class, 'disasm output should be a string'
++    s2=RubyVM::InstructionSequence.compile(p).disasm_nochildren
++    assert_equal true, s1.size > s2.size
++  end
++end
+Index: test/ruby/test_iseq.rb
+===================================================================
+--- test/ruby/test_iseq.rb	(revision 28642)
++++ test/ruby/test_iseq.rb	(working copy)
+@@ -0,0 +1,1 @@
++# See that setting ISEQS__ and SCRIPT_ISEQS__ saves 
++# RubyVM::Instruction_sequenses
++require 'test/unit'
++
++class TestIseqAccess < Test::Unit::TestCase
++  def test_basic
++    Kernel.const_set(:SCRIPT_ISEQS__, {})
++    Kernel.const_set(:ISEQS__, {})
++    sizes=[]
++    [ISEQS__, SCRIPT_ISEQS__].each do |iseq_hash|
++      sizes << iseq_hash.size
++    end
++    # defining five should trigger five instruction sequence additions
++    # to ISEQS__ and SCRIPT_ISEQS__
++    # 
++    eval 'def five; 5 end'
++    assert_equal sizes[0], sizes[1]
++    [SCRIPT_ISEQS__, ISEQS__].each do |iseq_hash|
++      assert_equal true, iseq_hash.size > sizes.pop
++      assert_equal Hash, iseq_hash.class
++      a = iseq_hash.first
++      assert_equal Array, a.class
++      assert_equal RubyVM::InstructionSequence, iseq_hash.values[0][0].class
++    end
++    Kernel.const_set(:SCRIPT_ISEQS__, nil)
++    Kernel.const_set(:ISEQS__, nil)
++  end
++end

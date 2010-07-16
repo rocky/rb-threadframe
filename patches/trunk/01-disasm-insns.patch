@@ -308,10 +308,10 @@ Index: template/insns_info.inc.tmpl
  #ifdef USE_INSN_RET_NUM
  static int
  insn_ret_num(VALUE insn)
-Index: test/test_disam.rb
+Index: test/ruby/test_disam.rb
 ===================================================================
---- test/test_disasm.rb	(revision 28642)
-+++ test/test_disasm.rb	(working copy)
+--- test/ruby/test_disasm.rb	(revision 28642)
++++ test/ruby/test_disasm.rb	(working copy)
 @@ -0,0 +1,17 @@
 +# Some simple tests of RubyVM::InstructionSequence#disasm, and
 +# #disasm_nochildren
