@@ -1,0 +1,107 @@
+A debugger or similar introspection tool needs to be able to find all
+instruction sequences and access them. This patch facilitates this by
+adding the following behavior, analogous to SCRIPT_LINES__ for
+capturing source-code lines.
+
+If SCRIPT_ISEQS__ is defined and is a hash, then every time a new
+instruction sequence is added, it is accessible from SCRIPT_ISEQS__
+using the "filename" as a key.
+
+Similarly, if ISEQS__ is defined and is a hash, then every time a new
+instruction sequence is added, it is accessible from ISEQS__ using its
+iseq_name as a key.
+
+Index: iseq.c
+===================================================================
+--- iseq.c	(revision 28642)
++++ iseq.c	(working copy)
+@@ -427,6 +427,48 @@
+ 				parent, ISEQ_TYPE_MAIN, &COMPILE_OPTION_DEFAULT);
+ }
+ 
++/* A debugger or similar introspection tool needs to be able to find
++ * all instruction sequences and access them. We facilitate this by
++ * adding the following behavior, analogous to SCRIPT_LINES__ for
++ * capturing source-code lines.
++ * 
++ * If SCRIPT_ISEQS__ is defined and is a hash, then every time a new
++ * instruction sequence is added, it is accessible from SCRIPT_ISEQS__
++ * using the "filename" as a key.
++ * 
++ * Similarly, if ISEQS__ is defined and is a hash, then every time a
++ * new instruction sequence is added, it is accessible from ISEQS__
++ * using its iseq_name as a key.  
++ */
++static void
++update_file_iseq(VALUE filename, VALUE iseq_name, VALUE iseq)
++{
++    ID hash_id;
++    CONST_ID(hash_id, "SCRIPT_ISEQS__");
++    if (rb_const_defined_at(rb_cObject, hash_id)) {
++	VALUE hash = rb_const_get_at(rb_cObject, hash_id);
++	if (TYPE(hash) == T_HASH) {
++	    VALUE iseqs = rb_hash_aref(hash, filename);
++	    if (TYPE(iseqs) == T_ARRAY)
++		rb_ary_push(iseqs, iseq);
++	    else
++		rb_hash_aset(hash, filename, rb_ary_new3(1, iseq));
++	}
++    }
++    CONST_ID(hash_id, "ISEQS__");
++    if (rb_const_defined_at(rb_cObject, hash_id)) {
++	VALUE hash = rb_const_get_at(rb_cObject, hash_id);
++	if (TYPE(hash) == T_HASH) {
++	    VALUE iseqs = rb_hash_aref(hash, iseq_name);
++	    if (TYPE(iseqs) == T_ARRAY)
++		rb_ary_push(iseqs, iseq);
++	    else
++		rb_hash_aset(hash, iseq_name, rb_ary_new3(1, iseq));
++	}
++    }
++}
++
++
+ static VALUE
+ rb_iseq_new_with_bopt_and_opt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
+ 				VALUE parent, VALUE type, VALUE bopt,
+@@ -441,6 +483,7 @@
+     prepare_iseq_build(iseq, name, filename, filepath, line_no, parent, type, bopt, option);
+     rb_iseq_compile_node(self, node);
+     cleanup_iseq_build(iseq);
++    update_file_iseq(filename, name, self);
+     return self;
+ }
+
+Index: test/ruby/test_iseq.rb
+===================================================================
+--- test/ruby/test_iseq.rb	(revision 28642)
++++ test/ruby/test_iseq.rb	(working copy)
+@@ -0,0 +1,1 @@
++# See that setting ISEQS__ and SCRIPT_ISEQS__ saves 
++# RubyVM::Instruction_sequenses
++require 'test/unit'
++
++class TestIseqAccess < Test::Unit::TestCase
++  def test_basic
++    Kernel.const_set(:SCRIPT_ISEQS__, {})
++    Kernel.const_set(:ISEQS__, {})
++    sizes=[]
++    [ISEQS__, SCRIPT_ISEQS__].each do |iseq_hash|
++      sizes << iseq_hash.size
++    end
++    # defining five should trigger five instruction sequence additions
++    # to ISEQS__ and SCRIPT_ISEQS__
++    # 
++    eval 'def five; 5 end'
++    assert_equal sizes[0], sizes[1]
++    [SCRIPT_ISEQS__, ISEQS__].each do |iseq_hash|
++      assert_equal true, iseq_hash.size > sizes.pop
++      assert_equal Hash, iseq_hash.class
++      a = iseq_hash.first
++      assert_equal Array, a.class
++      assert_equal RubyVM::InstructionSequence, iseq_hash.values[0][0].class
++    end
++    Kernel.const_set(:SCRIPT_ISEQS__, nil)
++    Kernel.const_set(:ISEQS__, nil)
++  end
++end
