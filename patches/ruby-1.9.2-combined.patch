@@ -873,9 +873,9 @@ Index: compile.c
  	    add_ensure_iseq(ret, iseq, 0);
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 28647)
+--- vm_eval.c	(revision 28684)
 +++ vm_eval.c	(working copy)
-@@ -67,22 +67,37 @@
+@@ -67,7 +67,6 @@
  	break;
        }
        case VM_METHOD_TYPE_CFUNC: {
@@ -883,16 +883,9 @@ Index: vm_eval.c
  	{
  	    rb_control_frame_t *reg_cfp = th->cfp;
  	    rb_control_frame_t *cfp =
- 		vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
+@@ -75,14 +74,23 @@
  			      recv, (VALUE)blockptr, 0, reg_cfp->sp, 0, 1);
  
-+	    /* Store actual argument count as the block_iseq
-+	       pointer. cfunc.argc contains the prototype
-+	       value. Should formalize this by making block_iseq a
-+	       union in vm_core.h
-+	    */
-+	    cfp->block_iseq = (rb_iseq_t *) INT2FIX(argc);
-+
  	    cfp->me = me;
 +	    if (0 == th->tracing)
 +		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
@@ -915,7 +908,7 @@ Index: vm_eval.c
  	break;
        }
        case VM_METHOD_TYPE_ATTRSET: {
-@@ -868,7 +883,8 @@
+@@ -868,7 +876,8 @@
  #endif
  		    if (UNLIKELY(VM_FRAME_TYPE(th->cfp) == VM_FRAME_MAGIC_CFUNC)) {
  			const rb_method_entry_t *me = th->cfp->me;
@@ -925,7 +918,7 @@ Index: vm_eval.c
  		    }
  
  		    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
-@@ -1024,7 +1040,25 @@
+@@ -1024,7 +1033,25 @@
      if (state) {
  	if (state == TAG_RAISE) {
  	    VALUE errinfo = th->errinfo;
@@ -952,6 +945,7 @@ Index: vm_eval.c
  		VALUE mesg, errat, bt2;
  		extern VALUE rb_get_backtrace(VALUE info);
  		ID id_mesg;
+
 Index: proc.c
 ===================================================================
 --- proc.c	(revision 28647)
@@ -1524,7 +1518,7 @@ Index: vm_insnhelper.c
  
  #define COLLECT_PROFILE 0
  #if COLLECT_PROFILE
-@@ -391,11 +395,18 @@
+@@ -391,11 +395,11 @@
      const rb_method_definition_t *def = me->def;
      rb_control_frame_t *cfp;
  
@@ -1532,13 +1526,6 @@ Index: vm_insnhelper.c
 -
      cfp = vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
  			recv, (VALUE) blockptr, 0, reg_cfp->sp, 0, 1);
-+
-+    /* Store actual argument count as the block_iseq pointer. cfunc.argc contains
-+       the prototype value. Should formalize this by making block_iseq a union
-+       in vm_core.h
-+    */
-+    cfp->block_iseq = (rb_iseq_t *) INT2FIX(num);
-+
      cfp->me = me;
 +    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, me->called_id, me->klass);
 +
