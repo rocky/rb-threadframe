@@ -421,7 +421,7 @@ Index: vm_core.h
  VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, VALUE, const rb_compile_option_t*);
  VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
  VALUE rb_iseq_disasm(VALUE self);
-+VALUE rb_iseq_disasm_no_children(VALUE self);
++VALUE rb_iseq_disasm_nochildren(VALUE self);
  int rb_iseq_disasm_insn(VALUE str, VALUE *iseqval, size_t pos, rb_iseq_t *iseq, VALUE child);
  const char *ruby_node_name(int node);
  int rb_iseq_first_lineno(rb_iseq_t *iseq);
@@ -541,7 +541,7 @@ Index: iseq.c
  static size_t
  iseq_memsize(const void *ptr)
  {
-@@ -395,6 +444,48 @@
+@@ -395,6 +427,48 @@
  				parent, ISEQ_TYPE_MAIN, &COMPILE_OPTION_DEFAULT);
  }
  
