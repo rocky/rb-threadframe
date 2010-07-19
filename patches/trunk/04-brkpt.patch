@@ -159,7 +159,7 @@ Index: brkpt.c
 + *  call-seq:
 + *     RubyVM::InstructionSequence#dealloc -> bool
 + *
-+ *  DeAllocates a breakpoint byte vector of zeros for each 
++ *  Deallocates a breakpoint byte vector of zeros for each 
 + *  instruction in the instruction sequence. True is returned if 
 + *  a vector was allocated, false if there already was one allocated,
 + *  and nil if there was some problem.
