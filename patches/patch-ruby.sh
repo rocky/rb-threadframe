@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-file=${SOURCE_FILE[0]}
-dirname=${1%/*}
+function __file__ {
+    typeset -p BASH_source
+    echo ${BASH_SOURCE[0]}
+}
+file=$(__file__)
+dirname=${file%/*}
 
 patchfile=${1:-'head'}
 case $patchfile in
