@@ -12,8 +12,8 @@ case $patchfile in
 	    03-iseq-create.patch   \
 	    04-brkpt.patch
 	do 
-	    echo -- Applying patches in ${dirname}/$file ...
-	    patch -p0 < ${dirname}/$file
+	    echo -- Applying patches in ${dirname}/trunk/$file ...
+	    patch -p0 < ${dirname}/trunk/$file
 	done
 	;;
     combined ) 
