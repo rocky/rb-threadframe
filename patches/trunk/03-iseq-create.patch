@@ -1,13 +1,18 @@
-Add "iseq_alloc_shared" to allow an external C extension to create a
-RubyVM::InstructionSequence object sequence from its own C pointer of
-type rb_iseq_t *. For example, the rb-threadframe uses this routine to
-implement Method#iseq and Proc#iseq.
+Adds C function iseq_alloc_shared(). This allows an external C
+extension to create a RubyVM::InstructionSequence object sequence from
+its own C pointer of type rb_iseq_t *. For example, the rb-threadframe
+uses this routine to implement Method#iseq and Proc#iseq.
+
+It is likely that one might want to move Method#iseq and Proc#iseq out
+of rb-threadframe and into Ruby core, but I think iseq_alloc_shared()
+should still exist for other situations that haven't been thought of
+yet.
 
 Index: iseq.c
 ===================================================================
 --- iseq.c	(revision 28642)
 +++ iseq.c	(working copy)
-@@ -118,6 +150,23 @@
+@@ -150,6 +150,23 @@
      RUBY_MARK_LEAVE("iseq");
  }
  

@@ -89,7 +89,7 @@ thread_frame_invalid_internal(thread_frame_t *tf)
     
 #define SAVE_FRAME(TF, TH)						\
     tf->th = TH;							\
-    tf->cfp = thread_context_frame(tf->th);				\
+    tf->cfp = thread_control_frame(tf->th);				\
     memcpy(tf->signature1, &(tf->cfp->iseq), sizeof(tf->signature1));	\
     memcpy(tf->signature2, &(tf->cfp->proc), sizeof(tf->signature2)) 
 

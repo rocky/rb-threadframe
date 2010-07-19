@@ -38,7 +38,6 @@ class TestISeqBrkpt < Test::Unit::TestCase
                  "Offset %d should be unset even when deallocated" % max_offset)
 
     assert_raises TypeError do iseq.brkpt_set('a') end
-
   end
 
   def test_iseq_brkpt_set
@@ -56,8 +55,6 @@ class TestISeqBrkpt < Test::Unit::TestCase
     assert_equal(true, $saw_brkpt)
     clear_trace_func
   end
-
-
 end
 
 # We want to double-check we didn't mess up any pointers somewhere.

@@ -308,6 +308,25 @@ Index: template/insns_info.inc.tmpl
  #ifdef USE_INSN_RET_NUM
  static int
  insn_ret_num(VALUE insn)
+Index: thread.c
+===================================================================
+--- thread.c	(revision 28647)
++++ thread.c	(working copy)
+@@ -336,6 +336,14 @@
+ static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
+ static void rb_mutex_abandon_all(mutex_t *mutexes);
+ 
++rb_control_frame_t *
++thread_control_frame(rb_thread_t *th) 
++{
++  if (th == NULL || ((VALUE) th) == Qnil)
++    th = GET_THREAD(); /* main thread */
++  return rb_vm_get_ruby_level_next_cfp(th, th->cfp);
++}
++
+ void
+ rb_thread_terminate_all(void)
+ {
 Index: test/ruby/test_disam.rb
 ===================================================================
 --- test/ruby/test_disasm.rb	(revision 28642)
