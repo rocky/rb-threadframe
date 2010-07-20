@@ -133,7 +133,7 @@ Index: proc.c
  static int rb_obj_is_method(VALUE m);
  rb_iseq_t *rb_method_get_iseq(VALUE method);
  
-@@ -1630,7 +1670,7 @@
+@@ -1636,7 +1670,7 @@
      return INT2FIX(n);
  }
  

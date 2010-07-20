@@ -15,7 +15,7 @@ Index: iseq.c
 ===================================================================
 --- iseq.c	(revision 28642)
 +++ iseq.c	(working copy)
-@@ -427,6 +427,48 @@
+@@ -429,6 +427,48 @@
  				parent, ISEQ_TYPE_MAIN, &COMPILE_OPTION_DEFAULT);
  }
  
@@ -64,7 +64,7 @@ Index: iseq.c
  static VALUE
  rb_iseq_new_with_bopt_and_opt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
  				VALUE parent, VALUE type, VALUE bopt,
-@@ -441,6 +483,7 @@
+@@ -443,6 +483,7 @@
      prepare_iseq_build(iseq, name, filename, filepath, line_no, parent, type, bopt, option);
      rb_iseq_compile_node(self, node);
      cleanup_iseq_build(iseq);
