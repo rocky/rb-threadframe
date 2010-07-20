@@ -288,7 +288,7 @@ thread_frame_argc(VALUE klass)
     if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
 	return iseq_argc(thread_frame_iseq(klass));
     } else if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
-        return INT2FIX(tf->cfp->me->def->body.cfunc.argc);
+        return INT2FIX(tf->cfp->me->def->body.cfunc.actual_argc);
     } else
 	return Qnil;
 }
