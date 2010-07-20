@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-function __file__ {
-    typeset -p BASH_source
+function __FILE__ {
     echo ${BASH_SOURCE[0]}
 }
-file=$(__file__)
+file=$(__FILE__)
 dirname=${file%/*}
 
 patchfile=${1:-'head'}

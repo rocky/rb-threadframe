@@ -2,8 +2,8 @@
 require 'test/unit'
 require_relative '../../ext/thread_frame'
 
-class TestTracing < Test::Unit::TestCase
-  EVENT2MASK = {
+class TestTracingMasks < Test::Unit::TestCase
+  @@EVENT2MASK = {
     'line'     => 0x01,
     'call'     => 0x08,
     'return'   => 0x10,
@@ -43,7 +43,7 @@ class TestTracing < Test::Unit::TestCase
 
     @keep_count = true
     @counts = {}
-    EVENT2MASK.each do |event_name, mask|
+    @@EVENT2MASK.each do |event_name, mask|
       @events = []
       Thread.current.set_trace_func(method(:trace_hook).to_proc, mask)
       something_to_test(5)
@@ -63,7 +63,7 @@ class TestTracing < Test::Unit::TestCase
     ].each do |event_names|
       @events = []
       mask = event_names.map{|name| 
-        EVENT2MASK[name]
+        @@EVENT2MASK[name]
       }.inject do 
         |mask, bit| 
         mask |= bit
