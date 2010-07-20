@@ -351,10 +351,23 @@ Index: brkpt.c
 Index: test/ruby/test_brkpt.rb
 --- test/ruby/test_brkpt.rb	(revision 28642)
 +++ test/ruby/test_brkpt.rb	(working copy)
-@@ -0,0 +1,32 @@
+@@ -0,0 +1,60 @@
 +require 'test/unit'
 +
 +class TestISeqBrkpt < Test::Unit::TestCase
++
++  def setup
++    @original_compile_option = RubyVM::InstructionSequence.compile_option
++    RubyVM::InstructionSequence.compile_option = {
++      :trace_instruction => false,
++      :specialized_instruction => false
++    }
++  end
++
++  def teardown
++    set_trace_func(nil)
++    RubyVM::InstructionSequence.compile_option = @original_compile_option
++  end
 +
 +  def test_iseq_brkpt
 +    iseq = RubyVM::InstructionSequence.compile('x=1; y=2')
@@ -379,6 +392,21 @@ Index: test/ruby/test_brkpt.rb
 +
 +    assert_raises TypeError do iseq.brkpt_set('a') end
 +
++    iseq.brkpt_set(2)    
++    iseq.brkpt_set(4)    
++    events = []
++    eval <<-EOF.gsub(/^.*?: /, "")
++     1: set_trace_func(Proc.new { |event, file, lineno, mid, binding, klass|
++     2:   events << [event, lineno, mid, klass]
++     3: })
++     4: iseq.eval
++     5: set_trace_func(nil)
++    EOF
++    # puts iseq.disassemble
++    brkpt_events = events.select{|item| item[0] == 'brkpt'}
++    assert_equal(2, brkpt_events.size, 
++                 "Expecting to see 2 brkpts in #{events}.inspect")
++    assert_equal(true, iseq.brkpt_dealloc)
 +  end
 +end
 +
