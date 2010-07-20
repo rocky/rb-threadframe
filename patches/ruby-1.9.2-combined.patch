@@ -1,290 +1,23 @@
-Index: common.mk
+Index: method.h
 ===================================================================
---- common.mk	(revision 28647)
-+++ common.mk	(working copy)
-@@ -30,6 +30,7 @@
+--- method.h	(revision 28682)
++++ method.h	(working copy)
+@@ -46,7 +46,11 @@
  
- COMMONOBJS    = array.$(OBJEXT) \
- 		bignum.$(OBJEXT) \
-+		brkpt.$(OBJEXT) \
- 		class.$(OBJEXT) \
- 		compar.$(OBJEXT) \
- 		complex.$(OBJEXT) \
-Index: brkpt.c
---- brkpt.c	(revision 28642)
-+++ brkpt.c	(working copy)
-@@ -0,0 +1,232 @@
-+/**********************************************************************
-+  brkpt.c - VM-assisted Breakpoint support 
-+
-+**********************************************************************/
-+
-+#include "ruby/ruby.h"
-+
-+#include "vm_core.h"
-+#include "iseq.h"
-+
-+VALUE rb_cISeq;
-+
-+/* 
-+ *  call-seq:
-+ *  RubyVM::InstructionSequence#brkpt_alloc -> bool
-+ *
-+ *  Allocates a breakpoint byte vector of zeros for each 
-+ *  instruction in the instruction sequence. True is returned if 
-+ *  a vector was allocated, false if there already was one allocated,
-+ *  and nil if there was some problem.
-+ */
-+
-+VALUE
-+iseq_brkpt_alloc(VALUE iseqval)
-+{
-+    rb_iseq_t *iseq;
-+    if (Qnil == iseqval) return Qnil;
-+    else {
-+	GetISeqPtr(iseqval, iseq);
-+	if (iseq->breakpoints) {
-+	    return Qfalse;
-+	}
-+	iseq->breakpoints = calloc( iseq->iseq_size, sizeof(unsigned char));
-+	return Qtrue;
-+    }
-+}
-+
-+/* 
-+ *  Document-method: RubyVM::InstructionSequence::brkpt_dealloc -> bool
-+ *
-+ *  call-seq:
-+ *     RubyVM::InstructionSequence#dealloc -> bool
-+ *
-+ *  DeAllocates a breakpoint byte vector of zeros for each 
-+ *  instruction in the instruction sequence. True is returned if 
-+ *  a vector was allocated, false if there already was one allocated,
-+ *  and nil if there was some problem.
-+ */
-+VALUE
-+iseq_brkpt_dealloc(VALUE iseqval)
-+{
-+    rb_iseq_t *iseq;
-+    if (Qnil == iseqval) return Qnil;
-+    else {
-+	GetISeqPtr(iseqval, iseq);
-+	if (!iseq->breakpoints) {
-+	    return Qfalse;
-+	}
-+	free(iseq->breakpoints);
-+	iseq->breakpoints = NULL;
-+	return Qtrue;
-+    }
-+}
-+
-+/* 
-+ *  Checks that offsetval is in range and converts it to a positive
-+ *  integer. An exception is raised if offsetval is invalid.
-+ */
-+static long unsigned int
-+iseq_get_offset_internal(rb_iseq_t *iseq, VALUE offsetval)
-+{
-+    if (FIXNUM_P(offsetval)) {
-+	long int offset = FIX2INT(offsetval);
-+	unsigned long int uoffset;
-+	unsigned long int size = iseq->iseq_size;
-+
-+	uoffset = (offset < 0) ? 
-+	    (unsigned long int) size + offset :
-+	    (unsigned long int) offset;
-+	
-+	/* FIXME: check that offset is at a valid instruction offset */
-+	if (uoffset >= size) {
-+	    rb_raise(rb_eTypeError, 
-+		     "instruction sequence offset %lu should be in the range -%lu .. %lu",
-+		     uoffset, size, size-1);
-+	}
-+	return uoffset;
-+    } else {
-+	rb_raise(rb_eTypeError, "type mismatch: %s given, Fixnum expected", 
-+		 rb_class2name(CLASS_OF(offsetval)));
-+	return 0; /* NOT REACHED */
-+    }
-+    
-+}
-+
-+/* 
-+ *  Document-method: RubyVM::InstructionSequence::brkpt_get(offset)
-+ *
-+ *  call-seq:
-+ *     RubyVM::InstructionSequence#brkpt_get(offset) -> bool
-+ *
-+ *  Get a value of breakpoint of byte vector at +offset+.
-+ *
-+ *  True is returned if there is a breakpoint previously set, false
-+ *  if not, and nil if there was some problem. Negative values of
-+ *  <i>offset</i> count from the end of the instruction sequence.
-+ */
-+VALUE
-+iseq_brkpt_get(VALUE iseqval, VALUE offsetval)
-+{
-+    if (Qnil != iseqval) {
-+	rb_iseq_t *iseq;
-+	unsigned long int uoffset;
-+	
-+	GetISeqPtr(iseqval, iseq);
-+	if (!iseq->breakpoints) return Qfalse;
-+
-+	uoffset = iseq_get_offset_internal(iseq, offsetval);
-+	      
-+	/* FIXME: check that offset is at a valid instruction offset */
-+	return (0 != iseq->breakpoints[uoffset]) ? Qtrue : Qfalse;
-+    }
-+    return Qnil;
-+}
-+
-+static VALUE
-+iseq_brkpt_set_unset(VALUE iseqval, VALUE offsetval, char val)
-+{
-+    if (Qnil != iseqval) {
-+	rb_iseq_t *iseq;
-+	unsigned long int uoffset;
-+
-+	GetISeqPtr(iseqval, iseq);
-+	if (!iseq->breakpoints) {
-+	    if (val) {
-+		/* Set breakpoint requested */
-+		VALUE alloc_ret = iseq_brkpt_alloc(iseqval);
-+		if (!iseq->breakpoints) return alloc_ret;
-+	    } else 
-+		/* Unset breakpoint requested. */
-+		return Qtrue;
-+	}
-+	uoffset = iseq_get_offset_internal(iseq, offsetval);
-+
-+	/* FIXME: check that offset is at a valid instruction offset */
-+	iseq->breakpoints[uoffset] = val;
-+	return Qtrue;
-+    }
-+    return Qnil;
-+}
-+
-+/* 
-+ *  Document-method: RubyVM::InstructionSequence::brkpt_set(offset) -> bool
-+ *
-+ *  call-seq:
-+ *     RubyVM::InstructionSequence#brkpt_set(offset) -> bool
-+ *
-+ *  Set a breakpoint of byte vector at +offset+.
-+ *
-+ * +true+ is returned if the breakpoint is now set. An IndexError can or a
-+ * TypeError can be raised if values are invalid.  Negative values of
-+ * +offset+ count from the end of the instruction sequence.
-+ */
-+VALUE
-+iseq_brkpt_set(VALUE iseqval, VALUE offsetval)
-+{
-+    return iseq_brkpt_set_unset(iseqval, offsetval, '\001');
-+}
-+
-+/* 
-+ *  Document-method: RubyVM::InstructionSequence::brkpt_unset
-+ *
-+ *  call-seq:
-+ *     RubyVM::InstructionSequence#brkpt_unset(offset) -> bool
-+ *
-+ *  Unsets breakpoint of byte vector at +offset+.
-+ * 
-+ *  True is returned if the breakpoint is now unset. An IndexError can or
-+ *  a TypeError can be raised if values are invalid.  However if the
-+ *  instruction sequence does not have any breakpoints allocated, we
-+ *  will not check whether the offset is valid in any way.
-+ * 
-+ *  Negative values of <i>offset</i> count from the end of the
-+ *  instruction sequence. 
-+ */
-+VALUE
-+iseq_brkpt_unset(VALUE iseqval, VALUE offsetval)
-+{
-+    return iseq_brkpt_set_unset(iseqval, offsetval, '\000');
-+}
-+
-+/* 
-+ *  Document-method: RubyVM::InstructionSequence::brkpts
-+ *
-+ *  call-seq:
-+ *     RubyVM::InstructionSequence#brkpts -> Array
-+ *
-+ *  Returns a list of breakpoints in effect for this instruction sequence.
-+ *  If no breakpoints have been allocated nil is returned. If breakpoints
-+ *  were allocated but none are set then the empty array is returned.
-+ */
-+VALUE
-+iseq_brkpts(VALUE iseqval)
-+{
-+    rb_iseq_t *iseq;
-+    if (Qnil == iseqval) return Qnil;
-+    else {
-+	GetISeqPtr(iseqval, iseq);
-+	if (iseq->breakpoints) {
-+	    unsigned int offset;
-+	    VALUE ary = rb_ary_new();
-+	    for (offset = 0; offset < iseq->iseq_size; offset++) {
-+		if (iseq->breakpoints[offset])
-+		    rb_ary_push(ary, INT2FIX(offset));
-+	    }
-+	    return ary;
-+	} else {
-+	    return Qnil;
-+	}
-+    }
-+}
-+
-+void
-+Init_Brkpt(void)
-+{
-+    rb_define_method(rb_cISeq, "brkpt_alloc",      iseq_brkpt_alloc, 0);
-+    rb_define_method(rb_cISeq, "brkpt_dealloc",    iseq_brkpt_dealloc, 0);
-+    rb_define_method(rb_cISeq, "brkpt_get",        iseq_brkpt_get, 1);
-+    rb_define_method(rb_cISeq, "brkpt_set",        iseq_brkpt_set, 1);
-+    rb_define_method(rb_cISeq, "brkpt_unset",      iseq_brkpt_unset, 1);
-+    rb_define_method(rb_cISeq, "brkpts",           iseq_brkpts, 0);
-+}
-Index: test/ruby/test_brkpt.rb
---- test/ruby/test_brkpt.rb	(revision 28642)
-+++ test/ruby/test_brkpt.rb	(working copy)
-@@ -0,0 +1,32 @@
-+require 'test/unit'
-+
-+class TestISeqBrkpt < Test::Unit::TestCase
-+
-+  def test_iseq_brkpt
-+    iseq = RubyVM::InstructionSequence.compile('x=1; y=2')
-+    assert iseq
-+    assert_equal(nil, iseq.brkpts)
-+    assert_equal(true, iseq.brkpt_alloc)
-+    assert_equal([], iseq.brkpts)
-+    assert_equal(false, iseq.brkpt_alloc)
-+    
-+    assert_equal(true, iseq.brkpt_set(0))
-+    assert_equal(1,    iseq.brkpts.size)
-+    assert_equal(true, iseq.brkpt_get(0), 'Offset 0 should be set')
-+    assert_equal(true, iseq.brkpt_unset(0),'Offset 0 should be unset')
-+    assert_equal(false, iseq.brkpt_get(0), 'Offset 0 should be unset now')
-+    assert_equal(true, iseq.brkpt_unset(0), 
-+                 'Offset 0 should be unset again')
-+    assert_raises TypeError do iseq.brkpt_get(100) end
-+    assert_equal(true, iseq.brkpt_dealloc)
-+    assert_equal(false, iseq.brkpt_dealloc)
-+    assert_equal(true, iseq.brkpt_unset(0),
-+                 'Offset 0 should be unset even when deallocated')
-+
-+    assert_raises TypeError do iseq.brkpt_set('a') end
-+
-+  end
-+end
-+
-+# We want to double-check we didn't mess up any pointers somewhere.
-+at_exit { GC.start  }
+ typedef struct rb_method_cfunc_struct {
+     VALUE (*func)(ANYARGS);
+-    int argc;
++    int argc; /* This should probably be called "arity" since it is based
++		 on the static prototype, not the supplied arguments
++		 at runtime. */
++    int actual_argc; /* This probably should be called argc. It is the
++			argument count at runtime.*/
+ } rb_method_cfunc_t;
+ 
+ typedef struct rb_method_attr_struct {
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 28647)
+--- include/ruby/ruby.h	(revision 28682)
 +++ include/ruby/ruby.h	(working copy)
 @@ -1351,7 +1351,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
@@ -299,7 +32,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 Index: insns.def
 ===================================================================
---- insns.def	(revision 28647)
+--- insns.def	(revision 28682)
 +++ insns.def	(working copy)
 @@ -15,7 +15,7 @@
  
@@ -312,7 +45,7 @@ Index: insns.def
      (return value)
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 28647)
+--- vm_core.h	(revision 28682)
 +++ vm_core.h	(working copy)
 @@ -34,7 +34,7 @@
  #ifndef ENABLE_VM_OBJSPACE
@@ -476,7 +209,7 @@ Index: vm_core.h
  #endif /* RUBY_VM_CORE_H */
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 28647)
+--- iseq.c	(revision 28682)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -541,7 +274,7 @@ Index: iseq.c
  static size_t
  iseq_memsize(const void *ptr)
  {
-@@ -395,6 +427,48 @@
+@@ -395,6 +444,48 @@
  				parent, ISEQ_TYPE_MAIN, &COMPILE_OPTION_DEFAULT);
  }
  
@@ -590,7 +323,7 @@ Index: iseq.c
  static VALUE
  rb_iseq_new_with_bopt_and_opt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
  				VALUE parent, VALUE type, VALUE bopt,
-@@ -409,6 +470,7 @@
+@@ -409,6 +500,7 @@
      prepare_iseq_build(iseq, name, filename, filepath, line_no, parent, type, bopt, option);
      rb_iseq_compile_node(self, node);
      cleanup_iseq_build(iseq);
@@ -598,7 +331,7 @@ Index: iseq.c
      return self;
  }
  
-@@ -653,9 +715,13 @@
+@@ -653,9 +745,13 @@
          return rb_sprintf("#<%s: uninitialized>", rb_obj_classname(self));
      }
  
@@ -615,7 +348,7 @@ Index: iseq.c
  }
  
  static
-@@ -725,6 +791,117 @@
+@@ -725,6 +821,117 @@
      return 0;
  }
  
@@ -733,7 +466,7 @@ Index: iseq.c
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -914,9 +1091,8 @@
+@@ -914,9 +1121,8 @@
  }
  
  VALUE
@@ -744,7 +477,7 @@ Index: iseq.c
      VALUE *iseq;
      VALUE str = rb_str_new(0, 0);
      VALUE child = rb_ary_new();
-@@ -1008,14 +1184,44 @@
+@@ -1008,14 +1214,44 @@
  	n += rb_iseq_disasm_insn(str, iseq, n, iseqdat, child);
      }
  
@@ -793,7 +526,7 @@ Index: iseq.c
  static VALUE
  iseq_s_disasm(VALUE klass, VALUE body)
  {
-@@ -1493,6 +1730,8 @@
+@@ -1493,6 +1729,8 @@
      return iseqval;
  }
  
@@ -802,7 +535,7 @@ Index: iseq.c
  void
  Init_ISeq(void)
  {
-@@ -1501,9 +1707,11 @@
+@@ -1501,9 +1739,11 @@
      rb_define_alloc_func(rb_cISeq, iseq_alloc);
      rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
      rb_define_method(rb_cISeq, "disasm", rb_iseq_disasm, 0);
@@ -814,17 +547,17 @@ Index: iseq.c
  
      /* disable this feature because there is no verifier. */
      /* rb_define_singleton_method(rb_cISeq, "load", iseq_s_load, -1); */
-@@ -1516,5 +1757,7 @@
+@@ -1516,5 +1756,7 @@
      rb_define_singleton_method(rb_cISeq, "compile_option=", iseq_s_compile_option_set, 1);
      rb_define_singleton_method(rb_cISeq, "disasm", iseq_s_disasm, 1);
      rb_define_singleton_method(rb_cISeq, "disassemble", iseq_s_disasm, 1);
 +
 +    Init_Brkpt();
  }
-
+ 
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 28647)
+--- iseq.h	(revision 28682)
 +++ iseq.h	(working copy)
 @@ -101,4 +101,10 @@
  #define DEFINED_ZSUPER INT2FIX(9)
@@ -839,7 +572,7 @@ Index: iseq.h
  #endif /* RUBY_COMPILE_H */
 Index: load.c
 ===================================================================
---- load.c	(revision 28647)
+--- load.c	(revision 28682)
 +++ load.c	(working copy)
 @@ -293,11 +293,14 @@
      if (state == 0) {
@@ -859,7 +592,7 @@ Index: load.c
      }
 Index: compile.c
 ===================================================================
---- compile.c	(revision 28647)
+--- compile.c	(revision 28682)
 +++ compile.c	(working copy)
 @@ -3353,6 +3353,9 @@
  	if (iseq->compile_data->redo_label != 0) {
@@ -873,9 +606,9 @@ Index: compile.c
  	    add_ensure_iseq(ret, iseq, 0);
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 28684)
+--- vm_eval.c	(revision 28682)
 +++ vm_eval.c	(working copy)
-@@ -67,7 +67,6 @@
+@@ -67,22 +67,34 @@
  	break;
        }
        case VM_METHOD_TYPE_CFUNC: {
@@ -883,8 +616,12 @@ Index: vm_eval.c
  	{
  	    rb_control_frame_t *reg_cfp = th->cfp;
  	    rb_control_frame_t *cfp =
-@@ -75,14 +74,23 @@
+ 		vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
  			      recv, (VALUE)blockptr, 0, reg_cfp->sp, 0, 1);
++	    /* Store actual argument count. Note that cfunc.argc
++	       contains the prototype value.
++	    */
++	    me->def->body.cfunc.actual_argc = argc;
  
  	    cfp->me = me;
 +	    if (0 == th->tracing)
@@ -908,7 +645,7 @@ Index: vm_eval.c
  	break;
        }
        case VM_METHOD_TYPE_ATTRSET: {
-@@ -868,7 +876,8 @@
+@@ -868,7 +880,8 @@
  #endif
  		    if (UNLIKELY(VM_FRAME_TYPE(th->cfp) == VM_FRAME_MAGIC_CFUNC)) {
  			const rb_method_entry_t *me = th->cfp->me;
@@ -918,7 +655,7 @@ Index: vm_eval.c
  		    }
  
  		    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
-@@ -1024,7 +1033,25 @@
+@@ -1024,7 +1037,25 @@
      if (state) {
  	if (state == TAG_RAISE) {
  	    VALUE errinfo = th->errinfo;
@@ -945,10 +682,9 @@ Index: vm_eval.c
  		VALUE mesg, errat, bt2;
  		extern VALUE rb_get_backtrace(VALUE info);
  		ID id_mesg;
-
 Index: proc.c
 ===================================================================
---- proc.c	(revision 28647)
+--- proc.c	(revision 28682)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -1025,7 +761,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 28647)
+--- thread.c	(revision 28682)
 +++ thread.c	(working copy)
 @@ -336,6 +336,16 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -1340,9 +1076,21 @@ Index: thread.c
  
      /* init thread core */
      {
+Index: common.mk
+===================================================================
+--- common.mk	(revision 28682)
++++ common.mk	(working copy)
+@@ -30,6 +30,7 @@
+ 
+ COMMONOBJS    = array.$(OBJEXT) \
+ 		bignum.$(OBJEXT) \
++		brkpt.$(OBJEXT) \
+ 		class.$(OBJEXT) \
+ 		compar.$(OBJEXT) \
+ 		complex.$(OBJEXT) \
 Index: eval.c
 ===================================================================
---- eval.c	(revision 28647)
+--- eval.c	(revision 28682)
 +++ eval.c	(working copy)
 @@ -34,7 +34,7 @@
  
@@ -1383,7 +1131,7 @@ Index: eval.c
      JUMP_TAG(TAG_RAISE);
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 28647)
+--- vm_exec.h	(revision 28682)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
@@ -1451,7 +1199,7 @@ Index: vm_exec.h
  #define debugs printf
 Index: vm.c
 ===================================================================
---- vm.c	(revision 28647)
+--- vm.c	(revision 28682)
 +++ vm.c	(working copy)
 @@ -691,6 +691,7 @@
      if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
@@ -1495,7 +1243,7 @@ Index: vm.c
  		EXEC_EVENT_HOOK(th, RUBY_EVENT_END, th->cfp->self, 0, 0);
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 28647)
+--- vm_insnhelper.c	(revision 28682)
 +++ vm_insnhelper.c	(working copy)
 @@ -26,9 +26,12 @@
  	      const VALUE *pc, VALUE *sp, VALUE *lfp,
@@ -1518,7 +1266,7 @@ Index: vm_insnhelper.c
  
  #define COLLECT_PROFILE 0
  #if COLLECT_PROFILE
-@@ -391,11 +395,11 @@
+@@ -391,11 +395,15 @@
      const rb_method_definition_t *def = me->def;
      rb_control_frame_t *cfp;
  
@@ -1526,13 +1274,17 @@ Index: vm_insnhelper.c
 -
      cfp = vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
  			recv, (VALUE) blockptr, 0, reg_cfp->sp, 0, 1);
++    /* Store actual argument count. Note that cfunc.argc contains the
++       prototype value.
++    */
++    me->def->body.cfunc.actual_argc = num;
      cfp->me = me;
 +    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, me->called_id, me->klass);
 +
      reg_cfp->sp -= num + 1;
  
      val = call_cfunc(def->body.cfunc.func, recv, (int)def->body.cfunc.argc, num, reg_cfp->sp + 1);
-@@ -404,10 +415,21 @@
+@@ -404,10 +412,21 @@
  	rb_bug("cfp consistency error - send");
      }
  
@@ -1556,7 +1308,7 @@ Index: vm_insnhelper.c
      return val;
  }
  
-@@ -477,6 +499,13 @@
+@@ -477,6 +496,13 @@
  		      iseq->iseq_encoded + opt_pc, sp, 0, 0);
  
  	cfp->sp = rsp - 1 /* recv */;
@@ -1572,7 +1324,7 @@ Index: vm_insnhelper.c
  	VALUE *p_rsp;
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 28647)
+--- tool/instruction.rb	(revision 28682)
 +++ tool/instruction.rb	(working copy)
 @@ -854,6 +854,17 @@
        commit "INSN_ENTRY(#{insn.name}){"
@@ -1594,7 +1346,7 @@ Index: tool/instruction.rb
        make_header_operands   insn
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 28647)
+--- test/ruby/test_settracefunc.rb	(revision 28682)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -23,8 +23,6 @@
       4: x = 1 + 1
@@ -1772,7 +1524,7 @@ Index: test/ruby/test_settracefunc.rb
  end
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 28647)
+--- template/insns_info.inc.tmpl	(revision 28682)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -42,38 +42,6 @@
  }
@@ -1813,6 +1565,278 @@ Index: template/insns_info.inc.tmpl
  #ifdef USE_INSN_RET_NUM
  static int
  insn_ret_num(VALUE insn)
+Index: brkpt.c
+--- brkpt.c	(revision 28642)
++++ brkpt.c	(working copy)
+@@ -0,0 +1,232 @@
++/**********************************************************************
++  brkpt.c - VM-assisted Breakpoint support 
++
++**********************************************************************/
++
++#include "ruby/ruby.h"
++
++#include "vm_core.h"
++#include "iseq.h"
++
++VALUE rb_cISeq;
++
++/* 
++ *  call-seq:
++ *  RubyVM::InstructionSequence#brkpt_alloc -> bool
++ *
++ *  Allocates a breakpoint byte vector of zeros for each 
++ *  instruction in the instruction sequence. True is returned if 
++ *  a vector was allocated, false if there already was one allocated,
++ *  and nil if there was some problem.
++ */
++
++VALUE
++iseq_brkpt_alloc(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    if (Qnil == iseqval) return Qnil;
++    else {
++	GetISeqPtr(iseqval, iseq);
++	if (iseq->breakpoints) {
++	    return Qfalse;
++	}
++	iseq->breakpoints = calloc( iseq->iseq_size, sizeof(unsigned char));
++	return Qtrue;
++    }
++}
++
++/* 
++ *  Document-method: RubyVM::InstructionSequence::brkpt_dealloc -> bool
++ *
++ *  call-seq:
++ *     RubyVM::InstructionSequence#dealloc -> bool
++ *
++ *  DeAllocates a breakpoint byte vector of zeros for each 
++ *  instruction in the instruction sequence. True is returned if 
++ *  a vector was allocated, false if there already was one allocated,
++ *  and nil if there was some problem.
++ */
++VALUE
++iseq_brkpt_dealloc(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    if (Qnil == iseqval) return Qnil;
++    else {
++	GetISeqPtr(iseqval, iseq);
++	if (!iseq->breakpoints) {
++	    return Qfalse;
++	}
++	free(iseq->breakpoints);
++	iseq->breakpoints = NULL;
++	return Qtrue;
++    }
++}
++
++/* 
++ *  Checks that offsetval is in range and converts it to a positive
++ *  integer. An exception is raised if offsetval is invalid.
++ */
++static long unsigned int
++iseq_get_offset_internal(rb_iseq_t *iseq, VALUE offsetval)
++{
++    if (FIXNUM_P(offsetval)) {
++	long int offset = FIX2INT(offsetval);
++	unsigned long int uoffset;
++	unsigned long int size = iseq->iseq_size;
++
++	uoffset = (offset < 0) ? 
++	    (unsigned long int) size + offset :
++	    (unsigned long int) offset;
++	
++	/* FIXME: check that offset is at a valid instruction offset */
++	if (uoffset >= size) {
++	    rb_raise(rb_eTypeError, 
++		     "instruction sequence offset %lu should be in the range -%l .. %lu",
++		     uoffset, size, size-1);
++	}
++	return uoffset;
++    } else {
++	rb_raise(rb_eTypeError, "type mismatch: %s given, Fixnum expected", 
++		 rb_class2name(CLASS_OF(offsetval)));
++	return 0; /* NOT REACHED */
++    }
++    
++}
++
++/* 
++ *  Document-method: RubyVM::InstructionSequence::brkpt_get(offset)
++ *
++ *  call-seq:
++ *     RubyVM::InstructionSequence#brkpt_get(offset) -> bool
++ *
++ *  Get a value of breakpoint of byte vector at +offset+.
++ *
++ *  True is returned if there is a breakpoint previously set, false
++ *  if not, and nil if there was some problem. Negative values of
++ *  <i>offset</i> count from the end of the instruction sequence.
++ */
++VALUE
++iseq_brkpt_get(VALUE iseqval, VALUE offsetval)
++{
++    if (Qnil != iseqval) {
++	rb_iseq_t *iseq;
++	unsigned long int uoffset;
++	
++	GetISeqPtr(iseqval, iseq);
++	if (!iseq->breakpoints) return Qfalse;
++
++	uoffset = iseq_get_offset_internal(iseq, offsetval);
++	      
++	/* FIXME: check that offset is at a valid instruction offset */
++	return (0 != iseq->breakpoints[uoffset]) ? Qtrue : Qfalse;
++    }
++    return Qnil;
++}
++
++static VALUE
++iseq_brkpt_set_unset(VALUE iseqval, VALUE offsetval, char val)
++{
++    if (Qnil != iseqval) {
++	rb_iseq_t *iseq;
++	unsigned long int uoffset;
++
++	GetISeqPtr(iseqval, iseq);
++	if (!iseq->breakpoints) {
++	    if (val) {
++		/* Set breakpoint requested */
++		VALUE alloc_ret = iseq_brkpt_alloc(iseqval);
++		if (!iseq->breakpoints) return alloc_ret;
++	    } else 
++		/* Unset breakpoint requested. */
++		return Qtrue;
++	}
++	uoffset = iseq_get_offset_internal(iseq, offsetval);
++
++	/* FIXME: check that offset is at a valid instruction offset */
++	iseq->breakpoints[uoffset] = val;
++	return Qtrue;
++    }
++    return Qnil;
++}
++
++/* 
++ *  Document-method: RubyVM::InstructionSequence::brkpt_set(offset) -> bool
++ *
++ *  call-seq:
++ *     RubyVM::InstructionSequence#brkpt_set(offset) -> bool
++ *
++ *  Set a breakpoint of byte vector at +offset+.
++ *
++ * +true+ is returned if the breakpoint is now set. An IndexError can or a
++ * TypeError can be raised if values are invalid.  Negative values of
++ * +offset+ count from the end of the instruction sequence.
++ */
++VALUE
++iseq_brkpt_set(VALUE iseqval, VALUE offsetval)
++{
++    return iseq_brkpt_set_unset(iseqval, offsetval, '\001');
++}
++
++/* 
++ *  Document-method: RubyVM::InstructionSequence::brkpt_unset
++ *
++ *  call-seq:
++ *     RubyVM::InstructionSequence#brkpt_unset(offset) -> bool
++ *
++ *  Unsets breakpoint of byte vector at +offset+.
++ * 
++ *  True is returned if the breakpoint is now unset. An IndexError can or
++ *  a TypeError can be raised if values are invalid.  However if the
++ *  instruction sequence does not have any breakpoints allocated, we
++ *  will not check whether the offset is valid in any way.
++ * 
++ *  Negative values of <i>offset</i> count from the end of the
++ *  instruction sequence. 
++ */
++VALUE
++iseq_brkpt_unset(VALUE iseqval, VALUE offsetval)
++{
++    return iseq_brkpt_set_unset(iseqval, offsetval, '\000');
++}
++
++/* 
++ *  Document-method: RubyVM::InstructionSequence::brkpts
++ *
++ *  call-seq:
++ *     RubyVM::InstructionSequence#brkpts -> Array
++ *
++ *  Returns a list of breakpoints in effect for this instruction sequence.
++ *  If no breakpoints have been allocated nil is returned. If breakpoints
++ *  were allocated but none are set then the empty array is returned.
++ */
++VALUE
++iseq_brkpts(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    if (Qnil == iseqval) return Qnil;
++    else {
++	GetISeqPtr(iseqval, iseq);
++	if (iseq->breakpoints) {
++	    unsigned int offset;
++	    VALUE ary = rb_ary_new();
++	    for (offset = 0; offset < iseq->iseq_size; offset++) {
++		if (iseq->breakpoints[offset])
++		    rb_ary_push(ary, INT2FIX(offset));
++	    }
++	    return ary;
++	} else {
++	    return Qnil;
++	}
++    }
++}
++
++void
++Init_Brkpt(void)
++{
++    rb_define_method(rb_cISeq, "brkpt_alloc",      iseq_brkpt_alloc, 0);
++    rb_define_method(rb_cISeq, "brkpt_dealloc",    iseq_brkpt_dealloc, 0);
++    rb_define_method(rb_cISeq, "brkpt_get",        iseq_brkpt_get, 1);
++    rb_define_method(rb_cISeq, "brkpt_set",        iseq_brkpt_set, 1);
++    rb_define_method(rb_cISeq, "brkpt_unset",      iseq_brkpt_unset, 1);
++    rb_define_method(rb_cISeq, "brkpts",           iseq_brkpts, 0);
++}
+Index: test/ruby/test_brkpt.rb
+--- test/ruby/test_brkpt.rb	(revision 28642)
++++ test/ruby/test_brkpt.rb	(working copy)
+@@ -0,0 +1,32 @@
++require 'test/unit'
++
++class TestISeqBrkpt < Test::Unit::TestCase
++
++  def test_iseq_brkpt
++    iseq = RubyVM::InstructionSequence.compile('x=1; y=2')
++    assert iseq
++    assert_equal(nil, iseq.brkpts)
++    assert_equal(true, iseq.brkpt_alloc)
++    assert_equal([], iseq.brkpts)
++    assert_equal(false, iseq.brkpt_alloc)
++    
++    assert_equal(true, iseq.brkpt_set(0))
++    assert_equal(1,    iseq.brkpts.size)
++    assert_equal(true, iseq.brkpt_get(0), 'Offset 0 should be set')
++    assert_equal(true, iseq.brkpt_unset(0),'Offset 0 should be unset')
++    assert_equal(false, iseq.brkpt_get(0), 'Offset 0 should be unset now')
++    assert_equal(true, iseq.brkpt_unset(0), 
++                 'Offset 0 should be unset again')
++    assert_raises TypeError do iseq.brkpt_get(100) end
++    assert_equal(true, iseq.brkpt_dealloc)
++    assert_equal(false, iseq.brkpt_dealloc)
++    assert_equal(true, iseq.brkpt_unset(0),
++                 'Offset 0 should be unset even when deallocated')
++
++    assert_raises TypeError do iseq.brkpt_set('a') end
++
++  end
++end
++
++# We want to double-check we didn't mess up any pointers somewhere.
++at_exit { GC.start  }
 Index: test/ruby/test_disam.rb
 ===================================================================
 --- test/ruby/test_disasm.rb	(revision 28642)
