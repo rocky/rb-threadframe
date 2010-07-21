@@ -1039,7 +1039,7 @@ Index: thread.c
      VALUE filename = srcfile ? rb_str_new2(srcfile) : Qnil;
      VALUE argv[6];
      int line = rb_sourceline();
-@@ -4043,11 +4141,16 @@
+@@ -4043,11 +4141,17 @@
      VALUE klass = 0;
  
      if (p->event == RUBY_EVENT_C_CALL ||
@@ -1051,10 +1051,11 @@ Index: thread.c
 -    }
 -    else {
 +    } else if (p->event == RUBY_EVENT_RAISE) {
-+	/* We have arranged to store the raise message in klass here. */
-+	VALUE throwaway_klass;
-+	rb_thread_method_id_and_class(GET_THREAD(), &id, &throwaway_klass);
-+	klass = p->klass;
++        /* rb_thread_method_and_id() wants a place to store a klass
++	    value which subsequently we will not use.  */
++        VALUE junk_klass; 
++        rb_thread_method_id_and_class(GET_THREAD(), &id, &junk_klass);
++        klass = p->klass;
 +    } else {
  	rb_thread_method_id_and_class(GET_THREAD(), &id, &klass);
      }
@@ -1108,12 +1109,17 @@ Index: eval.c
  
  void *
  ruby_options(int argc, char **argv)
-@@ -440,7 +440,7 @@
+@@ -440,7 +440,12 @@
      rb_trap_restore_mask();
  
      if (tag != TAG_FATAL) {
 -	EXEC_EVENT_HOOK(th, RUBY_EVENT_RAISE, th->cfp->self, 0, 0);
-+	EXEC_EVENT_HOOK(th, RUBY_EVENT_RAISE, th->cfp->self, 0, mesg);
++        /* In a RAISE event, we store as the "class" parameter the
++           the optional message parameter which is likely to be of more
++           use. Given a binding, a trace hook can get the class via 
++           eval('self.class', binding)
++	 */
++        EXEC_EVENT_HOOK(th, RUBY_EVENT_RAISE, th->cfp->self, 0, mesg);
      }
  }
  
