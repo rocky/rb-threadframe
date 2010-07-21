@@ -496,7 +496,7 @@ Index: iseq.c
  
 +/*
 + *  call-seq:
-+ *     iseq.disasm   => string
++ *     iseq.disasm   -> string
 + *
 + *  Returns a string disassembly of an instruction sequence.
 + */
@@ -509,7 +509,7 @@ Index: iseq.c
 +
 +/*
 + *  call-seq:
-+ *     iseq.disasm_nochildren   => string
++ *     iseq.disasm_nochildren   -> string
 + *
 + *  Returns a string disassembly of an instruction sequence, and
 + *  doesn't include instruction sequences for any associated catch
@@ -779,13 +779,11 @@ Index: thread.c
  void
  rb_thread_terminate_all(void)
  {
-@@ -3766,7 +3776,9 @@
+@@ -3766,7 +3776,7 @@
      GetThreadPtr(thval, th);
  
      if (flag) {
 -	th->event_flags |= RUBY_EVENT_VM;
-+        /* Rocky: Probably wrong to set RUBY_EVENT_BRKPT here. And why is RUBY_EVENT_VM
-+           special? */
 +        th->event_flags |= (RUBY_EVENT_VM | RUBY_EVENT_BRKPT);
      }
      else {
@@ -881,9 +879,9 @@ Index: thread.c
   *  call-seq:
 - *     set_trace_func(proc)    -> proc
 - *     set_trace_func(nil)     -> nil
-+ *     set_trace_func(proc)        => proc
-+ *     set_trace_func(proc, mask)  => proc
-+ *     set_trace_func(nil)         => nil
++ *     set_trace_func(proc)        -> proc
++ *     set_trace_func(proc, mask)  -> proc
++ *     set_trace_func(nil)         -> nil
   *
   *  Establishes _proc_ as the handler for tracing, or disables
   *  tracing if the parameter is +nil+. _proc_ takes up
@@ -945,7 +943,7 @@ Index: thread.c
  /*
   *  call-seq:
 - *     thr.add_trace_func(proc)    -> proc
-+ *     thr.add_trace_func(proc, events=RUBY_EVENT_ALL)    => proc
++ *     thr.add_trace_func(proc, events=RUBY_EVENT_ALL)    -> proc
   *
   *  Adds _proc_ as a handler for tracing.
   *  See <code>Thread#set_trace_func</code> and +set_trace_func+.
@@ -1200,14 +1198,6 @@ Index: vm.c
 ===================================================================
 --- vm.c	(revision 28684)
 +++ vm.c	(working copy)
-@@ -691,6 +691,7 @@
-     if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
- 	rb_num_t i;
- 	size_t pos = cfp->pc - cfp->iseq->iseq_encoded;
-+	line_no = iseq->insn_info_table[0].line_no;
- 
- 	if (iseq->insn_info_table[0].position == pos) goto found;
- 	for (i = 1; i < iseq->insn_info_size; i++) {
 @@ -1164,8 +1165,20 @@
  
  	while (th->cfp->pc == 0 || th->cfp->iseq == 0) {
