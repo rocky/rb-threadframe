@@ -31,5 +31,3 @@ case $patchfile in
 	patch -p0 < ${dirname}/$file
 	;;
     esac
-
-echo $dirname
