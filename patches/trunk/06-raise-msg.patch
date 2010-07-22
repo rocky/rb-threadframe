@@ -1,0 +1,83 @@
+This patch provides a way to get the exception message on a "raise"
+event.  It does this by storing the message as the klass
+parameter. Note that in a hook one can get the class via a binding
+from the frame using eval('self.class', binding)
+
+Another small but unrelated change here is to fill in some of the
+missing event names in the case statement of routine get_event_name().
+
+
+Index: eval.c
+===================================================================
+--- eval.c	(revision 28692)
++++ eval.c	(working copy)
+@@ -440,7 +440,10 @@
+     rb_trap_restore_mask();
+ 
+     if (tag != TAG_FATAL) {
+-	EXEC_EVENT_HOOK(th, RUBY_EVENT_RAISE, th->cfp->self, 0, 0);
++        /* In a RAISE event, the class is meaningless, so we will use that
++	   to good end by storing the optional message parameter.
++	*/
++	EXEC_EVENT_HOOK(th, RUBY_EVENT_RAISE, th->cfp->self, 0, mesg);
+     }
+ }
+
+Index: thread.c
+--- thread.c	(revision 28692)
++++ thread.c	(working copy)
+===================================================================
+@@ -4025,6 +4109,12 @@
+ 	return "c-return";
+       case RUBY_EVENT_RAISE:
+ 	return "raise";
++      case RUBY_EVENT_SWITCH:
++        return "switch";
++      case RUBY_EVENT_COVERAGE:
++        return "coverage";
++      case RUBY_EVENT_VM:
++        return "vm";
+       default:
+ 	return "unknown";
+     }
+@@ -4056,8 +4055,15 @@
+ 	p->event == RUBY_EVENT_C_RETURN) {
+ 	id = p->id;
+ 	klass = p->klass;
+-    }
+-    else {
++    } else if (p->event == RUBY_EVENT_RAISE) {
++       /* rb_thread_method_and_id() wants a place to store a klass
++	   value which subsequently we will not use.  */
++        VALUE junk_klass; 
++	rb_thread_method_id_and_class(GET_THREAD(), &id, &junk_klass);
++	/* When the event is RUBY_EVENT_RAISE, we have stored the raise
++	   message as the trace-hook klass parameter. */ 
++	klass = p->klass;
++    } else {
+ 	rb_thread_method_id_and_class(GET_THREAD(), &id, &klass);
+     }
+     if (id == ID_ALLOCATOR)
+Index: test/ruby/test_settracefunc.rb
+===================================================================
+--- test/ruby/test_settracefunc.rb	(revision 28692)
++++ test/ruby/test_settracefunc.rb	(working copy)
+@@ -220,7 +220,7 @@
+      3: })
+      4: begin
+      5:   raise TypeError, "error"
+-     6: rescue TypeError
++     6: rescue TypeError => $e
+      7: end
+      8: set_trace_func(nil)
+     EOF
+@@ -248,7 +248,7 @@
+                  events.shift)
+     assert_equal(["c-return", 5, :set_backtrace, Exception],
+                  events.shift)
+-    assert_equal(["raise", 5, :test_raise, TestSetTraceFunc],
++    assert_equal(["raise", 5, :test_raise, $e],
+                  events.shift)
+     assert_equal(["c-return", 5, :raise, Kernel],
+                  events.shift)
+
