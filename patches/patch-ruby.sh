@@ -14,7 +14,8 @@ case $patchfile in
 	    02-iseq-access.patch   \
 	    03-iseq-create.patch   \
 	    04-C-argc.patch        \
-	    05-brkpt.patch
+	    05-brkpt.patch         #\
+	    #06-raise-msg.patch
 	do 
 	    echo -- Applying patches in ${dirname}/trunk/$file ...
 	    patch -p0 < ${dirname}/trunk/$file

@@ -31,7 +31,7 @@ Index: iseq.c
 ===================================================================
 --- iseq.c	(revision 28647)
 +++ iseq.c	(working copy)
-@@ -1728,6 +1726,8 @@
+@@ -1726,6 +1726,8 @@
      return iseqval;
  }
  
@@ -40,7 +40,7 @@ Index: iseq.c
  void
  Init_ISeq(void)
  {
-@@ -1753,5 +1753,7 @@
+@@ -1751,5 +1753,7 @@
      rb_define_singleton_method(rb_cISeq, "compile_option=", iseq_s_compile_option_set, 1);
      rb_define_singleton_method(rb_cISeq, "disasm", iseq_s_disasm, 1);
      rb_define_singleton_method(rb_cISeq, "disassemble", iseq_s_disasm, 1);
@@ -52,7 +52,7 @@ Index: include/ruby/ruby.h
 ===================================================================
 --- include/ruby/ruby.h	(revision 28642)
 +++ include/ruby/ruby.h	(working copy)
-@@ -1362,6 +1352,7 @@
+@@ -1352,6 +1352,7 @@
  #define RUBY_EVENT_C_CALL    0x0020
  #define RUBY_EVENT_C_RETURN  0x0040
  #define RUBY_EVENT_RAISE     0x0080
@@ -64,7 +64,7 @@ Index: thread.c
 ===================================================================
 --- thread.c	(revision 28642)
 +++ thread.c	(working copy)
-@@ -3774,7 +3765,7 @@
+@@ -3765,7 +3765,7 @@
      GetThreadPtr(thval, th);
  
      if (flag) {
@@ -73,7 +73,7 @@ Index: thread.c
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -4022,6 +4013,8 @@
+@@ -4013,6 +4013,8 @@
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -95,6 +95,33 @@ Index: vm_core.h
  };
  
  enum ruby_special_exceptions {
+Index: vm_exec.h
+===================================================================
+--- vm_exec.h	(revision 28647)
++++ vm_exec.h	(working copy)
+@@ -28,12 +62,17 @@
+ #define USAGE_ANALYSIS_REGISTER(reg, s)		/* none */
+ #endif
+ 
+-#ifdef __GCC__
++/* Rocky: VM-assisted breakpoint handling. */
++#define TEST_AND_HANDLE_BREAKPOINT(cfp, pc)				\
++    if (UNLIKELY(cfp->iseq &&						\
++		 cfp->iseq->breakpoints &&				\
++		 cfp->iseq->breakpoints[pc - cfp->iseq->iseq_encoded])) \
++	EXEC_EVENT_HOOK(th, RUBY_EVENT_BRKPT, cfp->self,		\
++			0, 0)
++
+ /* TODO: machine dependent prefetch instruction */
+-#define PREFETCH(pc)
+-#else
+-#define PREFETCH(pc)
+-#endif
++#define PREFETCH(pc)							\
++    TEST_AND_HANDLE_BREAKPOINT(GET_CFP(), pc)
+ 
+ #if VMDEBUG > 0
+ #define debugs printf
 Index: vm_insnhelper.c
 ===================================================================
 --- vm_insnhelper.c	(revision 28647)
