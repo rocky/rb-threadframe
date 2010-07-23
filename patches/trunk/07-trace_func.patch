@@ -1,17 +1,45 @@
-This patch adds a bunch of stuff I mention on my home computer before
-the disk crash that I can't get too right now, but will retrieve later.
+This patch:
 
-In addition, it moves the trace hook calls and returns so that the hook
-has access to the call stack which contains the parameters and return
-value. Note that this has a good effect in my opinion of not running
-the hook for the c-return of the set_trace_func call.
+1. adds the ability to set filter trace events inside Ruby using an
+optional FIXNUM bitmask of event bits.
 
-Furthermore, have provision to allow the trace hook change the
-return value.
+2. allows thread trace hooks to be chained
 
-Ideally I would have split out the two different things going on here,
-but because both occur in close proximity in the source code it was
-easier to do the patching with them combined.
+3. adjusts the location of trace hook events for C calls and C returns
+so that the hook has access to the call stack. The stack contains the
+parameters and return value. Note that this also has a good effect in my
+opinion of not running the hook for the c-return of the set_trace_func
+call.
+
+4. Adds provision to allow the trace hook change the return value.
+
+The underlying mechanism for filtering by an event mask was already in
+the code base, just not previously user-accessible. It had been used
+internally to separate "profiling" hooks versus "debugging" hooks. I'm
+not sure why there needs to be a distinction.
+
+Allowing user-control over the mask allows debuggers to run faster --
+filtering inside Ruby is faster than doing it in a trace hook. It
+also allows for more flexibility in custom trace hooks.
+
+Since using a FIXNUM bitmask is a little low-level, it is anticipated
+that this is addressed by a Ruby module. For example see rb-trace
+which defines constants for the bits in the bit masks and allows one
+to give a Ruby set of event strings/symbols rather than a bitmask.
+
+More detail regarding the Ruby routines changed/added:
+
+  clear_trace_func() - removes all trace hooks for a thread. This was
+                       available, but not callable from Ruby.
+  add_trace_func() - adds a trace hook without destroying previous hooks
+  set_trace_func() - changed to allow for an option trace-event bitmask
+
+NOTE: Possibly a way is needed to remove a specific hook. Right now I
+have been using rb-trace to manage lists of trace hooks.
+
+Ideally I would have split out into different patches 1) and 2) from
+3) and 4) above.  But because both occur in close proximity in the
+source code, it was much easier to do the patching with them combined.
 
 
 Index: thread.c
