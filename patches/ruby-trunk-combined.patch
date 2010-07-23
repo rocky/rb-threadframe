@@ -1204,6 +1204,14 @@ Index: vm.c
 ===================================================================
 --- vm.c	(revision 28647)
 +++ vm.c	(working copy)
+@@ -691,6 +691,7 @@
+     if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
+ 	rb_num_t i;
+ 	size_t pos = cfp->pc - cfp->iseq->iseq_encoded;
++	line_no = iseq->insn_info_table[0].line_no;
+ 
+ 	if (iseq->insn_info_table[0].position == pos) goto found;
+ 	for (i = 1; i < iseq->insn_info_size; i++) {
 @@ -1164,8 +1165,20 @@
  
  	while (th->cfp->pc == 0 || th->cfp->iseq == 0) {
