@@ -380,3 +380,139 @@ Index: test/ruby/test_settracefunc.rb
       ["c-call", 4, :each, Array],
       ["line", 4, __method__, self.class],
 
+Index: test/ruby/test_tracefunc_adds.rb
+--- test/ruby/test_tracefunc_adds.rb	(revision 28642)
++++ test/ruby/test_tracefunc_adds.rb	(working copy)
+@@ -0,0 +1,131 @@
++require 'test/unit'
++
++# tests set_trace_func with event bitmasks, clear_trace_func, 
++# Newer changes
++class TestSetTraceFuncAdds < Test::Unit::TestCase
++
++  # Some of the below setup is similar to what is in lib/trace_mod.rb of 
++  # rb-trace
++  @@NO_EVENT_MASK        = 0x0000
++  @@LINE_EVENT_MASK      = 0x0001
++  @@CLASS_EVENT_MASK     = 0x0002
++  @@END_EVENT_MASK       = 0x0004
++  @@CALL_EVENT_MASK      = 0x0008
++  @@RETURN_EVENT_MASK    = 0x0010
++  @@C_CALL_EVENT_MASK    = 0x0020
++  @@C_RETURN_EVENT_MASK  = 0x0040
++  @@RAISE_EVENT_MASK     = 0x0080
++  @@ALL_EVENTS_MASK      = 0x00ff
++  
++  @@EVENT2MASK = {
++    'line'     => @@LINE_EVENT_MASK,
++    'call'     => @@CALL_EVENT_MASK,
++    'return'   => @@RETURN_EVENT_MASK,
++    'c-call'   => @@C_CALL_EVENT_MASK,
++    'c-return' => @@C_RETURN_EVENT_MASK,
++    'c-raise'  => @@RAISE_EVENT_MASK
++  }
++
++  # Convert +events+ into a Fixnum bitmask used internally by Ruby.
++  # Parameter +events+ should be Enumerable and each element should
++  # either be a Fixnum mask value or something that can be converted
++  # to a symbol. If the latter, the case is not important as we'll
++  # downcase the string representation.
++  def events2bitmask(event_list)
++    bitmask = @@NO_EVENT_MASK
++    event_list.each do |event|
++      bitmask |= @@EVENT2MASK[event]
++    end
++    return bitmask
++  end
++
++  def setup
++    @original_compile_option = RubyVM::InstructionSequence.compile_option
++    RubyVM::InstructionSequence.compile_option = {
++      :trace_instruction => true,
++      :specialized_instruction => false
++    }
++    @proc_template = 'Proc.new { |event, file, lineno, mid, binding, klass|
++      %s << [event, lineno, mid, klass]}'
++  end
++
++  def teardown
++    clear_trace_func
++    RubyVM::InstructionSequence.compile_option = @original_compile_option
++  end
++
++
++  def test_eventmask
++    returned_tuples = 
++      [['line', 5, :test_eventmask, self.class],
++       ['class', 5, nil, nil],
++       ['end', 5, nil, nil],
++       ['line', 6, :test_eventmask, self.class],
++       ['call', 1, :five, self.class],
++       ['line', 1, :five, self.class],
++       ['return', 1, :five, self.class],
++       ['c-call', 6, :any?, Enumerable],
++       ['c-call', 6, :each, Array],
++       ['line', 6, :test_eventmask, self.class],
++       ['c-return', 6, :each, Array],
++       ['c-return', 6, :any?, Enumerable],
++       ['line', 7, :test_eventmask, self.class],
++       ['c-call', 7, :clear_trace_func, Kernel]]
++
++    [[], nil, 
++     %w(line),
++     %w(call line),
++     %w(c-call c-return line),
++    ].each do |event_list|
++      tuples = []
++      event_mask = if event_list
++                     events2bitmask(event_list)
++                   else
++                     @@ALL_EVENTS_MASK
++                   end
++      cmd = <<-EOF.gsub(/^.*?: /, '')
++        1: def five; 5 end
++        2: p1 = #{@proc_template}
++        3: set_trace_func(p1, #{event_mask})
++        4: class Foo; end
++        5: [1,2,five].any? {|n| n}
++        6: clear_trace_func
++      EOF
++      eval(cmd % 'tuples')
++      expected = if event_list
++                   returned_tuples.select{|x| !([x[0]] & event_list).empty?}
++                 else
++                   returned_tuples
++                 end
++      assert_equal(expected, tuples, 
++                   "Error filtering #{event_list}")
++     # p tuples
++    end
++  end
++
++  def test_chained_hook
++    puts "ho"
++    tuples1 = []
++    tuples2 = []
++    cmd = <<-EOF.gsub(/^.*?: /, '')
++        1: def five; 5 end
++        2: p1 = #{@proc_template}
++        3: p2 = #{@proc_template}
++        4: add_trace_func(p1, @@LINE_EVENT_MASK)
++        5: add_trace_func(p2, @@CALL_EVENT_MASK)
++        6: class Foo; end
++        7: [1,2,five].any? {|n| n}
++      EOF
++    eval(cmd % %w(tuples1 tuples2))
++    clear_trace_func
++    assert_equal([
++                  ["line", 7, :test_chained_hook, self.class], 
++                  ["line", 8, :test_chained_hook, self.class], 
++                  ["line", 9, :test_chained_hook, self.class], 
++                  ["line", 1, :five, self.class], 
++                  ["line", 9, :test_chained_hook, self.class], 
++                  ["line", 121, :test_chained_hook, self.class]], tuples1,
++                 'line filtering')
++    assert_equal([["call", 1, :five, self.class]], tuples2, 
++                 'call filtering')
++  end
++end
