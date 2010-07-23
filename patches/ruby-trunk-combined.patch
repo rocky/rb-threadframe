@@ -971,7 +971,7 @@ Index: thread.c
  /*
   *  call-seq:
 - *     thr.set_trace_func(proc)    -> proc
-+ *     thr.set_trace_func(proc, events=RB_EVENT_ALL)    => proc
++ *     thr.set_trace_func(proc, events=RB_EVENT_ALL)    -> proc
   *     thr.set_trace_func(nil)     -> nil
   *
   *  Establishes _proc_ on _thr_ as the handler for tracing, or

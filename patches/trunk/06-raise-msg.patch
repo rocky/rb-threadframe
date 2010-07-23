@@ -9,7 +9,7 @@ missing event names in the case statement of routine get_event_name().
 
 Index: eval.c
 ===================================================================
---- eval.c	(revision 28692)
+--- eval.c	(revision 28647)
 +++ eval.c	(working copy)
 @@ -440,7 +440,10 @@
      rb_trap_restore_mask();
@@ -24,7 +24,7 @@ Index: eval.c
  }
 
 Index: thread.c
---- thread.c	(revision 28692)
+--- thread.c	(revision 28647)
 +++ thread.c	(working copy)
 ===================================================================
 @@ -4025,6 +4109,12 @@
@@ -60,7 +60,7 @@ Index: thread.c
      if (id == ID_ALLOCATOR)
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 28692)
+--- test/ruby/test_settracefunc.rb	(revision 28647)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -220,7 +220,7 @@
       3: })
