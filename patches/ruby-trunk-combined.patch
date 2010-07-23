@@ -1038,7 +1038,7 @@ Index: thread.c
      VALUE filename = srcfile ? rb_str_new2(srcfile) : Qnil;
      VALUE argv[6];
      int line = rb_sourceline();
-@@ -4043,11 +4150,16 @@
+@@ -4043,11 +4148,17 @@
      VALUE klass = 0;
  
      if (p->event == RUBY_EVENT_C_CALL ||
@@ -1050,10 +1050,11 @@ Index: thread.c
 -    }
 -    else {
 +    } else if (p->event == RUBY_EVENT_RAISE) {
-+	/* We have arranged to store the raise message in klass here. */
-+	VALUE throwaway_klass;
-+	rb_thread_method_id_and_class(GET_THREAD(), &id, &throwaway_klass);
-+	klass = p->klass;
++        /* rb_thread_method_and_id() wants a place to store a klass
++	    value which subsequently we will not use.  */
++        VALUE junk_klass; 
++        rb_thread_method_id_and_class(GET_THREAD(), &id, &junk_klass);
++        klass = p->klass;
 +    } else {
  	rb_thread_method_id_and_class(GET_THREAD(), &id, &klass);
      }

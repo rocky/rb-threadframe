@@ -228,15 +228,6 @@ Index: thread.c
      return trace;
  }
  
-@@ -4063,7 +4109,7 @@
- 	id = p->id;
- 	klass = p->klass;
-     } else if (p->event == RUBY_EVENT_RAISE) {
--       /* rb_thread_method_and_id() wants a place to store a klass
-+        /* rb_thread_method_and_id() wants a place to store a klass
- 	   value which subsequently we will not use.  */
-         VALUE junk_klass; 
- 	rb_thread_method_id_and_class(GET_THREAD(), &id, &junk_klass);
 @@ -4257,9 +4303,11 @@
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
