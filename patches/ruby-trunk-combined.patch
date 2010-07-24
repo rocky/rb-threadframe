@@ -2058,3 +2058,34 @@ Index: test/ruby/test_tracefunc_adds.rb
 +                 'call filtering')
 +  end
 +end
+Index: test/ruby/test_tracefunc_raise.rb
+===================================================================
+--- test/ruby/test_tracefunc_raise.rb	(revision 28647)
++++ test/ruby/test_tracefunc_raise.rb	(working copy)
+@@ -0,0 +1,26 @@
++require 'test/unit'
++
++# tests that we a trace hook has access to the runtime exception Object
++# when it is called through a raise event
++
++class TestTracefuncRaise < Test::Unit::TestCase
++
++  def test_basic
++    tuples = []
++    p = Proc.new { 
++      |event, file, lineno, mid, binding, klass|
++      tuples << klass
++    }
++    msg = 'this is a message'
++    set_trace_func(p, 0x0080)
++    begin ; x = 1/0; rescue; end
++    begin ; raise RuntimeError, msg; rescue; end
++    clear_trace_func
++    assert_equal(2, tuples.size, 
++                 "Wrong number of tuples captured #{tuples.inspect}")
++    assert_equal msg, tuples[1].message
++    assert_equal([ZeroDivisionError, RuntimeError], tuples.map{|t| t.class},
++                 "Mismatched tuples classes in #{tuples.inspect}")
++    
++  end
++end
