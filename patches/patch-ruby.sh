@@ -19,18 +19,21 @@ case $patchfile in
 	    07-raise-msg.patch     \
 	    08-trace_func.patch
 	do 
-	    echo -- Applying patches in ${dirname}/trunk/$file ...
-	    patch -p0 < ${dirname}/trunk/$file
+	    patch_file=${dirname}/trunk/$file
+	    echo -- Applying patches in $patch_file ... | tee -a patches_applied.log
+	    patch -p0 < $patch_file
 	done
 	;;
     combined ) 
 	file=ruby-trunk-combined.patch
-	echo -- Applying patches in ${dirname}/$file ...
-	patch -p0 < ${dirname}/$file
+	patch_file=${dirname}/trunk/$file
+	echo -- Applying patches in $patch_file
+	patch -p0 < $patch_file
 	;;
     1.9.2 | rc2  | * )
 	file=ruby-1.9.2-combined.patch
-	echo -- Applying patches in ${dirname}/$file ...
-	patch -p0 < ${dirname}/$file
+	patch_file=${dirname}/trunk/$file
+	echo -- Applying patches in $patch_file
+	patch -p0 < $patch_file
 	;;
     esac
