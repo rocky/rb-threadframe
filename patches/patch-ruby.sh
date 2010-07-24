@@ -26,13 +26,13 @@ case $patchfile in
 	;;
     combined ) 
 	file=ruby-trunk-combined.patch
-	patch_file=${dirname}/trunk/$file
+	patch_file=${dirname}/$file
 	echo -- Applying patches in $patch_file
 	patch -p0 < $patch_file
 	;;
     1.9.2 | rc2  | * )
 	file=ruby-1.9.2-combined.patch
-	patch_file=${dirname}/trunk/$file
+	patch_file=${dirname}/$file
 	echo -- Applying patches in $patch_file
 	patch -p0 < $patch_file
 	;;
