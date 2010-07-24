@@ -71,6 +71,12 @@ static VALUE
 thread_frame_invalid_internal(thread_frame_t *tf)
 {
     int cmp;
+
+    /* All valid frame types have 0x1 set so we will use this.
+       Warning: this is an undocumented assumption which may someday
+       be wrong. */
+    if ((tf->cfp->flag & 0x1) == 0) return Qtrue;
+
     if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, tf->cfp))
 	return Qtrue;
     if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
@@ -86,12 +92,27 @@ thread_frame_invalid_internal(thread_frame_t *tf)
 	return Qnil;
     }
 }
+
+/* 
+   COPY_SIGNATURE saves some invariant data from the frame for
+   comparison later when the frame is used again.
+
+   Even though fields like iseq may not be valid for things C function
+   frames, nevertheless all we care about is whether they could change
+   or not over the course of evaluation. Hving more data to compare
+   against to verify whether a frame is valid is helpful. If the data
+   is random unitialized data, that's even better. Again just so long as
+   that random data doesn't change in the course of normal use.
+
+   FIXME: There are probably more fields which could be saved.  */
+#define COPY_SIGNATURE(tf, cfp)					  \
+    memcpy(tf->signature1, &(cfp->iseq), sizeof(tf->signature1)); \
+    memcpy(tf->signature2, &(cfp->proc), sizeof(tf->signature2)) 
     
 #define SAVE_FRAME(TF, TH)						\
     tf->th = TH;							\
     tf->cfp = thread_control_frame(tf->th);				\
-    memcpy(tf->signature1, &(tf->cfp->iseq), sizeof(tf->signature1));	\
-    memcpy(tf->signature2, &(tf->cfp->proc), sizeof(tf->signature2)) 
+    COPY_SIGNATURE(tf, tf->cfp);					\
 
 #define GET_THREAD_PTR \
     rb_thread_t *th; \
@@ -118,6 +139,11 @@ thread_frame_threadframe(VALUE thval)
     thread_frame_t *tf; \
     Data_Get_Struct(klass, thread_frame_t, tf)
 
+#define THREAD_FRAME_SETUP_WITH_ERROR		    \
+    THREAD_FRAME_SETUP;				    \
+    if (Qtrue == thread_frame_invalid_internal(tf)) \
+	rb_raise(rb_eThreadFrameError, "invalid frame")
+
 #define THREAD_FRAME_FIELD_METHOD(FIELD)	\
 static VALUE					\
 thread_frame_##FIELD(VALUE klass)		\
@@ -134,7 +160,7 @@ thread_frame_##REG(VALUE klass, VALUE index)			\
 	rb_raise(rb_eTypeError, "integer argument expected");	\
     } else {							\
         long int i = FIX2INT(index);				\
-	THREAD_FRAME_SETUP ;					\
+	THREAD_FRAME_SETUP_WITH_ERROR ;					\
 	/* FIXME: check index is within range. */		\
 	return tf->cfp->REG[-i]; /* stack  grows "down" */	\
     }								\
@@ -173,7 +199,7 @@ thread_frame_lfp(VALUE klass, VALUE index)
     long int i = FIX2INT(index);
     long int size;
     
-    THREAD_FRAME_SETUP ;
+    THREAD_FRAME_SETUP_WITH_ERROR ;
 
     size = tf->cfp->iseq->local_size;
     if (i < 0) i = size - i;
@@ -218,7 +244,7 @@ thread_frame_sp_set(VALUE klass, VALUE index, VALUE newvalue)
 	rb_raise(rb_eTypeError, "integer argument expected");
     } else {
         long int i = FIX2INT(index);
-	THREAD_FRAME_SETUP ;
+	THREAD_FRAME_SETUP_WITH_ERROR ;
 	/* FIXME: check index is within range. */
         /* stack  grows "down" */
 	tf->cfp->sp[-i] = newvalue;
@@ -239,10 +265,9 @@ static VALUE
 thread_frame_set_pc_offset(VALUE klass, VALUE offset_val)
 {
     int offset;
-    THREAD_FRAME_SETUP ;
-    if (Qtrue == thread_frame_invalid_internal(tf))
-	rb_raise(rb_eThreadFrameError, "invalid frame");
-    else if (!FIXNUM_P(offset_val)) {
+    THREAD_FRAME_SETUP_WITH_ERROR ;
+
+    if (!FIXNUM_P(offset_val)) {
 	rb_raise(rb_eTypeError, "integer argument expected");
     } else {
         offset = FIX2INT(offset_val);
@@ -284,7 +309,8 @@ THREAD_FRAME_FIELD_METHOD(flag) ;
 static VALUE
 thread_frame_argc(VALUE klass)
 {
-    THREAD_FRAME_SETUP ;
+    THREAD_FRAME_SETUP_WITH_ERROR;
+
     if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
 	return iseq_argc(thread_frame_iseq(klass));
     } else if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
@@ -304,7 +330,8 @@ thread_frame_argc(VALUE klass)
 static VALUE
 thread_frame_arity(VALUE klass)
 {
-    THREAD_FRAME_SETUP ;
+    THREAD_FRAME_SETUP_WITH_ERROR ;
+
     if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
 	return iseq_arity(thread_frame_iseq(klass));
     } else if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
@@ -322,10 +349,9 @@ thread_frame_arity(VALUE klass)
 static VALUE
 thread_frame_binding(VALUE klass)
 {
-    THREAD_FRAME_SETUP ;
-    if (Qtrue == thread_frame_invalid_internal(tf))
-	rb_raise(rb_eThreadFrameError, "invalid frame");
-    else {
+    THREAD_FRAME_SETUP_WITH_ERROR ;
+
+    {
 	rb_binding_t *bind = 0;
 	VALUE bindval = rb_binding_frame_new(tf->th, tf->cfp);
 	GetBindingPtr(bindval, bind);
@@ -350,10 +376,9 @@ thread_frame_binding(VALUE klass)
 static VALUE
 thread_frame_equal(VALUE klass, VALUE tfval2)
 {
-    THREAD_FRAME_SETUP ;
-    if (Qtrue == thread_frame_invalid_internal(tf))
-	rb_raise(rb_eThreadFrameError, "invalid frame");
-    else {
+    THREAD_FRAME_SETUP_WITH_ERROR ;
+
+    {
 	thread_frame_t *tf2;
 	if (!rb_obj_is_kind_of(tfval2, rb_cThreadFrame)) {
 	rb_raise(rb_eTypeError, 
@@ -446,9 +471,8 @@ thread_frame_is_trace_off(VALUE klass)
 static VALUE
 thread_frame_method(VALUE klass)
 {
-    THREAD_FRAME_SETUP ;			\
-    if (Qtrue == thread_frame_invalid_internal(tf))
-	rb_raise(rb_eThreadFrameError, "invalid frame");
+    THREAD_FRAME_SETUP_WITH_ERROR ;			\
+
     switch (VM_FRAME_TYPE(tf->cfp)) {
       case VM_FRAME_MAGIC_BLOCK:
       case VM_FRAME_MAGIC_EVAL:
@@ -483,9 +507,8 @@ static VALUE
 thread_frame_pc_offset(VALUE klass)
 {
     unsigned long pc;
-    THREAD_FRAME_SETUP ;
-    if (Qtrue == thread_frame_invalid_internal(tf))
-	rb_raise(rb_eThreadFrameError, "invalid frame");
+    THREAD_FRAME_SETUP_WITH_ERROR ;
+
     if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq) && 
 	(tf->cfp->pc != 0 && tf->cfp->iseq != 0)) {
 	pc = tf->cfp->pc - tf->cfp->iseq->iseq_encoded;
@@ -509,7 +532,7 @@ thread_frame_iseq(VALUE klass)
 {
     rb_iseq_t *iseq;
     VALUE rb_iseq;
-    THREAD_FRAME_SETUP ;
+    THREAD_FRAME_SETUP_WITH_ERROR ;
     iseq = tf->cfp->iseq;
     if (!iseq) return Qnil;
     rb_iseq = iseq_alloc_shared(rb_cISeq);
@@ -524,7 +547,7 @@ static VALUE
 thread_frame_next(VALUE klass)
 {
     rb_control_frame_t *cfp = NULL;
-    THREAD_FRAME_SETUP ;
+    THREAD_FRAME_SETUP_WITH_ERROR ;
     cfp = RUBY_VM_NEXT_CONTROL_FRAME(tf->cfp);
 
     if ((void *)(cfp) <= (void *)(tf->th->stack))
@@ -536,17 +559,7 @@ thread_frame_next(VALUE klass)
 	Data_Get_Struct(next, thread_frame_t, next_tf);
 	next_tf->th  = tf->th;
 	next_tf->cfp = cfp;
-    
-	if (RUBY_VM_NORMAL_ISEQ_P(cfp->iseq)) {
-	    memcpy(tf->signature1, &(cfp->iseq), sizeof(tf->signature1)); 
-	    memcpy(tf->signature2, &(cfp->proc), sizeof(tf->signature2));
-	} else if (!cfp) {
-	    return Qnil;
-	} else if (RUBYVM_CFUNC_FRAME_P(cfp)) {
-	    /* FIXME: This probabably not complete*/
-	    memcpy(tf->signature1, &(cfp->iseq), sizeof(tf->signature1)); 
-	    memcpy(tf->signature2, &(cfp->proc), sizeof(tf->signature2));
-	}
+	COPY_SIGNATURE(tf, cfp);
 	return next;
     }
 }
@@ -604,28 +617,19 @@ thread_frame_prev_internal(rb_control_frame_t *prev_cfp, rb_thread_t *th,
     cfp = prev_cfp;
     prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
     if (VM_FRAME_TYPE(prev_cfp) == VM_FRAME_MAGIC_FINISH) {
-      prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(prev_cfp);
+	prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(prev_cfp);
     }
     if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, prev_cfp))
-      return Qnil;
+	return Qnil;
   }
+  if (!cfp) return Qnil;
 
   prev = thread_frame_alloc(rb_cThreadFrame);
   thread_frame_t_alloc(prev);
   Data_Get_Struct(prev, thread_frame_t, tf);
   tf->th  = th;
   tf->cfp = prev_cfp;
-  
-  if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
-    memcpy(tf->signature1, &(tf->cfp->iseq), sizeof(tf->signature1)); 
-    memcpy(tf->signature2, &(tf->cfp->proc), sizeof(tf->signature2));
-  } else if (!cfp) {
-    return Qnil;
-  } else if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
-    /* FIXME: This probabably not complete*/
-    memcpy(tf->signature1, &(cfp->iseq), sizeof(tf->signature1)); 
-    memcpy(tf->signature2, &(cfp->proc), sizeof(tf->signature2));
-  }
+  COPY_SIGNATURE(tf, tf->cfp);
   return prev;
 }
 
