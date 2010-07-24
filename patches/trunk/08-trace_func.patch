@@ -383,7 +383,7 @@ Index: test/ruby/test_settracefunc.rb
 Index: test/ruby/test_tracefunc_adds.rb
 --- test/ruby/test_tracefunc_adds.rb	(revision 28642)
 +++ test/ruby/test_tracefunc_adds.rb	(working copy)
-@@ -0,0 +1,132 @@
+@@ -0,0 +1,131 @@
 +require 'test/unit'
 +
 +# tests set_trace_func with event bitmasks, clear_trace_func, 
@@ -490,7 +490,6 @@ Index: test/ruby/test_tracefunc_adds.rb
 +  end
 +
 +  def test_chained_hook
-+    puts "ho"
 +    tuples1 = []
 +    tuples2 = []
 +    cmd = <<-EOF.gsub(/^.*?: /, '')
@@ -510,7 +509,7 @@ Index: test/ruby/test_tracefunc_adds.rb
 +                  ["line", 9, :test_chained_hook, self.class], 
 +                  ["line", 1, :five, self.class], 
 +                  ["line", 9, :test_chained_hook, self.class], 
-+                  ["line", 121, :test_chained_hook, self.class]], tuples1,
++                 ], tuples1[0..-2],
 +                 'line filtering')
 +    assert_equal([["call", 1, :five, self.class]], tuples2, 
 +                 'call filtering')
