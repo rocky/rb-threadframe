@@ -46,7 +46,7 @@ Index: thread.c
 ===================================================================
 --- thread.c	(revision 28647)
 +++ thread.c	(working copy)
-@@ -3883,19 +3883,48 @@
+@@ -3885,19 +3883,48 @@
      return ST_CONTINUE;
  }
  
@@ -98,7 +98,7 @@ Index: thread.c
   *
   *  Establishes _proc_ as the handler for tracing, or disables
   *  tracing if the parameter is +nil+. _proc_ takes up
-@@ -3909,6 +3938,8 @@
+@@ -3911,6 +3938,8 @@
   *  <code>line</code> (execute code on a new line), <code>raise</code>
   *  (raise an exception), and <code>return</code> (return from a Ruby
   *  method). Tracing is disabled within the context of _proc_.
@@ -107,7 +107,7 @@ Index: thread.c
   *
   *      class Test
   *	def test
-@@ -3933,55 +3964,62 @@
+@@ -3935,55 +3964,62 @@
   *	  line prog.rb:3        test     Test
   *	  line prog.rb:4        test     Test
   *      return prog.rb:4        test     Test
@@ -188,7 +188,7 @@ Index: thread.c
   *     thr.set_trace_func(nil)     -> nil
   *
   *  Establishes _proc_ on _thr_ as the handler for tracing, or
-@@ -3990,16 +4028,24 @@
+@@ -3992,16 +4028,24 @@
   */
  
  static VALUE
@@ -215,7 +215,7 @@ Index: thread.c
      return trace;
  }
  
-@@ -4257,9 +4303,11 @@
+@@ -4259,9 +4303,11 @@
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -256,7 +256,7 @@ Index: vm_insnhelper.c
 ===================================================================
 --- vm_insnhelper.c	(revision 28647)
 +++ vm_insnhelper.c	(working copy)
-@@ -391,8 +391,6 @@
+@@ -395,8 +391,6 @@
      const rb_method_definition_t *def = me->def;
      rb_control_frame_t *cfp;
  
@@ -265,7 +265,7 @@ Index: vm_insnhelper.c
      cfp = vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
  			recv, (VALUE) blockptr, 0, reg_cfp->sp, 0, 1);
      /* Store actual argument count. Note that cfunc.argc contains the
-@@ -400,6 +398,8 @@
+@@ -404,6 +398,8 @@
      */
      me->def->body.cfunc.actual_argc = num;
      cfp->me = me;
@@ -274,7 +274,7 @@ Index: vm_insnhelper.c
      reg_cfp->sp -= num + 1;
  
      val = call_cfunc(def->body.cfunc.func, recv, (int)def->body.cfunc.argc, num, reg_cfp->sp + 1);
-@@ -407,11 +407,21 @@
+@@ -411,11 +407,21 @@
      if (reg_cfp != th->cfp + 1) {
  	rb_bug("cfp consistency error - send");
      }
