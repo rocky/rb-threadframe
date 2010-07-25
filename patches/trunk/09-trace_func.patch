@@ -41,6 +41,7 @@ Ideally I would have split out into different patches 1) and 2) from
 3) and 4) above.  But because both occur in close proximity in the
 source code, it was much easier to do the patching with them combined.
 
+This patch assumes 02-trace_func.patch has been applied.
 
 Index: thread.c
 ===================================================================
