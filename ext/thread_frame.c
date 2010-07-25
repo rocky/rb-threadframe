@@ -311,10 +311,10 @@ thread_frame_argc(VALUE klass)
 {
     THREAD_FRAME_SETUP_WITH_ERROR;
 
-    if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
+    if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
+	return INT2FIX(tf->cfp->me->def->body.cfunc.actual_argc);
+    } else if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
 	return iseq_argc(thread_frame_iseq(klass));
-    } else if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
-        return INT2FIX(tf->cfp->me->def->body.cfunc.actual_argc);
     } else
 	return Qnil;
 }
@@ -582,7 +582,7 @@ thread_frame_prev(int argc, VALUE *argv, VALUE klass)
     VALUE nv;
     int n;
 
-    THREAD_FRAME_SETUP ;
+    THREAD_FRAME_SETUP_WITH_ERROR ;
 
     rb_scan_args(argc, argv, "01", &nv);
 

@@ -1,7 +1,9 @@
-This patch provides a way to get the exception message on a "raise"
-event.  It does this by storing the message as the klass
-parameter. Note that in a hook one can get the class via a binding
-from the frame using eval('self.class', binding)
+This patch provides a way to get the exception object on a "raise"
+event in a trace hook. The exeception object passed as the "klass"
+parameter in the hook callback.
+
+Note that in a hook one can get the class via a binding from the frame
+using eval('self.class', binding)
 
 Another small but unrelated change here is to fill in some of the
 missing event names in the case statement of routine get_event_name().
@@ -83,3 +85,34 @@ Index: test/ruby/test_settracefunc.rb
      assert_equal(["c-return", 5, :raise, Kernel],
                   events.shift)
 
+Index: test/ruby/test_tracefunc_raise.rb
+===================================================================
+--- test/ruby/test_tracefunc_raise.rb	(revision 28647)
++++ test/ruby/test_tracefunc_raise.rb	(working copy)
+@@ -0,0 +1,26 @@
++require 'test/unit'
++
++# tests that we a trace hook has access to the runtime exception Object
++# when it is called through a raise event
++
++class TestTracefuncRaise < Test::Unit::TestCase
++
++  def test_basic
++    tuples = []
++    p = Proc.new { 
++      |event, file, lineno, mid, binding, klass|
++      tuples << klass
++    }
++    msg = 'this is a message'
++    set_trace_func(p, 0x0080)
++    begin ; x = 1/0; rescue; end
++    begin ; raise RuntimeError, msg; rescue; end
++    clear_trace_func
++    assert_equal(2, tuples.size, 
++                 "Wrong number of tuples captured #{tuples.inspect}")
++    assert_equal msg, tuples[1].message
++    assert_equal([ZeroDivisionError, RuntimeError], tuples.map{|t| t.class},
++                 "Mismatched tuples classes in #{tuples.inspect}")
++    
++  end
++end
