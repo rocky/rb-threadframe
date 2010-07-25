@@ -11,12 +11,13 @@ case $patchfile in
 	for file in \
 	    00-extern-access.patch  \
 	    01-get-sourceline.patch \
-	    02-disasm-insns.patch  \
-	    03-iseq-access.patch   \
-	    04-iseq-create.patch   \
-	    05-C-argc.patch        \
-	    06-brkpt.patch         \
-	    07-raise-msg.patch     \
+	    02-frame-trace.patch    \
+	    02-disasm-insns.patch   \
+	    03-iseq-access.patch    \
+	    04-iseq-create.patch    \
+	    05-C-argc.patch         \
+	    06-brkpt.patch          \
+	    07-raise-msg.patch      \
 	    08-trace_func.patch
 	do 
 	    echo -- Applying patches in ${dirname}/trunk/$file ...

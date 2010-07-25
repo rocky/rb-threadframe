@@ -46,19 +46,6 @@ Index: thread.c
 ===================================================================
 --- thread.c	(revision 28647)
 +++ thread.c	(working copy)
-@@ -3796,10 +3796,10 @@
-     const rb_event_flag_t wait_event = th->event_flags;
- 
-     if (self == rb_mRubyVMFrozenCore) return;
--    if (wait_event & flag) {
-+    if (wait_event & flag && th->tracing <= 0) {
- 	exec_event_hooks(th->event_hooks, flag, self, id, klass);
-     }
--    if (wait_event & RUBY_EVENT_VM) {
-+    if (wait_event & RUBY_EVENT_VM && th->tracing <= 0) {
- 	if (th->vm->event_hooks == NULL) {
- 	    th->event_flags &= (~RUBY_EVENT_VM);
- 	}
 @@ -3883,19 +3883,48 @@
      return ST_CONTINUE;
  }

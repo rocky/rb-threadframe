@@ -29,7 +29,7 @@ Index: thread.c
 --- thread.c	(revision 28647)
 +++ thread.c	(working copy)
 ===================================================================
-@@ -4025,6 +4109,12 @@
+@@ -4027,6 +4109,12 @@
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -42,7 +42,7 @@ Index: thread.c
        default:
  	return "unknown";
      }
-@@ -4056,8 +4055,15 @@
+@@ -4058,8 +4055,15 @@
  	p->event == RUBY_EVENT_C_RETURN) {
  	id = p->id;
  	klass = p->klass;

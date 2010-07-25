@@ -9,7 +9,7 @@ Index: vm_core.h
 ===================================================================
 --- vm_core.h	(revision 28647)
 +++ vm_core.h	(working copy)
-@@ -495,6 +500,7 @@
+@@ -498,6 +500,7 @@
  VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, VALUE, const rb_compile_option_t*);
  VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
  VALUE rb_iseq_disasm(VALUE self);

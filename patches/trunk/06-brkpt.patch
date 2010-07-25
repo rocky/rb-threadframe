@@ -73,7 +73,7 @@ Index: thread.c
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -4013,6 +4013,8 @@
+@@ -4015,6 +4013,8 @@
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -126,7 +126,7 @@ Index: vm_insnhelper.c
 ===================================================================
 --- vm_insnhelper.c	(revision 28647)
 +++ vm_insnhelper.c	(working copy)
-@@ -481,6 +477,12 @@
+@@ -485,6 +477,12 @@
  		      iseq->iseq_encoded + opt_pc, sp, 0, 0);
  
  	cfp->sp = rsp - 1 /* recv */;
