@@ -13,7 +13,7 @@ Index: eval.c
 ===================================================================
 --- eval.c	(revision 28647)
 +++ eval.c	(working copy)
-@@ -440,7 +440,12 @@
+@@ -440,6 +440,11 @@
      rb_trap_restore_mask();
  
      if (tag != TAG_FATAL) {
@@ -23,7 +23,7 @@ Index: eval.c
 +           use. Given a binding, a trace hook can get the class via 
 +           eval('self.class', binding)
 +	 */
-+	EXEC_EVENT_HOOK(th, RUBY_EVENT_RAISE, th->cfp->self, 0, mesg);
++        EXEC_EVENT_HOOK(th, RUBY_EVENT_RAISE, th->cfp->self, 0, mesg);
      }
  }
 

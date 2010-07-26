@@ -253,6 +253,39 @@ Index: eval.c
  
  void *
  ruby_options(int argc, char **argv)
+--- vm_eval.c	(revision 28647)
++++ vm_eval.c	(working copy)
+@@ -67,7 +67,6 @@
+ 	break;
+       }
+       case VM_METHOD_TYPE_CFUNC: {
+-	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
+ 	{
+ 	    rb_control_frame_t *reg_cfp = th->cfp;
+ 	    rb_control_frame_t *cfp =
+@@ -78,15 +77,21 @@
+ 	       contains the prototype value.
+ 	    */
+ 	    me->def->body.cfunc.actual_argc = argc;
++
+ 	    cfp->me = me;
++	    if (0 == th->tracing)
++		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
++
+ 	    val = call_cfunc(def->body.cfunc.func, recv, def->body.cfunc.argc, argc, argv);
+ 
+ 	    if (reg_cfp != th->cfp + 1) {
+ 		rb_bug("cfp consistency error - call0");
+ 	    }
++	    if (0 == th->tracing) {
++		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
++	    }
+ 	    vm_pop_frame(th);
+ 	}
+-	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
+ 	break;
+       }
+       case VM_METHOD_TYPE_ATTRSET: {
 Index: vm_insnhelper.c
 ===================================================================
 --- vm_insnhelper.c	(revision 28647)
