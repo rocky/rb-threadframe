@@ -132,16 +132,16 @@ Index: thread.c
  	    }
  	    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
  	}
-+@@ -1322,7 +1335,7 @@
-+ 
-+ 	    switch (VM_FRAME_TYPE(th->cfp)) {
-+ 	      case VM_FRAME_MAGIC_METHOD:
-+-		EXEC_EVENT_HOOK(th, RUBY_EVENT_RETURN, th->cfp->self, 0, 0);
-++		EXEC_EVENT_RETURN_HOOK(th, RUBY_EVENT_RETURN, th->cfp->self, 0, 0);
-+ 		break;
-+ 	      case VM_FRAME_MAGIC_CLASS:
-+ 		EXEC_EVENT_HOOK(th, RUBY_EVENT_END, th->cfp->self, 0, 0);
- Index: vm_insnhelper.c
+@@ -1334,7 +1346,7 @@
+ 
+ 	    switch (VM_FRAME_TYPE(th->cfp)) {
+ 	      case VM_FRAME_MAGIC_METHOD:
+-		EXEC_EVENT_HOOK(th, RUBY_EVENT_RETURN, th->cfp->self, 0, 0);
++		EXEC_EVENT_RETURN_HOOK(th, RUBY_EVENT_RETURN, th->cfp->self, 0, 0);
+ 		break;
+ 	      case VM_FRAME_MAGIC_CLASS:
+ 		EXEC_EVENT_HOOK(th, RUBY_EVENT_END, th->cfp->self, 0, 0);
+Index: vm_insnhelper.c
 Index: vm_insnhelper.c
 ===================================================================
 --- vm_insnhelper.c	(revision 28647)

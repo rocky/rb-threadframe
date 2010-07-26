@@ -748,11 +748,10 @@ Index: thread.c
 ===================================================================
 --- thread.c	(revision 28647)
 +++ thread.c	(working copy)
-@@ -336,6 +336,16 @@
+@@ -336,6 +336,14 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
  static void rb_mutex_abandon_all(mutex_t *mutexes);
  
-+
 +rb_control_frame_t *
 +thread_control_frame(rb_thread_t *th) 
 +{
@@ -760,7 +759,6 @@ Index: thread.c
 +    th = GET_THREAD(); /* main thread */
 +  return rb_vm_get_ruby_level_next_cfp(th, th->cfp);
 +}
-+
 +
  void
  rb_thread_terminate_all(void)
