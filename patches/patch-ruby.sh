@@ -18,7 +18,8 @@ case $patchfile in
 	    06-C-argc.patch         \
 	    07-brkpt.patch          \
 	    08-raise-msg.patch      \
-	    09-trace_func.patch
+	    09-trace_func.patch     \
+	    10-iseq-top-name.patch
 	do 
 	    patch_file=${dirname}/trunk/$file
 	    echo -- Applying patches in $patch_file ... | tee -a patches_applied.log

@@ -1,0 +1,59 @@
+This patch changes the instruction sequence name slightly for the top-most
+instruction-sequence container (ISEQ_TYPE_TOP). The name <top (required)> isn't
+very instructive and it is not unique. So we replace (required) with 
+a file name. For example:
+
+ <top /tmp/l.rb> vs <top (required)> 
+
+and also
+ 
+ <RubyVM::InstructionSequence:<compiled>> vs.
+ <RubyVM::InstructionSequence:<compiled>@<compiled>>
+
+Motivation: Instruction sequence names become important the more one
+needs to access them.  In a debugger we use instruction sequences in
+describing where to stop or in showing disassembly, so making things
+look more descriptive is helpful.
+
+
+Index: iseq.c
+===================================================================
+--- iseq.c	(revision 28647)
++++ iseq.c	(working copy)
+@@ -746,9 +727,13 @@
+         return rb_sprintf("#<%s: uninitialized>", rb_obj_classname(self));
+     }
+ 
+-    return rb_sprintf("<%s:%s@%s>",
+-                      rb_obj_classname(self),
+-		      RSTRING_PTR(iseq->name), RSTRING_PTR(iseq->filename));
++    if (ISEQ_TYPE_TOP == iseq->type)
++	return rb_sprintf("<%s:%s>",
++			  rb_obj_classname(self), RSTRING_PTR(iseq->name));
++    else
++	return rb_sprintf("<%s:%s@%s>",
++			  rb_obj_classname(self),
++			  RSTRING_PTR(iseq->name), RSTRING_PTR(iseq->filename));
+ }
+ 
+ static
+Index: load.c
+===================================================================
+--- load.c	(revision 28682)
++++ load.c	(working copy)
+@@ -294,11 +294,14 @@
+     if (state == 0) {
+ 	NODE *node;
+ 	VALUE iseq;
++	char iseq_name[MAXPATHLEN];
+ 
+ 	th->mild_compile_error++;
+ 	node = (NODE *)rb_load_file(RSTRING_PTR(fname));
+ 	loaded = TRUE;
+-	iseq = rb_iseq_new_top(node, rb_str_new2("<top (required)>"), fname, rb_realpath_internal(Qnil, fname, 1), Qfalse);
++	snprintf(iseq_name, sizeof(iseq_name), "<top %s>", RSTRING_PTR(fname));
++	iseq = rb_iseq_new_top(node, rb_str_new2(iseq_name), fname, rb_realpath_internal(Qnil, fname, 1), Qfalse);
++
+ 	th->mild_compile_error--;
+ 	rb_iseq_eval(iseq);
+     }
