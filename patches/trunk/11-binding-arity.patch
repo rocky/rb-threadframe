@@ -1,0 +1,77 @@
+This patch does two separate unrelated things.
+
+1. get_iseq_arity() allows an external C extension retrieve an the
+instruction sequence arity. In rb-threadframe this is supplemented
+with another routine to provide:
+   RubyVM::InstructionSequence#arity -> Fixnum
+
+Possibly this method should added Ruby 1.9
+
+2. rb_binding_frame_new() allows an external C extension to return a
+binding using a thread and control frame pointers. In rb-threadframe
+this is used to provide:
+  RubyVM::ThreadFrame#binding
+
+Index: iseq.c
+===================================================================
+--- proc.c	(revision 28647)
++++ proc.c	(working copy)
+@@ -324,6 +324,28 @@
+     return bindval;
+ }
+ 
++/*  Like rb_binding_new(), but we allow you to pass your own thread and
++ *  cfp rather than assume the current thread and current frame
++ *  pointer. 
++*/
++VALUE
++rb_binding_frame_new(void *vth, void *vcfp)
++{
++    rb_thread_t * th = (rb_thread_t *) vth;
++    rb_control_frame_t * cfp  = (rb_control_frame_t *) vcfp;
++    VALUE bindval = binding_alloc(rb_cBinding);
++    rb_binding_t *bind;
++    
++    if (cfp == 0) {
++        rb_raise(rb_eRuntimeError, 
++		 "Can't create Binding Object on top of Fiber.");
++    }
++
++    GetBindingPtr(bindval, bind);
++    bind->env = rb_vm_make_env_object(th, cfp);
++    return bindval;
++}
++
+ /*
+  *  call-seq:
+  *     binding -> a_binding
+@@ -625,6 +643,29 @@
+     return INT2FIX(arity);
+ }
+ 
++int 
++get_iseq_arity(rb_iseq_t *iseq) 
++{
++    if (iseq) {
++	if (BUILTIN_TYPE(iseq) != T_NODE) {
++	    if (iseq->arg_rest < 0) {
++		return iseq->argc;
++	    }
++	    else {
++		return -(iseq->argc + 1 + iseq->arg_post_len);
++	    }
++	}
++	else {
++	    NODE *node = (NODE *)iseq;
++	    if (nd_type(node) == NODE_IFUNC && node->nd_cfnc == bmcall) {
++		/* method(:foo).to_proc.arity */
++		return method_arity(node->nd_tval);
++	    }
++	}
++    }
++    return -1;
++}
++
+ int
+ rb_proc_arity(VALUE self)
+ {

@@ -590,20 +590,6 @@ Index: load.c
  	th->mild_compile_error--;
  	rb_iseq_eval(iseq);
      }
-Index: compile.c
-===================================================================
---- compile.c	(revision 28682)
-+++ compile.c	(working copy)
-@@ -3353,6 +3353,9 @@
- 	if (iseq->compile_data->redo_label != 0) {
- 	    LABEL *splabel = NEW_LABEL(0);
- 	    debugs("next in while loop\n");
-+	    if (!poped) {
-+		ADD_INSN(ret, nd_line(node), putnil);
-+	    }
- 	    ADD_LABEL(ret, splabel);
- 	    COMPILE(ret, "next val/valid syntax?", node->nd_stts);
- 	    add_ensure_iseq(ret, iseq, 0);
 Index: vm_eval.c
 ===================================================================
 --- vm_eval.c	(revision 28682)
@@ -695,10 +681,14 @@ Index: proc.c
  static int rb_obj_is_method(VALUE m);
  rb_iseq_t *rb_method_get_iseq(VALUE method);
  
-@@ -324,6 +324,24 @@
+@@ -324,6 +324,28 @@
      return bindval;
  }
  
++/*  Like rb_binding_new(), but we allow you to pass your own thread and
++ *  cfp rather than assume the current thread and current frame
++ *  pointer. 
++*/
 +VALUE
 +rb_binding_frame_new(void *vth, void *vcfp)
 +{
