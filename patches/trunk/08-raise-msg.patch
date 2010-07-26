@@ -13,7 +13,7 @@ Index: eval.c
 ===================================================================
 --- eval.c	(revision 28647)
 +++ eval.c	(working copy)
-@@ -440,6 +440,11 @@
+@@ -440,7 +440,12 @@
      rb_trap_restore_mask();
  
      if (tag != TAG_FATAL) {
@@ -26,7 +26,7 @@ Index: eval.c
 +        EXEC_EVENT_HOOK(th, RUBY_EVENT_RAISE, th->cfp->self, 0, mesg);
      }
  }
-
+ 
 Index: thread.c
 --- thread.c	(revision 28647)
 +++ thread.c	(working copy)

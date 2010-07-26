@@ -41,7 +41,7 @@ Index: load.c
 ===================================================================
 --- load.c	(revision 28682)
 +++ load.c	(working copy)
-@@ -294,11 +294,14 @@
+@@ -294,11 +294,13 @@
      if (state == 0) {
  	NODE *node;
  	VALUE iseq;
@@ -53,7 +53,6 @@ Index: load.c
 -	iseq = rb_iseq_new_top(node, rb_str_new2("<top (required)>"), fname, rb_realpath_internal(Qnil, fname, 1), Qfalse);
 +	snprintf(iseq_name, sizeof(iseq_name), "<top %s>", RSTRING_PTR(fname));
 +	iseq = rb_iseq_new_top(node, rb_str_new2(iseq_name), fname, rb_realpath_internal(Qnil, fname, 1), Qfalse);
-+
  	th->mild_compile_error--;
  	rb_iseq_eval(iseq);
      }

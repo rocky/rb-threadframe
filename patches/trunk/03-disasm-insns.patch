@@ -208,7 +208,7 @@ Index: iseq.c
  
 +/*
 + *  call-seq:
-+ *     iseq.disasm   => string
++ *     iseq.disasm   -> string
 + *
 + *  Returns a string disassembly of an instruction sequence.
 + */
@@ -221,7 +221,7 @@ Index: iseq.c
 +
 +/*
 + *  call-seq:
-+ *     iseq.disasm_nochildren   => string
++ *     iseq.disasm_nochildren   -> string
 + *
 + *  Returns a string disassembly of an instruction sequence, and
 + *  doesn't include instruction sequences for any associated catch
