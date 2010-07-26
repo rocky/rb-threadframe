@@ -185,7 +185,7 @@ Index: thread.c
  /*
   *  call-seq:
 - *     thr.set_trace_func(proc)    -> proc
-+ *     thr.set_trace_func(proc, events=RB_EVENT_ALL)    => proc
++ *     thr.set_trace_func(proc, events=RB_EVENT_ALL)    -> proc
   *     thr.set_trace_func(nil)     -> nil
   *
   *  Establishes _proc_ on _thr_ as the handler for tracing, or
@@ -263,7 +263,7 @@ Index: eval.c
  	{
  	    rb_control_frame_t *reg_cfp = th->cfp;
  	    rb_control_frame_t *cfp =
-@@ -78,15 +77,21 @@
+@@ -78,15 +77,22 @@
  	       contains the prototype value.
  	    */
  	    me->def->body.cfunc.actual_argc = argc;
@@ -277,6 +277,7 @@ Index: eval.c
  	    if (reg_cfp != th->cfp + 1) {
  		rb_bug("cfp consistency error - call0");
  	    }
++
 +	    if (0 == th->tracing) {
 +		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
 +	    }
@@ -308,10 +309,11 @@ Index: vm_insnhelper.c
      reg_cfp->sp -= num + 1;
  
      val = call_cfunc(def->body.cfunc.func, recv, (int)def->body.cfunc.argc, num, reg_cfp->sp + 1);
-@@ -411,11 +407,21 @@
+@@ -411,11 +407,22 @@
      if (reg_cfp != th->cfp + 1) {
  	rb_bug("cfp consistency error - send");
      }
++
 +    if (0 == th->tracing) {
 +	rb_event_flag_t wait_event__ = th->event_flags;			
 +	if (UNLIKELY(wait_event__)) {
@@ -354,15 +356,36 @@ Index: test/ruby/test_settracefunc.rb
      assert_equal(["line", 4, __method__, self.class],
                   events.shift)
      assert_equal(["c-call", 4, :method_added, Module],
-@@ -90,8 +86,6 @@
+@@ -88,10 +84,8 @@
+      6:   end
+      7: end
       8: x = Foo.new.bar
-      9: set_trace_func(nil)
+-     9: set_trace_func(nil)
++     9: clear_trace_func()
      EOF
 -    assert_equal(["c-return", 3, :set_trace_func, Kernel],
 -                 events.shift)
      assert_equal(["line", 4, __method__, self.class],
                   events.shift)
      assert_equal(["c-call", 4, :inherited, Class],
+@@ -124,7 +118,7 @@
+                  events.shift)
+     assert_equal(["line", 9, __method__, self.class],
+                  events.shift)
+-    assert_equal(["c-call", 9, :set_trace_func, Kernel],
++    assert_equal(["c-call", 9, :clear_trace_func, Kernel],
+                  events.shift)
+     assert_equal([], events)
+   end
+@@ -132,7 +126,7 @@
+   def test_return # [ruby-dev:38701]
+     events = []
+     eval <<-EOF.gsub(/^.*?: /, "")
+-     1: set_trace_func(Proc.new { |event, file, lineno, mid, binding, klass|
++     1: add_trace_func(Proc.new { |event, file, lineno, mid, binding, klass|
+      2:   events << [event, lineno, mid, klass]
+      3: })
+      4: def foo(a)
 @@ -143,8 +137,6 @@
       9: foo(false)
      10: set_trace_func(nil)
