@@ -1108,16 +1108,6 @@ Index: eval.c
      }
  }
  
-@@ -588,6 +588,9 @@
- 
-     setup_exception(th, TAG_RAISE, mesg);
- 
-+    /* rocky: FIXME: decide what to do for sp values. Do we push mesg? 
-+       See vm_insnhelper.c for guidance.
-+     */
-     EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, self, mid, klass);
-     rb_thread_raised_clear(th);
-     JUMP_TAG(TAG_RAISE);
 Index: vm_exec.h
 ===================================================================
 --- vm_exec.h	(revision 28647)
