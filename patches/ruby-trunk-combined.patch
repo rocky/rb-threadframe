@@ -607,7 +607,7 @@ Index: vm_eval.c
 ===================================================================
 --- vm_eval.c	(revision 28647)
 +++ vm_eval.c	(working copy)
-@@ -67,22 +67,34 @@
+@@ -67,22 +67,30 @@
  	break;
        }
        case VM_METHOD_TYPE_CFUNC: {
@@ -632,10 +632,6 @@ Index: vm_eval.c
  		rb_bug("cfp consistency error - call0");
  	    }
 +	    if (0 == th->tracing && 0 == th->exec_event_tracing) {
-+		/* rocky: FIXME: decide what to do for sp values,
-+		   especially the return value. See vm_insnhelper.c
-+		   for guidance.
-+		*/
 +		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
 +	    }
  	    vm_pop_frame(th);
@@ -644,16 +640,6 @@ Index: vm_eval.c
  	break;
        }
        case VM_METHOD_TYPE_ATTRSET: {
-@@ -869,7 +881,8 @@
- #endif
- 		    if (UNLIKELY(VM_FRAME_TYPE(th->cfp) == VM_FRAME_MAGIC_CFUNC)) {
- 			const rb_method_entry_t *me = th->cfp->me;
--			EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, th->cfp->self, me->called_id, me->klass);
-+			EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, 
-+					th->cfp->self, me->called_id, me->klass);
- 		    }
- 
- 		    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
 @@ -1025,7 +1038,25 @@
      if (state) {
  	if (state == TAG_RAISE) {
