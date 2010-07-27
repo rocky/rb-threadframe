@@ -592,7 +592,7 @@ Index: vm_eval.c
 ===================================================================
 --- vm_eval.c	(revision 28647)
 +++ vm_eval.c	(working copy)
-@@ -67,22 +67,30 @@
+@@ -67,22 +67,32 @@
  	break;
        }
        case VM_METHOD_TYPE_CFUNC: {
@@ -602,6 +602,7 @@ Index: vm_eval.c
  	    rb_control_frame_t *cfp =
  		vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
  			      recv, (VALUE)blockptr, 0, reg_cfp->sp, 0, 1);
++
 +	    /* Store actual argument count. Note that cfunc.argc
 +	       contains the prototype value.
 +	    */
@@ -616,6 +617,7 @@ Index: vm_eval.c
  	    if (reg_cfp != th->cfp + 1) {
  		rb_bug("cfp consistency error - call0");
  	    }
++
 +	    if (0 == th->tracing && 0 == th->exec_event_tracing) {
 +		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
 +	    }
@@ -998,7 +1000,7 @@ Index: thread.c
        default:
  	return "unknown";
      }
-@@ -4043,11 +4148,17 @@
+@@ -4043,11 +4148,19 @@
      VALUE klass = 0;
  
      if (p->event == RUBY_EVENT_C_CALL ||
@@ -1013,8 +1015,10 @@ Index: thread.c
 +        /* rb_thread_method_and_id() wants a place to store a klass
 +	    value which subsequently we will not use.  */
 +        VALUE junk_klass; 
-+        rb_thread_method_id_and_class(GET_THREAD(), &id, &junk_klass);
-+        klass = p->klass;
++	 rb_thread_method_id_and_class(GET_THREAD(), &id, &junk_klass);
++	 /* When the event is RUBY_EVENT_RAISE, we have stored the raise
++	    message as the trace-hook klass parameter. */ 
++	 klass = p->klass;
 +    } else {
  	rb_thread_method_id_and_class(GET_THREAD(), &id, &klass);
      }
@@ -1876,7 +1880,6 @@ Index: test/ruby/test_iseq.rb
 Index: test/ruby/test_tracefunc_adds.rb
 --- test/ruby/test_tracefunc_adds.rb	(revision 28642)
 +++ test/ruby/test_tracefunc_adds.rb	(working copy)
-@@ -0,0 +1,130 @@
 +require 'test/unit'
 +
 +# tests set_trace_func with event bitmasks, clear_trace_func, 
@@ -1894,7 +1897,8 @@ Index: test/ruby/test_tracefunc_adds.rb
 +  @@C_CALL_EVENT_MASK    = 0x0020
 +  @@C_RETURN_EVENT_MASK  = 0x0040
 +  @@RAISE_EVENT_MASK     = 0x0080
-+  @@ALL_EVENTS_MASK      = 0x00ff
++  @@INSN_EVENT_MASK      = 0x0100
++  @@ALL_EVENTS_MASK      = (0xffff & ~@@INSN_EVENT_MASK)
 +  
 +  @@EVENT2MASK = {
 +    'line'     => @@LINE_EVENT_MASK,
@@ -2005,6 +2009,20 @@ Index: test/ruby/test_tracefunc_adds.rb
 +                 'line filtering')
 +    assert_equal([["call", 1, :five, self.class]], tuples2, 
 +                 'call filtering')
++  end
++
++  def test_trace_insn
++    tuples = []
++    cmd = <<-EOF.gsub(/^.*?: /, '')
++        1: p = #{@proc_template}
++        2: add_trace_func(p, @@INSN_EVENT_MASK)
++        4: x = 1
++        3: y = 2
++      EOF
++    eval cmd % 'tuples'
++    clear_trace_func
++    assert_equal true, !tuples.empty?, 'triggered instruction events'
++    assert_equal true, tuples.all?{|t| 'vm-insn' == t[0]}, 'instruction events'
 +  end
 +end
 Index: test/ruby/test_tracefunc_raise.rb

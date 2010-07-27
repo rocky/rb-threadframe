@@ -81,8 +81,8 @@ Index: thread.c
 +    }
 +
 +    {
-+	rb_thread_t *th           = GET_THREAD(); /* main thread */
-+	th->tracing               = -1;
++	rb_thread_t *th = GET_THREAD(); /* main thread */
++	th->tracing     = -1;
 +	rb_add_event_hook(call_trace_func, mask, trace);
 +    }
 +    
@@ -413,17 +413,65 @@ Index: test/ruby/test_settracefunc.rb
      assert_equal(["line", 4, __method__, self.class],
                   events.shift)
      assert_equal(["line", 5, __method__, self.class],
-@@ -273,8 +261,7 @@
+@@ -263,6 +251,15 @@
+     assert_equal([], events)
+   end
+ 
++  def chunk(list, char)
++    sep = char * 30 + "\n"
++    sep + list.map{|e| e.join(' ')}.join("\n") + "\n"
++  end
++
++  def showit(actual, expected)
++    chunk(actual, '-') + chunk(expected, '=')
++  end
++
+   def test_break # [ruby-core:27606] [Bug #2610]
+     events = []
+     eval <<-EOF.gsub(/^.*?: /, "")
+@@ -273,17 +270,15 @@
       8: set_trace_func(nil)
      EOF
  
 -    [["c-return", 3, :set_trace_func, Kernel],
 -     ["line", 4, __method__, self.class],
-+    [["line", 4, __method__, self.class],
-      ["c-call", 4, :any?, Enumerable],
-      ["c-call", 4, :each, Array],
-      ["line", 4, __method__, self.class],
-
+-     ["c-call", 4, :any?, Enumerable],
+-     ["c-call", 4, :each, Array],
+-     ["line", 4, __method__, self.class],
+-     ["c-return", 4, :each, Array],
+-     ["c-return", 4, :any?, Enumerable],
+-     ["line", 5, __method__, self.class],
+-     ["c-call", 5, :set_trace_func, Kernel]].each{|e|
+-      assert_equal(e, events.shift)
+-    }
++    expected = [["line", 4, __method__, self.class],
++                ["c-call", 4, :any?, Enumerable],
++                ["c-call", 4, :each, Array],
++                ["line", 4, __method__, self.class],
++                ["c-return", 4, :any?, Enumerable],
++                ["line", 5, __method__, self.class],
++                ["c-call", 5, :set_trace_func, Kernel]]
++    events.each_with_index{|e, i|
++      assert_equal(e, events[i], showit(events, expected))}
+   end
+ 
+   def test_invalid_proc
+@@ -320,10 +315,11 @@
+     end
+     th.join
+ 
+-    [["c-return", 1, :set_trace_func, Thread, :set],
+-     ["line", 2, __method__, self.class, :set],
+-     ["c-call", 2, :add_trace_func, Thread, :set]].each do |e|
+-      assert_equal(e, events[:set].shift)
++    expected = [["c-return", 1, :set_trace_func, Thread, :set],
++                ["line", 2, __method__, self.class, :set],
++                ["c-call", 2, :add_trace_func, Thread, :set]]
++    expected.each do |e|
++      assert_equal(e, events[:set].shift, showit(events, expected))
+     end
+ 
+     [["c-return", 2, :add_trace_func, Thread],
 Index: test/ruby/test_tracefunc_adds.rb
 --- test/ruby/test_tracefunc_adds.rb	(revision 28642)
 +++ test/ruby/test_tracefunc_adds.rb	(working copy)

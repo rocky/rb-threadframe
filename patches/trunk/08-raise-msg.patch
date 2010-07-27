@@ -51,13 +51,13 @@ Index: thread.c
 -    }
 -    else {
 +    } else if (p->event == RUBY_EVENT_RAISE) {
-+       /* rb_thread_method_and_id() wants a place to store a klass
-+	   value which subsequently we will not use.  */
++        /* rb_thread_method_and_id() wants a place to store a klass
++	    value which subsequently we will not use.  */
 +        VALUE junk_klass; 
-+	rb_thread_method_id_and_class(GET_THREAD(), &id, &junk_klass);
-+	/* When the event is RUBY_EVENT_RAISE, we have stored the raise
-+	   message as the trace-hook klass parameter. */ 
-+	klass = p->klass;
++	 rb_thread_method_id_and_class(GET_THREAD(), &id, &junk_klass);
++	 /* When the event is RUBY_EVENT_RAISE, we have stored the raise
++	    message as the trace-hook klass parameter. */ 
++	 klass = p->klass;
 +    } else {
  	rb_thread_method_id_and_class(GET_THREAD(), &id, &klass);
      }
