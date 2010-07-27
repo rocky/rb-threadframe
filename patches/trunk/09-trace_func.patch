@@ -427,7 +427,7 @@ Index: test/ruby/test_settracefunc.rb
 Index: test/ruby/test_tracefunc_adds.rb
 --- test/ruby/test_tracefunc_adds.rb	(revision 28642)
 +++ test/ruby/test_tracefunc_adds.rb	(working copy)
-@@ -0,0 +1,131 @@
+@@ -0,0 +1,130 @@
 +require 'test/unit'
 +
 +# tests set_trace_func with event bitmasks, clear_trace_func, 
@@ -483,7 +483,6 @@ Index: test/ruby/test_tracefunc_adds.rb
 +    clear_trace_func
 +    RubyVM::InstructionSequence.compile_option = @original_compile_option
 +  end
-+
 +
 +  def test_eventmask
 +    returned_tuples = 

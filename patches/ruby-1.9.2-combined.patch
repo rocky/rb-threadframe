@@ -1015,17 +1015,6 @@ Index: thread.c
        default:
  	return "unknown";
      }
-@@ -4036,6 +4129,10 @@
-     struct call_trace_func_args *p = (struct call_trace_func_args *)args;
-     const char *srcfile = rb_sourcefile();
-     VALUE eventname = rb_str_new2(get_event_name(p->event));
-+    
-+    if (p->event == RUBY_EVENT_INSN) 
-+        return Qnil;
-+    
-     VALUE filename = srcfile ? rb_str_new2(srcfile) : Qnil;
-     VALUE argv[6];
-     int line = rb_sourceline();
 @@ -4043,11 +4141,17 @@
      VALUE klass = 0;
  
@@ -1914,7 +1903,7 @@ Index: test/ruby/test_iseq.rb
 Index: test/ruby/test_tracefunc_adds.rb
 --- test/ruby/test_tracefunc_adds.rb	(revision 28642)
 +++ test/ruby/test_tracefunc_adds.rb	(working copy)
-@@ -0,0 +1,131 @@
+@@ -0,0 +1,130 @@
 +require 'test/unit'
 +
 +# tests set_trace_func with event bitmasks, clear_trace_func, 
@@ -1970,7 +1959,6 @@ Index: test/ruby/test_tracefunc_adds.rb
 +    clear_trace_func
 +    RubyVM::InstructionSequence.compile_option = @original_compile_option
 +  end
-+
 +
 +  def test_eventmask
 +    returned_tuples = 

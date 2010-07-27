@@ -27,17 +27,6 @@ Index: include/ruby/ruby.h
        case RUBY_EVENT_SWITCH:
          return "switch";
        case RUBY_EVENT_COVERAGE:
-@@ -4100,6 +4125,10 @@
-     struct call_trace_func_args *p = (struct call_trace_func_args *)args;
-     const char *srcfile = rb_sourcefile();
-     VALUE eventname = rb_str_new2(get_event_name(p->event));
-+    
-+    if (p->event == RUBY_EVENT_INSN) 
-+        return Qnil;
-+    
-     VALUE filename = srcfile ? rb_str_new2(srcfile) : Qnil;
-     VALUE argv[6];
-     int line = rb_sourceline();
 @@ -4107,7 +4137,8 @@
      VALUE klass = 0;
  
@@ -128,3 +117,36 @@ Index: vm_insnshelper.c
  	    if (UNLIKELY(cfp->iseq &&
  			 cfp->iseq->breakpoints &&
  			 cfp->iseq->breakpoints[opt_pc]))
+Index: test/ruby/test_tracefunc_adds.rb
+===================================================================
+--- test/ruby/test_tracefunc_adds.rb	(revision 28647)
++++ test/ruby/test_tracefunc_adds.rb	(working copy)
+@@ -15,7 +15,8 @@
+   @@C_CALL_EVENT_MASK    = 0x0020
+   @@C_RETURN_EVENT_MASK  = 0x0040
+   @@RAISE_EVENT_MASK     = 0x0080
+-  @@ALL_EVENTS_MASK      = 0x00ff
++  @@INSN_EVENT_MASK      = 0x0100
++  @@ALL_EVENTS_MASK      = (0xffff & ~@@INSN_EVENT_MASK)
+   
+   @@EVENT2MASK = {
+     'line'     => @@LINE_EVENT_MASK,
+@@ -127,4 +127,18 @@
+     assert_equal([["call", 1, :five, self.class]], tuples2, 
+                  'call filtering')
+   end
++
++  def test_trace_insn
++    tuples = []
++    cmd = <<-EOF.gsub(/^.*?: /, '')
++        1: p = #{@proc_template}
++        2: add_trace_func(p, @@INSN_EVENT_MASK)
++        4: x = 1
++        3: y = 2
++      EOF
++    eval cmd % 'tuples'
++    clear_trace_func
++    assert_equal true, !tuples.empty?, 'triggered instruction events'
++    assert_equal true, tuples.all?{|t| 'vm-insn' == t[0]}, 'instruction events'
++  end
+ end
