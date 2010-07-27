@@ -1015,13 +1015,12 @@ Index: thread.c
        default:
  	return "unknown";
      }
-@@ -4036,6 +4129,11 @@
+@@ -4036,6 +4129,10 @@
      struct call_trace_func_args *p = (struct call_trace_func_args *)args;
      const char *srcfile = rb_sourcefile();
      VALUE eventname = rb_str_new2(get_event_name(p->event));
 +    
-+    if (p->event == RUBY_EVENT_INSN &&
-+        GET_THREAD()->trace_skip_insn_count-- > 0) 
++    if (p->event == RUBY_EVENT_INSN) 
 +        return Qnil;
 +    
      VALUE filename = srcfile ? rb_str_new2(srcfile) : Qnil;
