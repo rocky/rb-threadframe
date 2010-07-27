@@ -1,0 +1,130 @@
+This patch add for VM instruction stepping, via a vm instruction event in the
+event mask. By default, this is not set when tracing is enabled.
+
+Index: include/ruby/ruby.h
+===================================================================
+--- include/ruby/ruby.h	(revision 28647)
++++ include/ruby/ruby.h	(working copy)
+@@ -1352,8 +1352,9 @@
+ #define RUBY_EVENT_C_CALL    0x0020
+ #define RUBY_EVENT_C_RETURN  0x0040
+ #define RUBY_EVENT_RAISE     0x0080
++#define RUBY_EVENT_INSN      0x0100
+ #define RUBY_EVENT_BRKPT     0x0200
+-#define RUBY_EVENT_ALL       0xffff
++#define RUBY_EVENT_ALL       (0xffff & ~RUBY_EVENT_INSN)
+ #define RUBY_EVENT_VM       0x10000
+ #define RUBY_EVENT_SWITCH   0x20000
+ #define RUBY_EVENT_COVERAGE 0x40000
+--- thread.c	(revision 28647)
++++ thread.c	(working copy)
+@@ -4073,6 +4096,8 @@
+ 	return "c-return";
+       case RUBY_EVENT_RAISE:
+ 	return "raise";
++      case RUBY_EVENT_INSN:
++        return "vm-insn";
+       case RUBY_EVENT_SWITCH:
+         return "switch";
+       case RUBY_EVENT_COVERAGE:
+@@ -4100,6 +4125,10 @@
+     struct call_trace_func_args *p = (struct call_trace_func_args *)args;
+     const char *srcfile = rb_sourcefile();
+     VALUE eventname = rb_str_new2(get_event_name(p->event));
++    
++    if (p->event == RUBY_EVENT_INSN) 
++        return Qnil;
++    
+     VALUE filename = srcfile ? rb_str_new2(srcfile) : Qnil;
+     VALUE argv[6];
+     int line = rb_sourceline();
+@@ -4107,7 +4137,8 @@
+     VALUE klass = 0;
+ 
+     if (p->event == RUBY_EVENT_C_CALL ||
+-	p->event == RUBY_EVENT_C_RETURN) {
++	p->event == RUBY_EVENT_C_RETURN ||
++	p->event == RUBY_EVENT_INSN) {
+ 	id = p->id;
+ 	klass = p->klass;
+     } else if (p->event == RUBY_EVENT_RAISE) {
+Index: tool/instruction.rb
+===================================================================
+--- tool/instruction.rb	(revision 28647)
++++ tool/instruction.rb	(working copy)
+@@ -854,6 +854,17 @@
+       commit "INSN_ENTRY(#{insn.name}){"
+       make_header_prepare_stack insn
+       commit "{"
++      # rocky: for reasons that I don't understand, calling the
++      # instruction trace hook in a "leave" instruction causes a
++      # SEGV via an illegal access csuch as via vm.c line 1144: 
++      #    ep = ... cfp->iseq ...  
++      # 
++      # Since we can handle this event via RUBY_EVENT_END I don't
++      # think there is any loss in functionality.
++      # Not sure if "send" should be included.
++      unless %w(leave send).member?(insn.name)
++        commit "  TRACE_INSN(#{insn.name});"
++      end
+       make_header_stack_val  insn
+       make_header_default_operands insn
+       make_header_operands   insn
+Index: vm_exec.h
+===================================================================
+--- vm_exec.h	(revision 28647)
++++ vm_exec.h	(working copy)
+@@ -18,6 +18,40 @@
+ typedef rb_num_t GENTRY;
+ typedef rb_iseq_t *ISEQ;
+ 
++#include "insns_info.inc"
++
++#if 0
++
++#define TRACE_INSN_SET_EXTRA_INFO(insn, var) do { var = Qnil; } while (0)
++
++#else
++
++#define TRACE_INSN_SET_EXTRA_INFO(insn, var) do { \
++  var = rb_ary_new2(insn_len(BIN(insn)) - 1); \
++  int trace_i__ = 0; \
++  while (trace_i__ < insn_len(BIN(insn)) - 1) { \
++    VALUE trace_push_val__ = Qnil; \
++    switch (insn_op_type(BIN(insn), trace_i__)) { \
++      case TS_VALUE: trace_push_val__ = GET_OPERAND(trace_i__ + 1); break; \
++      case TS_NUM: trace_push_val__ = INT2NUM(GET_OPERAND(trace_i__ + 1)); break; \
++      case TS_LINDEX: trace_push_val__ = INT2NUM((lindex_t) (GET_LFP() - GET_OPERAND(trace_i__ + 1))); break; \
++      case TS_DINDEX: trace_push_val__ = INT2NUM((dindex_t) (GET_DFP() - GET_OPERAND(trace_i__ + 1))); break; \
++      case TS_ID: trace_push_val__ = ID2SYM(GET_OPERAND(trace_i__ + 1)); break; \
++    } \
++    if (!SPECIAL_CONST_P(trace_push_val__)) \
++      trace_push_val__ = rb_type(trace_push_val__) == T_STRING ? \
++        rb_str_new_cstr(RSTRING_PTR(trace_push_val__)) : Qnil; \
++    rb_ary_push(var, trace_push_val__); \
++    trace_i__++; \
++  } \
++} while (0)
++
++#endif
++
++#define TRACE_INSN(insn) do { \
++  EXEC_EVENT_HOOK(th, RUBY_EVENT_INSN, GET_SELF(), 0, 0); \
++} while (0)
++
+ #ifdef  COLLECT_USAGE_ANALYSIS
+ #define USAGE_ANALYSIS_INSN(insn)           vm_analysis_insn(insn)
+ #define USAGE_ANALYSIS_OPERAND(insn, n, op) vm_analysis_operand(insn, n, (VALUE)op)
+diff -u -r ruby-test/vm_insnhelper.c ruby-test-combined/vm_insnhelper.c
+Index: vm_insnshelper.c
+===================================================================
+--- vm_insnhelper.c	(revision 28647)
++++ vm_insnhelper.c	(working copy)
+@@ -497,6 +497,7 @@
+ 
+ 	cfp->sp = rsp - 1 /* recv */;
+ 	if (LIKELY(0 == th->tracing)) {
++	    EXEC_EVENT_HOOK(th, RUBY_EVENT_INSN, cfp->self, 0, 0);
+ 	    if (UNLIKELY(cfp->iseq &&
+ 			 cfp->iseq->breakpoints &&
+ 			 cfp->iseq->breakpoints[opt_pc]))

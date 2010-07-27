@@ -20,7 +20,8 @@ case $patchfile in
 	    08-raise-msg.patch      \
 	    09-trace_func.patch     \
 	    10-iseq-top-name.patch  \
-	    11-binding-arity.patch 
+	    11-binding-arity.patch  \
+	    12-insn-step.patch
 	do 
 	    patch_file=${dirname}/trunk/$file
 	    echo -- Applying patches in $patch_file ... | tee -a patches_applied.log

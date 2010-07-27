@@ -93,7 +93,7 @@ Index: vm_core.h
  } rb_control_frame_t;
  
  typedef struct rb_block_struct {
-@@ -390,6 +395,18 @@
+@@ -390,6 +395,17 @@
      /* passing state */
      int state;
  
@@ -103,7 +103,6 @@ Index: vm_core.h
 +    int tracing;  /* 0 if not tracing. If less than 0, skip that many
 +		     C call/return pairs */
 +    int exec_event_tracing;  /* 0 if not in rb_threadptr_evec_event_hooks. */
-+    int trace_skip_insn_count; /* # of VM instructions to skip */
 +
 +    /* misc */
 +    int method_missing_reason;
@@ -806,7 +805,7 @@ Index: thread.c
  	}
      }
      th->errinfo = errinfo;
-@@ -3875,19 +3920,49 @@
+@@ -3875,19 +3920,48 @@
      return ST_CONTINUE;
  }
  
@@ -840,9 +839,8 @@ Index: thread.c
 +    }
 +
 +    {
-+	rb_thread_t *th           = GET_THREAD(); /* main thread */
-+	th->trace_skip_insn_count = 2;
-+	th->tracing               = -1;
++	rb_thread_t *th = GET_THREAD(); /* main thread */
++	th->tracing     = -1;
 +	rb_add_event_hook(call_trace_func, mask, trace);
 +    }
 +    
@@ -1000,13 +998,12 @@ Index: thread.c
        default:
  	return "unknown";
      }
-@@ -4036,6 +4138,11 @@
+@@ -4036,6 +4138,10 @@
      struct call_trace_func_args *p = (struct call_trace_func_args *)args;
      const char *srcfile = rb_sourcefile();
      VALUE eventname = rb_str_new2(get_event_name(p->event));
 +    
-+    if (p->event == RUBY_EVENT_INSN &&
-+        GET_THREAD()->trace_skip_insn_count-- > 0) 
++    if (p->event == RUBY_EVENT_INSN) 
 +        return Qnil;
 +    
      VALUE filename = srcfile ? rb_str_new2(srcfile) : Qnil;

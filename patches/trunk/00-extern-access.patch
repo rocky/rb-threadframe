@@ -63,7 +63,7 @@ Index: vm_core.h
       *        *c,                                 # rest
       *        d1, d2, ..., dO,                    # post
       *        &e)                                 # block
-@@ -390,6 +395,18 @@
+@@ -390,6 +395,17 @@
      /* passing state */
      int state;
  
@@ -73,7 +73,6 @@ Index: vm_core.h
 +    int tracing;  /* 0 if not tracing. If less than 0, skip that many
 +		     C call/return pairs */
 +    int exec_event_tracing;  /* 0 if not in rb_threadptr_evec_event_hooks. */
-+    int trace_skip_insn_count; /* # of VM instructions to skip */
 +
 +    /* misc */
 +    int method_missing_reason;
