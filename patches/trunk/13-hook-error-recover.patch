@@ -1,0 +1,117 @@
+Here is the situation this patch addressed. A trace hook was raising
+an exception when call from a C return. The hook would terminate, but
+the same event (e.g. C return would get called again causing the same
+exception from the trace hook. This patch fields errors from a hook
+and tries to do something that doesn't cause infinite looping.
+
+This code with exec_event_tracing is a little bit hacky, and was
+keeping a hook from tracing into itself. It was written before the
+per-frame tracing bit was added. Possibly it isn't needed any more.
+
+
+Index: test/ruby/test_settracefunc.rb
+===================================================================
+--- test/ruby/test_settracefunc.rb	(revision 28647)
++++ test/ruby/test_settracefunc.rb	(working copy)
+@@ -350,4 +350,25 @@
+     assert_equal([], events[:set])
+     assert_equal([], events[:add])
+   end
++
++  def test_trace_proc_that_raises_exception_recovery
++    $first_time = true
++    $traced = []
++    s = Proc.new {|event|
++      if $first_time
++        $first_time = false
++        raise RuntimeError
++      end
++      $traced << event
++    }
++    begin
++      set_trace_func(s)
++      assert_equal(false, 'hook should have raised error')
++    rescue RuntimeError
++      x = 1
++      set_trace_func(nil)
++      assert_equal(false, $traced.empty?, $traced)
++    end
++  end
++
+ end
+Index: thread.c
+===================================================================
+--- thread.c	(revision 28647)
++++ thread.c	(working copy)
+@@ -3806,7 +3806,29 @@
+ 	    th->event_flags &= (~RUBY_EVENT_VM);
+ 	}
+ 	else {
+-	    exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
++	    if (0 == th->exec_event_tracing) {
++		/* Modified from ruby_suppress_tracing */
++		int state;
++		volatile int raised = rb_threadptr_reset_raised(th);
++		rb_block_t * base_block_save = th->base_block;
++		th->exec_event_tracing = 1;
++		
++		PUSH_TAG();
++		if ((state = EXEC_TAG()) == 0) {
++		    exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
++		}
++		
++		th->base_block = base_block_save;
++		if (raised) {
++		    rb_threadptr_set_raised(th);
++		}
++		POP_TAG();
++		
++		th->exec_event_tracing = 0;
++		if (state) {
++		    JUMP_TAG(state);
++		}
++	    }
+ 	}
+     }
+     th->errinfo = errinfo;
+Index: vm.c
+===================================================================
+--- vm.c	(revision 28647)
++++ vm.c	(working copy)
+@@ -1165,9 +1165,20 @@
+ 
+ 	while (th->cfp->pc == 0 || th->cfp->iseq == 0) {
+ 	    if (UNLIKELY(VM_FRAME_TYPE(th->cfp) == VM_FRAME_MAGIC_CFUNC)) {
+-		const rb_method_entry_t *me = th->cfp->me;
+-		EXEC_EVENT_RETURN_HOOK(th, RUBY_EVENT_C_RETURN, th->cfp->self, 
+-					   me->called_id, me->klass);
++		/* rocky: The below tests and assignments are not
++		   quite right.  The problem I am having is when a
++		   there is an exception in hook code raised from a C
++		   return event. This causes the below EXEC_EVENT_HOOK to
++		   loop indefinitely. The below has the bad effect of
++		   not reseting exec_event_tracing sometimes.
++		 */
++		if (0 == th->tracing && 0 == th->exec_event_tracing) {
++		    const rb_method_entry_t *me = th->cfp->me;
++		    th->exec_event_tracing = 1;
++		    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, th->cfp->self, 
++				    me->called_id, me->klass);
++		    th->exec_event_tracing = 0;
++		}
+ 	    }
+ 	    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
+ 	}
+Index: vm_eval.c
+===================================================================
+--- vm_eval.c	(revision 28647)
++++ vm_eval.c	(working copy)
+@@ -88,7 +88,7 @@
+ 		rb_bug("cfp consistency error - call0");
+ 	    }
+ 
+-	    if (0 == th->tracing) {
++	    if (0 == th->tracing && 0 == th->exec_event_tracing) {
+ 		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
+ 	    }
+ 	    vm_pop_frame(th);
