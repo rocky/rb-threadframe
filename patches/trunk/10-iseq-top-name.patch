@@ -18,9 +18,9 @@ look more descriptive is helpful.
 
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 28647)
+--- iseq.c	(revision 28783)
 +++ iseq.c	(working copy)
-@@ -746,9 +727,13 @@
+@@ -748,9 +727,13 @@
          return rb_sprintf("#<%s: uninitialized>", rb_obj_classname(self));
      }
  
@@ -39,7 +39,7 @@ Index: iseq.c
  static
 Index: load.c
 ===================================================================
---- load.c	(revision 28682)
+--- load.c	(revision 28783)
 +++ load.c	(working copy)
 @@ -294,11 +294,13 @@
      if (state == 0) {

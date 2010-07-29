@@ -9,27 +9,11 @@ binding using thread and control frame pointers. In rb-threadframe
 this is used to provide:
   RubyVM::ThreadFrame#binding
 
-+
-+/* 
-+ *  call-seq:
-+ *  RubyVM::InstructionSequence#arity -> Fixnum
-+ *
-+ *  Returns the number of arguments that would not be ignored.
-+ *  See Ruby 1.9 proc_arity of proc.c
-+ */
-+VALUE
-+rb_iseq_arity(VALUE iseqval)
-+{
-+    rb_iseq_t *iseq;
-+    if (Qnil == iseqval) return Qnil;
-+    GetISeqPtr(iseqval, iseq);
-+    return (iseq) ? INT2FIX(get_iseq_arity(iseq)) : Qnil;
-+}
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 28647)
+--- iseq.c	(revision 28783)
 +++ iseq.c	(working copy)
-@@ -1730,6 +1730,22 @@
+@@ -1732,6 +1730,22 @@
      return iseqval;
  }
  
@@ -52,7 +36,7 @@ Index: iseq.c
  extern void Init_Brkpt(void); /* In brkpt.c */
  
  void
-@@ -1739,6 +1739,7 @@
+@@ -1741,6 +1739,7 @@
      rb_cISeq = rb_define_class_under(rb_cRubyVM, "InstructionSequence", rb_cObject);
      rb_define_alloc_func(rb_cISeq, iseq_alloc);
      rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
@@ -62,9 +46,9 @@ Index: iseq.c
      rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
 Index: iseq.c
 ===================================================================
---- proc.c	(revision 28647)
+--- proc.c	(revision 28783)
 +++ proc.c	(working copy)
-@@ -324,6 +324,28 @@
+@@ -328,6 +324,28 @@
      return bindval;
  }
  
@@ -93,7 +77,7 @@ Index: iseq.c
  /*
   *  call-seq:
   *     binding -> a_binding
-@@ -625,6 +643,29 @@
+@@ -629,6 +643,29 @@
      return INT2FIX(arity);
  }
  
@@ -125,7 +109,7 @@ Index: iseq.c
  {
 Index: test/ruby/test_iseq.rb
 ===================================================================
---- test/ruby/test_iseq.rb	(revision 28647)
+--- test/ruby/test_iseq.rb	(revision 28783)
 +++ test/ruby/test_iseq.rb	(working copy)
 @@ -37,4 +37,14 @@
        assert_equal RubyVM::InstructionSequence, iseq_hash.values[0][0].class

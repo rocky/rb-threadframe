@@ -8,7 +8,7 @@ OPTIMIZED_METHOD_TYPE_SEND, and OPTIMIZED_METHOD_TYPE_CALL.
 
 Index: method.h
 ===================================================================
---- method.h	(revision 28684)
+--- method.h	(revision 28783)
 +++ method.h	(working copy)
 @@ -46,7 +46,11 @@
  
@@ -25,7 +25,7 @@ Index: method.h
  typedef struct rb_method_attr_struct {
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 28684)
+--- vm_eval.c	(revision 28783)
 +++ vm_eval.c	(working copy)
 @@ -74,6 +74,10 @@
  		vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
@@ -40,7 +40,7 @@ Index: vm_eval.c
  
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 28684)
+--- vm_insnhelper.c	(revision 28783)
 +++ vm_insnhelper.c	(working copy)
 @@ -399,6 +395,10 @@
  

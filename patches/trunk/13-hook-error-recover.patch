@@ -11,7 +11,7 @@ per-frame tracing bit was added. Possibly it isn't needed any more.
 
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 28647)
+--- test/ruby/test_settracefunc.rb	(revision 28783)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -350,4 +350,25 @@
      assert_equal([], events[:set])
@@ -41,9 +41,9 @@ Index: test/ruby/test_settracefunc.rb
  end
 Index: thread.c
 ===================================================================
---- thread.c	(revision 28647)
+--- thread.c	(revision 28783)
 +++ thread.c	(working copy)
-@@ -3806,7 +3806,29 @@
+@@ -3815,7 +3806,29 @@
  	    th->event_flags &= (~RUBY_EVENT_VM);
  	}
  	else {
@@ -76,7 +76,7 @@ Index: thread.c
      th->errinfo = errinfo;
 Index: vm.c
 ===================================================================
---- vm.c	(revision 28647)
+--- vm.c	(revision 28783)
 +++ vm.c	(working copy)
 @@ -1165,9 +1165,20 @@
  
@@ -104,7 +104,7 @@ Index: vm.c
  	}
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 28647)
+--- vm_eval.c	(revision 28783)
 +++ vm_eval.c	(working copy)
 @@ -88,7 +88,7 @@
  		rb_bug("cfp consistency error - call0");

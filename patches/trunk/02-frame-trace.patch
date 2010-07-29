@@ -62,7 +62,7 @@ Index: vm_core.h
  /* other frame flag */
  #define VM_FRAME_FLAG_PASSED 0x0100
  
-@@ -695,13 +703,29 @@
+@@ -695,13 +700,29 @@
  void
  rb_threadptr_exec_event_hooks(rb_thread_t *th, rb_event_flag_t flag, VALUE self, ID id, VALUE klass);
  
@@ -102,9 +102,9 @@ Index: vm_core.h
  #endif /* RUBY_VM_CORE_H */
 Index: thread.c
 ===================================================================
---- thread.c	(revision 28647)
+--- thread.c	(revision 28783)
 +++ thread.c	(working copy)
-@@ -3788,10 +3788,12 @@
+@@ -3797,10 +3788,12 @@
      const rb_event_flag_t wait_event = th->event_flags;
  
      if (self == rb_mRubyVMFrozenCore) return;
@@ -144,7 +144,7 @@ Index: thread.c
 Index: vm_insnhelper.c
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 28647)
+--- vm_insnhelper.c	(revision 28783)
 +++ vm_insnhelper.c	(working copy)
 @@ -26,9 +26,12 @@
  	      const VALUE *pc, VALUE *sp, VALUE *lfp,

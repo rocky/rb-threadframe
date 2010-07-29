@@ -10,7 +10,7 @@ yet.
 
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 28642)
+--- iseq.c	(revision 28788)
 +++ iseq.c	(working copy)
 @@ -150,6 +150,23 @@
      RUBY_MARK_LEAVE("iseq");

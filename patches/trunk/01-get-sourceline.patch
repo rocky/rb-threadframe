@@ -3,7 +3,7 @@ set to 0) when the PC is 0.  This patch corrects that.
 
 Index: vm.c
 ===================================================================
---- vm.c	(revision 28647)
+--- vm.c	(revision 28783)
 +++ vm.c	(working copy)
 @@ -691,6 +691,7 @@
      if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {

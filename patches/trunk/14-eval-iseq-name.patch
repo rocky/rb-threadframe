@@ -7,7 +7,7 @@ part of the eval string. That is "(eval): ..." becomes "(eval: x=1\n"...):
 
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 28647)
+--- vm_eval.c	(revision 28783)
 +++ vm_eval.c	(working copy)
 @@ -31,6 +31,33 @@
  
@@ -96,7 +96,7 @@ Index: vm_eval.c
  	return eval_under(klass, self, argv[0], file, line);
      }
 ===================================================================
---- test/ruby/test_beginendblock.rb	(revision 28647)
+--- test/ruby/test_beginendblock.rb	(revision 28783)
 +++ test/ruby/test_beginendblock.rb	(working copy)
 @@ -69,7 +69,7 @@
      system(ruby, launcherpath, erroutpath)

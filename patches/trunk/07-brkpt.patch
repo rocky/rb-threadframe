@@ -31,7 +31,7 @@ Index: iseq.c
 ===================================================================
 --- iseq.c	(revision 28647)
 +++ iseq.c	(working copy)
-@@ -1726,6 +1726,8 @@
+@@ -1728,6 +1726,8 @@
      return iseqval;
  }
  
@@ -40,7 +40,7 @@ Index: iseq.c
  void
  Init_ISeq(void)
  {
-@@ -1751,5 +1753,7 @@
+@@ -1753,5 +1753,7 @@
      rb_define_singleton_method(rb_cISeq, "compile_option=", iseq_s_compile_option_set, 1);
      rb_define_singleton_method(rb_cISeq, "disasm", iseq_s_disasm, 1);
      rb_define_singleton_method(rb_cISeq, "disassemble", iseq_s_disasm, 1);
@@ -52,7 +52,7 @@ Index: include/ruby/ruby.h
 ===================================================================
 --- include/ruby/ruby.h	(revision 28642)
 +++ include/ruby/ruby.h	(working copy)
-@@ -1352,6 +1352,7 @@
+@@ -1368,6 +1352,7 @@
  #define RUBY_EVENT_C_CALL    0x0020
  #define RUBY_EVENT_C_RETURN  0x0040
  #define RUBY_EVENT_RAISE     0x0080
@@ -64,7 +64,7 @@ Index: thread.c
 ===================================================================
 --- thread.c	(revision 28642)
 +++ thread.c	(working copy)
-@@ -3765,7 +3765,7 @@
+@@ -3774,7 +3765,7 @@
      GetThreadPtr(thval, th);
  
      if (flag) {
@@ -73,7 +73,7 @@ Index: thread.c
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -4015,6 +4013,8 @@
+@@ -4024,6 +4013,8 @@
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -84,7 +84,7 @@ Index: thread.c
        case RUBY_EVENT_RETURN:
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 28642)
+--- vm_core.h	(revision 28783)
 +++ vm_core.h	(working copy)
 @@ -253,6 +253,8 @@
  
@@ -140,7 +140,7 @@ Index: vm_insnhelper.c
      else {
  	VALUE *p_rsp;
 Index: brkpt.c
---- brkpt.c	(revision 28642)
+--- brkpt.c	(revision 28783)
 +++ brkpt.c	(working copy)
 @@ -0,0 +1,232 @@
 +/**********************************************************************
@@ -376,7 +376,7 @@ Index: brkpt.c
 +    rb_define_method(rb_cISeq, "brkpts",           iseq_brkpts, 0);
 +}
 Index: test/ruby/test_brkpt.rb
---- test/ruby/test_brkpt.rb	(revision 28642)
+--- test/ruby/test_brkpt.rb	(revision 28783)
 +++ test/ruby/test_brkpt.rb	(working copy)
 @@ -0,0 +1,60 @@
 +require 'test/unit'
