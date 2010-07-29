@@ -1,17 +1,65 @@
 This patch does two separate unrelated things.
 
 1. get_iseq_arity() allows an external C extension retrieve an the
-instruction sequence arity. In rb-threadframe this is supplemented
-with another routine to provide:
+instruction sequence arity. rb_iseq_arity() provides 
    RubyVM::InstructionSequence#arity -> Fixnum
 
-Possibly this method should added Ruby 1.9
-
 2. rb_binding_frame_new() allows an external C extension to return a
-binding using a thread and control frame pointers. In rb-threadframe
+binding using thread and control frame pointers. In rb-threadframe
 this is used to provide:
   RubyVM::ThreadFrame#binding
 
++
++/* 
++ *  call-seq:
++ *  RubyVM::InstructionSequence#arity -> Fixnum
++ *
++ *  Returns the number of arguments that would not be ignored.
++ *  See Ruby 1.9 proc_arity of proc.c
++ */
++VALUE
++rb_iseq_arity(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    if (Qnil == iseqval) return Qnil;
++    GetISeqPtr(iseqval, iseq);
++    return (iseq) ? INT2FIX(get_iseq_arity(iseq)) : Qnil;
++}
+Index: iseq.c
+===================================================================
+--- iseq.c	(revision 28647)
++++ iseq.c	(working copy)
+@@ -1730,6 +1730,22 @@
+     return iseqval;
+ }
+ 
++/* 
++ *  call-seq:
++ *  RubyVM::InstructionSequence#arity -> Fixnum
++ *
++ *  Returns the number of arguments that would not be ignored.
++ *  See Ruby 1.9 proc_arity of proc.c
++ */
++VALUE
++rb_iseq_arity(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    if (Qnil == iseqval) return Qnil;
++    GetISeqPtr(iseqval, iseq);
++    return (iseq) ? INT2FIX(get_iseq_arity(iseq)) : Qnil;
++}
++
+ extern void Init_Brkpt(void); /* In brkpt.c */
+ 
+ void
+@@ -1739,6 +1739,7 @@
+     rb_cISeq = rb_define_class_under(rb_cRubyVM, "InstructionSequence", rb_cObject);
+     rb_define_alloc_func(rb_cISeq, iseq_alloc);
+     rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
++    rb_define_method(rb_cISeq, "arity", rb_iseq_arity, 0);
+     rb_define_method(rb_cISeq, "disasm", rb_iseq_disasm, 0);
+     rb_define_method(rb_cISeq, "disasm_nochildren", rb_iseq_disasm_nochildren, 0);
+     rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
 Index: iseq.c
 ===================================================================
 --- proc.c	(revision 28647)
@@ -75,3 +123,35 @@ Index: iseq.c
  int
  rb_proc_arity(VALUE self)
  {
+Index: test/ruby/test_iseq.rb
+===================================================================
+--- test/ruby/test_iseq.rb	(revision 28647)
++++ test/ruby/test_iseq.rb	(working copy)
+@@ -3,6 +3,10 @@
+ require 'test/unit'
+ 
+ class TestIseqAccess < Test::Unit::TestCase
++  def teardown
++    Kernel.const_set(:ISEQS__, nil)
++  end
++
+   def test_basic
+     Kernel.const_set(:SCRIPT_ISEQS__, {})
+     Kernel.const_set(:ISEQS__, {})
+@@ -23,6 +27,15 @@
+       assert_equal RubyVM::InstructionSequence, iseq_hash.values[0][0].class
+     end
+     Kernel.const_set(:SCRIPT_ISEQS__, nil)
+-    Kernel.const_set(:ISEQS__, nil)
++  end
++
++  def test_arity
++    Kernel.const_set(:ISEQS__, {})
++    eval 'def five; 5 end'
++    eval 'def add(a,b); a+b end'
++    eval 'def splat(*a); 5 end'
++    [['five', 0,], ['add', 2], ['splat', -1]].each do |meth, expect|
++      assert_equal(expect, ISEQS__[meth][0].arity)
++    end
+   end
+ end

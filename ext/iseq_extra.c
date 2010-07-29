@@ -18,23 +18,6 @@ struct iseq_insn_info_entry {
     unsigned short sp;
 };
 
-
-/* 
- *  call-seq:
- *  RubyVM::InstructionSequence#arity -> Fixnum
- *
- *  Returns the number of arguments that would not be ignored.
- *  See Ruby 1.9 proc_arity of proc.c
- */
-VALUE
-iseq_arity(VALUE iseqval)
-{
-    rb_iseq_t *iseq;
-    if (Qnil == iseqval) return Qnil;
-    GetISeqPtr(iseqval, iseq);
-    return (iseq) ? INT2FIX(get_iseq_arity(iseq)) : Qnil;
-}
-
 #ifdef HAVE_COMPILE_OPTIONS
 /* 
  *  Document-method: RubyVM::InstructionSequence::compile_options

@@ -1,3 +1,7 @@
+PATCH NOT USED because non-simple ASCII (e.g. eval("/\u3042/n") causes
+this to not happen:
+    assert_raise(SyntaxError) { eval("/\u3042/n") }
+
 Change "file" name in eval string to be more descriptive by including
 part of the eval string. That is "(eval): ..." becomes "(eval: x=1\n"...):
 
@@ -39,7 +43,7 @@ Index: vm_eval.c
  static inline VALUE
  vm_call0(rb_thread_t* th, VALUE recv, VALUE id, int argc, const VALUE *argv,
  	 const rb_method_entry_t *me)
-@@ -971,7 +1004,7 @@
+@@ -977,7 +1004,7 @@
  	    if (rb_obj_is_kind_of(scope, rb_cBinding)) {
  		GetBindingPtr(scope, bind);
  		envval = bind->env;
@@ -48,7 +52,7 @@ Index: vm_eval.c
  		    file = RSTRING_PTR(bind->filename);
  		    line = bind->line_no;
  		}
-@@ -1029,7 +1062,7 @@
+@@ -1035,7 +1062,7 @@
      if (state) {
  	if (state == TAG_RAISE) {
  	    VALUE errinfo = th->errinfo;
@@ -57,7 +61,7 @@ Index: vm_eval.c
  		VALUE mesg, errat, bt2;
  		extern VALUE rb_get_backtrace(VALUE info);
  		ID id_mesg;
-@@ -1110,13 +1143,22 @@
+@@ -1116,13 +1143,22 @@
  
      if (!NIL_P(vfile))
  	file = RSTRING_PTR(vfile);
@@ -80,7 +84,7 @@ Index: vm_eval.c
  }
  
  VALUE
-@@ -1265,6 +1307,10 @@
+@@ -1271,6 +1307,10 @@
  	    if (argc > 1) {
  		file = StringValuePtr(argv[1]);
  	    }

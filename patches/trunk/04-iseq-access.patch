@@ -76,7 +76,7 @@ Index: test/ruby/test_iseq.rb
 ===================================================================
 --- test/ruby/test_iseq.rb	(revision 28647)
 +++ test/ruby/test_iseq.rb	(working copy)
-@@ -0,0 +1,1 @@
+@@ -0,0 +1,28 @@
 +# See that setting ISEQS__ and SCRIPT_ISEQS__ saves 
 +# RubyVM::Instruction_sequenses
 +require 'test/unit'
@@ -105,3 +105,4 @@ Index: test/ruby/test_iseq.rb
 +    Kernel.const_set(:ISEQS__, nil)
 +  end
 +end
+
