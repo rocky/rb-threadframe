@@ -525,18 +525,35 @@ Index: iseq.c
  static VALUE
  iseq_s_disasm(VALUE klass, VALUE body)
  {
-@@ -1493,6 +1729,8 @@
+@@ -1493,6 +1729,24 @@
      return iseqval;
  }
  
++/* 
++ *  call-seq:
++ *  RubyVM::InstructionSequence#arity -> Fixnum
++ *
++ *  Returns the number of arguments that would not be ignored.
++ *  See Ruby 1.9 proc_arity of proc.c
++ */
++VALUE
++rb_iseq_arity(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    if (Qnil == iseqval) return Qnil;
++    GetISeqPtr(iseqval, iseq);
++    return (iseq) ? INT2FIX(get_iseq_arity(iseq)) : Qnil;
++}
++
 +extern void Init_Brkpt(void); /* In brkpt.c */
 +
  void
  Init_ISeq(void)
  {
-@@ -1501,9 +1739,11 @@
+@@ -1501,9 +1739,12 @@
      rb_define_alloc_func(rb_cISeq, iseq_alloc);
      rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
++    rb_define_method(rb_cISeq, "arity", rb_iseq_arity, 0);
      rb_define_method(rb_cISeq, "disasm", rb_iseq_disasm, 0);
 +    rb_define_method(rb_cISeq, "disasm_nochildren", rb_iseq_disasm_nochildren, 0);
      rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
@@ -573,7 +590,7 @@ Index: load.c
 ===================================================================
 --- load.c	(revision 28682)
 +++ load.c	(working copy)
-@@ -293,11 +293,14 @@
+@@ -293,11 +293,13 @@
      if (state == 0) {
  	NODE *node;
  	VALUE iseq;
@@ -583,9 +600,8 @@ Index: load.c
  	node = (NODE *)rb_load_file(RSTRING_PTR(fname));
  	loaded = TRUE;
 -	iseq = rb_iseq_new_top(node, rb_str_new2("<top (required)>"), fname, fname, Qfalse);
-+	
 +	snprintf(iseq_name, sizeof(iseq_name), "<top %s>", RSTRING_PTR(fname));
-+	iseq = rb_iseq_new_top(node, rb_str_new2(iseq_name), fname, fname, Qfalse);
++	iseq = rb_iseq_new_top(node, rb_str_new2(iseq_name), fname, rb_realpath_internal(Qnil, fname, 1), Qfalse);
  	th->mild_compile_error--;
  	rb_iseq_eval(iseq);
      }
@@ -593,7 +609,7 @@ Index: vm_eval.c
 ===================================================================
 --- vm_eval.c	(revision 28682)
 +++ vm_eval.c	(working copy)
-@@ -67,22 +67,34 @@
+@@ -67,22 +67,32 @@
  	break;
        }
        case VM_METHOD_TYPE_CFUNC: {
@@ -603,6 +619,7 @@ Index: vm_eval.c
  	    rb_control_frame_t *cfp =
  		vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
  			      recv, (VALUE)blockptr, 0, reg_cfp->sp, 0, 1);
++
 +	    /* Store actual argument count. Note that cfunc.argc
 +	       contains the prototype value.
 +	    */
@@ -617,11 +634,8 @@ Index: vm_eval.c
  	    if (reg_cfp != th->cfp + 1) {
  		rb_bug("cfp consistency error - call0");
  	    }
++
 +	    if (0 == th->tracing && 0 == th->exec_event_tracing) {
-+		/* rocky: FIXME: decide what to do for sp values,
-+		   especially the return value. See vm_insnhelper.c
-+		   for guidance.
-+		*/
 +		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
 +	    }
  	    vm_pop_frame(th);
@@ -752,11 +766,10 @@ Index: thread.c
 ===================================================================
 --- thread.c	(revision 28682)
 +++ thread.c	(working copy)
-@@ -336,6 +336,16 @@
+@@ -336,6 +336,14 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
  static void rb_mutex_abandon_all(mutex_t *mutexes);
  
-+
 +rb_control_frame_t *
 +thread_control_frame(rb_thread_t *th) 
 +{
@@ -764,7 +777,6 @@ Index: thread.c
 +    th = GET_THREAD(); /* main thread */
 +  return rb_vm_get_ruby_level_next_cfp(th, th->cfp);
 +}
-+
 +
  void
  rb_thread_terminate_all(void)

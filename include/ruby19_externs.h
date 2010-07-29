@@ -13,9 +13,9 @@
 extern VALUE iseq_alloc_shared(VALUE klass); /* new */
 extern VALUE rb_cISeq;
 extern const char * ruby_node_name(int node);
+extern VALUE rb_iseq_arity(VALUE iseqval);
 
 /* From proc.c */
-extern int   get_iseq_arity(rb_iseq_t *iseq);  /* new */
 extern int   method_arity(VALUE method);       /* removed "static" */
 extern VALUE rb_binding_frame_new(void *vth, void *vcfp);  /* new */
 

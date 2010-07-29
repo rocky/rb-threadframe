@@ -333,7 +333,7 @@ thread_frame_arity(VALUE klass)
     THREAD_FRAME_SETUP_WITH_ERROR ;
 
     if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
-	return iseq_arity(thread_frame_iseq(klass));
+	return rb_iseq_arity(thread_frame_iseq(klass));
     } else if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
 	return INT2FIX(tf->cfp->me->def->body.cfunc.argc);
     } else
