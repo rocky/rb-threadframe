@@ -76,15 +76,29 @@ Index: test/ruby/test_iseq.rb
 ===================================================================
 --- test/ruby/test_iseq.rb	(revision 28647)
 +++ test/ruby/test_iseq.rb	(working copy)
-@@ -0,0 +1,28 @@
+@@ -0,0 +1,40 @@
 +# See that setting ISEQS__ and SCRIPT_ISEQS__ saves 
 +# RubyVM::Instruction_sequenses
 +require 'test/unit'
 +
 +class TestIseqAccess < Test::Unit::TestCase
-+  def test_basic
-+    Kernel.const_set(:SCRIPT_ISEQS__, {})
++  def setup
++    old_verbosity = $VERBOSE
++    $VERBOSE = nil
 +    Kernel.const_set(:ISEQS__, {})
++    Kernel.const_set(:SCRIPT_ISEQS__, {})
++    $VERBOSE = old_verbosity
++  end
++
++  def teardown
++    old_verbosity = $VERBOSE
++    $VERBOSE = nil
++    Kernel.const_set(:ISEQS__, nil)
++    Kernel.const_set(:SCRIPT_ISEQS__, nil)
++    $VERBOSE = old_verbosity
++  end
++
++  def test_basic
 +    sizes=[]
 +    [ISEQS__, SCRIPT_ISEQS__].each do |iseq_hash|
 +      sizes << iseq_hash.size
@@ -101,8 +115,6 @@ Index: test/ruby/test_iseq.rb
 +      assert_equal Array, a.class
 +      assert_equal RubyVM::InstructionSequence, iseq_hash.values[0][0].class
 +    end
-+    Kernel.const_set(:SCRIPT_ISEQS__, nil)
-+    Kernel.const_set(:ISEQS__, nil)
 +  end
 +end
 

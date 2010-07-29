@@ -127,31 +127,18 @@ Index: test/ruby/test_iseq.rb
 ===================================================================
 --- test/ruby/test_iseq.rb	(revision 28647)
 +++ test/ruby/test_iseq.rb	(working copy)
-@@ -3,6 +3,10 @@
- require 'test/unit'
- 
- class TestIseqAccess < Test::Unit::TestCase
-+  def teardown
-+    Kernel.const_set(:ISEQS__, nil)
-+  end
-+
-   def test_basic
-     Kernel.const_set(:SCRIPT_ISEQS__, {})
-     Kernel.const_set(:ISEQS__, {})
-@@ -23,6 +27,15 @@
+@@ -37,4 +37,14 @@
        assert_equal RubyVM::InstructionSequence, iseq_hash.values[0][0].class
      end
-     Kernel.const_set(:SCRIPT_ISEQS__, nil)
--    Kernel.const_set(:ISEQS__, nil)
-+  end
+   end
 +
++  # Check RubyVM::InstructionSequence#arity
 +  def test_arity
-+    Kernel.const_set(:ISEQS__, {})
 +    eval 'def five; 5 end'
 +    eval 'def add(a,b); a+b end'
 +    eval 'def splat(*a); 5 end'
 +    [['five', 0,], ['add', 2], ['splat', -1]].each do |meth, expect|
 +      assert_equal(expect, ISEQS__[meth][0].arity)
 +    end
-   end
++  end
  end
