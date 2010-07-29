@@ -341,7 +341,6 @@ Init_iseq_extra(void)
     rb_define_method(rb_cISeq, "arg_rest",         iseq_arg_rest, 0) ;
     rb_define_method(rb_cISeq, "arg_simple",       iseq_arg_simple, 0) ;
     rb_define_method(rb_cISeq, "argc",             iseq_argc, 0) ;
-    rb_define_method(rb_cISeq, "arity",            iseq_arity, 0);
 #ifdef HAVE_COMPILE_OPTIONS
     rb_define_method(rb_cISeq, "compile_options",  iseq_compile_options, 0) ;
 #endif
