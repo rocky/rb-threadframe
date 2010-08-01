@@ -323,6 +323,19 @@ ISEQ_INT_FIELD_METHOD(arg_simple) ;
 ISEQ_INT_FIELD_METHOD(argc) ;
 ISEQ_INT_FIELD_METHOD(iseq_size) ;
 ISEQ_INT_FIELD_METHOD(klass) ;
+
+#if 0
+/*
+ * call-seq:
+ *    RubyVM::InstructionSequence#start_lineno() -> Fixnum
+ *
+ * Returns the starting line number of the source code for 
+ * the instruction-sequence.
+ */
+static VALUE
+iseq_line_no(VALUE iseqval)
+#endif
+
 ISEQ_INT_FIELD_METHOD(line_no) ;
 ISEQ_INT_FIELD_METHOD(local_size) ;
 ISEQ_INT_FIELD_METHOD(local_table_size) ;
@@ -349,7 +362,6 @@ Init_iseq_extra(void)
     rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
     rb_define_method(rb_cISeq, "killcache",        iseq_killcache, 0) ;
     rb_define_method(rb_cISeq, "klass",            iseq_klass, 0) ;
-    rb_define_method(rb_cISeq, "line_no",          iseq_line_no, 0) ;
     rb_define_method(rb_cISeq, "local_name",       iseq_local_name, 1) ;
     rb_define_method(rb_cISeq, "local_size",       iseq_local_size, 0) ;
     rb_define_method(rb_cISeq, "local_table_size", iseq_local_table_size, 0) ;
@@ -359,6 +371,7 @@ Init_iseq_extra(void)
     rb_define_method(rb_cISeq, "name",             iseq_name, 0) ;
     rb_define_method(rb_cISeq, "self",             iseq_self, 0) ;
     rb_define_method(rb_cISeq, "source_container", iseq_source_container, 0) ;
+    rb_define_method(rb_cISeq, "start_lineno",     iseq_line_no, 0) ;
     rb_define_method(rb_cISeq, "type",             iseq_type, 0) ;
 
 }
