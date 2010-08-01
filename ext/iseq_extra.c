@@ -390,7 +390,6 @@ Init_iseq_extra(void)
     rb_define_method(rb_cISeq, "name",             iseq_name, 0) ;
     rb_define_method(rb_cISeq, "self",             iseq_self, 0) ;
     rb_define_method(rb_cISeq, "source_container", iseq_source_container, 0) ;
-    rb_define_method(rb_cISeq, "start_lineno",     iseq_line_no, 0) ;
     rb_define_method(rb_cISeq, "type",             iseq_type, 0) ;
 
 }
