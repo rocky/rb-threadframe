@@ -14,15 +14,17 @@ class TestISeq < Test::Unit::TestCase
   end
   
   def test_fields
+    start_lineno = __LINE__ - 1;
     iseq = RubyVM::ThreadFrame::current.iseq
     assert iseq
     assert_equal('test_fields', iseq.name)
+    ## FIXME: Why does this fail? 
+    ## assert_equal(start_lineno, iseq.lineno, 'iseq.lineno')
     assert_equal(0, iseq.arity)
     assert_equal(-1, iseq.arg_block)
     assert_equal(0, iseq.argc)
     assert_equal(0, iseq.arg_opts)
-    assert_equal(2, iseq.local_table_size)
-
+    assert_equal(4, iseq.local_table_size)
     x  = lambda do |x,y| 
       iseq = RubyVM::ThreadFrame::current.iseq
       assert iseq
@@ -62,6 +64,9 @@ class TestISeq < Test::Unit::TestCase
     end
     x.call(1,2)
     C.new(self, 5)
+    end_lineno = __LINE__ + 3
+    assert_equal((start_lineno..end_lineno), 
+                 method(:test_fields).iseq.line_range, 'line range')
   end
 
   def test_iseq_equal

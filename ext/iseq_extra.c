@@ -323,22 +323,39 @@ ISEQ_INT_FIELD_METHOD(arg_simple) ;
 ISEQ_INT_FIELD_METHOD(argc) ;
 ISEQ_INT_FIELD_METHOD(iseq_size) ;
 ISEQ_INT_FIELD_METHOD(klass) ;
-
-#if 0
-/*
- * call-seq:
- *    RubyVM::InstructionSequence#start_lineno() -> Fixnum
- *
- * Returns the starting line number of the source code for 
- * the instruction-sequence.
- */
-static VALUE
-iseq_line_no(VALUE iseqval)
-#endif
-
 ISEQ_INT_FIELD_METHOD(line_no) ;
 ISEQ_INT_FIELD_METHOD(local_size) ;
 ISEQ_INT_FIELD_METHOD(local_table_size) ;
+
+/*
+ * call-seq:
+ *    RubyVM::InstructionSequence#line_range() -> Range
+ *
+ * Returns a range containing the starting line number and the
+ * ending line of the source code for the instruction-sequence.
+ */
+static VALUE
+iseq_line_range(VALUE iseqval) 
+{
+    rb_iseq_t *iseq;
+
+    GetISeqPtr(iseqval, iseq);
+    if (Qnil == iseqval) return Qnil;
+    else {
+	unsigned long i, size = iseq->insn_info_size;
+	struct iseq_insn_info_entry *table = iseq->insn_info_table;
+	unsigned short min_line = table[0].line_no;
+	unsigned short max_line = table[0].line_no;
+	
+	for (i = 0; i < size; i++) {
+	    if (table[i].line_no < min_line) 
+		min_line = table[i].line_no;
+	    else if (table[i].line_no > max_line)
+		max_line = table[i].line_no;
+	}
+	return rb_range_new(INT2FIX(min_line), INT2FIX(max_line), 0);
+    }
+}
 
 
 /* RDoc can't find methods when we use a definition like this: */
@@ -362,6 +379,8 @@ Init_iseq_extra(void)
     rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
     rb_define_method(rb_cISeq, "killcache",        iseq_killcache, 0) ;
     rb_define_method(rb_cISeq, "klass",            iseq_klass, 0) ;
+    rb_define_method(rb_cISeq, "lineno",           iseq_line_no, 0) ;
+    rb_define_method(rb_cISeq, "line_range",       iseq_line_range, 0) ;
     rb_define_method(rb_cISeq, "local_name",       iseq_local_name, 1) ;
     rb_define_method(rb_cISeq, "local_size",       iseq_local_size, 0) ;
     rb_define_method(rb_cISeq, "local_table_size", iseq_local_table_size, 0) ;
