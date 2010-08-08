@@ -45,7 +45,7 @@ This patch assumes 02-trace_func.patch has been applied.
 
 Index: thread.c
 ===================================================================
---- thread.c	(revision 28783)
+--- thread.c	(revision 28908)
 +++ thread.c	(working copy)
 @@ -3894,19 +3883,48 @@
      return ST_CONTINUE;
@@ -233,7 +233,7 @@ Index: thread.c
      {
 Index: eval.c
 ===================================================================
---- eval.c	(revision 28783)
+--- eval.c	(revision 28908)
 +++ eval.c	(working copy)
 @@ -34,7 +34,7 @@
  
@@ -253,7 +253,7 @@ Index: eval.c
  
  void *
  ruby_options(int argc, char **argv)
---- vm_eval.c	(revision 28783)
+--- vm_eval.c	(revision 28908)
 +++ vm_eval.c	(working copy)
 @@ -67,7 +67,6 @@
  	break;
@@ -263,7 +263,7 @@ Index: eval.c
  	{
  	    rb_control_frame_t *reg_cfp = th->cfp;
  	    rb_control_frame_t *cfp =
-@@ -78,15 +77,22 @@
+@@ -79,15 +77,22 @@
  	       contains the prototype value.
  	    */
  	    me->def->body.cfunc.actual_argc = argc;
@@ -289,7 +289,7 @@ Index: eval.c
        case VM_METHOD_TYPE_ATTRSET: {
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 28783)
+--- vm_insnhelper.c	(revision 28908)
 +++ vm_insnhelper.c	(working copy)
 @@ -395,8 +391,6 @@
      const rb_method_definition_t *def = me->def;
@@ -336,7 +336,7 @@ Index: vm_insnhelper.c
  
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 28783)
+--- test/ruby/test_settracefunc.rb	(revision 28908)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -23,8 +23,6 @@
       4: x = 1 + 1
@@ -473,7 +473,7 @@ Index: test/ruby/test_settracefunc.rb
  
      [["c-return", 2, :add_trace_func, Thread],
 Index: test/ruby/test_tracefunc_adds.rb
---- test/ruby/test_tracefunc_adds.rb	(revision 28783)
+--- test/ruby/test_tracefunc_adds.rb	(revision 28908)
 +++ test/ruby/test_tracefunc_adds.rb	(working copy)
 @@ -0,0 +1,130 @@
 +require 'test/unit'

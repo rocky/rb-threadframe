@@ -27,7 +27,7 @@ Index: vm_eval.c
 ===================================================================
 --- vm_eval.c	(revision 28783)
 +++ vm_eval.c	(working copy)
-@@ -74,6 +74,10 @@
+@@ -75,6 +74,10 @@
  		vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
  			      recv, (VALUE)blockptr, 0, reg_cfp->sp, 0, 1);
  
