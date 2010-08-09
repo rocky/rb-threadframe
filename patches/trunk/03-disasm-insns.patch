@@ -254,7 +254,7 @@ Index: iseq.h
 ===================================================================
 --- iseq.h	(revision 28783)
 +++ iseq.h	(working copy)
-@@ -101,4 +103,10 @@
+@@ -105,6 +103,12 @@
  #define DEFINED_ZSUPER INT2FIX(9)
  #define DEFINED_FUNC   INT2FIX(10)
  
@@ -264,7 +264,9 @@ Index: iseq.h
 +extern const char *insn_op_types(VALUE insn);
 +extern int insn_op_type(VALUE insn, long pos);
 +
- #endif /* RUBY_COMPILE_H */
+ #if defined __GNUC__ && __GNUC__ >= 4
+ #pragma GCC visibility pop
+ #endif
 Index: template/insns_info.inc.tmpl
 ===================================================================
 --- template/insns_info.inc.tmpl	(revision 28783)
