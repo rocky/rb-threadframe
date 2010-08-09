@@ -112,7 +112,7 @@ Index: vm_insnshelper.c
 @@ -497,6 +497,7 @@
  
  	cfp->sp = rsp - 1 /* recv */;
- 	if (LIKELY(0 == th->tracing)) {
+	if (LIKELY(0 == th->tracing && !(VM_FRAME_TRACE_OFF & cfp->tracing))) {
 +	    EXEC_EVENT_HOOK(th, RUBY_EVENT_INSN, cfp->self, 0, 0);
  	    if (UNLIKELY(cfp->iseq &&
  			 cfp->iseq->breakpoints &&

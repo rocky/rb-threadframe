@@ -255,9 +255,9 @@ Index: eval.c
  ruby_options(int argc, char **argv)
 --- vm_eval.c	(revision 28908)
 +++ vm_eval.c	(working copy)
-@@ -67,7 +67,6 @@
- 	break;
+@@ -68,7 +67,6 @@
        }
+       case VM_METHOD_TYPE_NOTIMPLEMENTED:
        case VM_METHOD_TYPE_CFUNC: {
 -	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
  	{

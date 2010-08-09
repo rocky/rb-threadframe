@@ -130,7 +130,7 @@ Index: vm_insnhelper.c
  		      iseq->iseq_encoded + opt_pc, sp, 0, 0);
  
  	cfp->sp = rsp - 1 /* recv */;
-+	if (LIKELY(0 == th->tracing)) {
++	if (LIKELY(0 == th->tracing && !(VM_FRAME_TRACE_OFF & cfp->tracing))) {
 +	    if (UNLIKELY(cfp->iseq &&
 +			 cfp->iseq->breakpoints &&
 +			 cfp->iseq->breakpoints[opt_pc]))

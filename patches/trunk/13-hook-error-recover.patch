@@ -48,7 +48,7 @@ Index: thread.c
  	}
  	else {
 -	    exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
-+	    if (0 == th->exec_event_tracing) {
++	    if (UNLIKELY(0 == th->exec_event_tracing && !(VM_FRAME_TRACE_OFF & th->cfp->tracing))) {
 +		/* Modified from ruby_suppress_tracing */
 +		int state;
 +		volatile int raised = rb_threadptr_reset_raised(th);
