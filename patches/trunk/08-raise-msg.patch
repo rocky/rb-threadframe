@@ -11,7 +11,7 @@ missing event names in the case statement of routine get_event_name().
 
 Index: eval.c
 ===================================================================
---- eval.c	(revision 28783)
+--- eval.c	(revision 28955)
 +++ eval.c	(working copy)
 @@ -440,7 +440,12 @@
      rb_trap_restore_mask();
@@ -28,10 +28,10 @@ Index: eval.c
  }
  
 Index: thread.c
---- thread.c	(revision 28783)
+--- thread.c	(revision 28955)
 +++ thread.c	(working copy)
 ===================================================================
-@@ -4036,6 +4109,12 @@
+@@ -4038,6 +4109,12 @@
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -44,7 +44,7 @@ Index: thread.c
        default:
  	return "unknown";
      }
-@@ -4067,8 +4055,15 @@
+@@ -4069,8 +4055,15 @@
  	p->event == RUBY_EVENT_C_RETURN) {
  	id = p->id;
  	klass = p->klass;
@@ -64,7 +64,7 @@ Index: thread.c
      if (id == ID_ALLOCATOR)
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 28783)
+--- test/ruby/test_settracefunc.rb	(revision 28955)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -220,7 +220,7 @@
       3: })
@@ -87,7 +87,7 @@ Index: test/ruby/test_settracefunc.rb
 
 Index: test/ruby/test_tracefunc_raise.rb
 ===================================================================
---- test/ruby/test_tracefunc_raise.rb	(revision 28783)
+--- test/ruby/test_tracefunc_raise.rb	(revision 28955)
 +++ test/ruby/test_tracefunc_raise.rb	(working copy)
 @@ -0,0 +1,26 @@
 +require 'test/unit'

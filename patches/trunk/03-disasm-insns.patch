@@ -7,9 +7,9 @@ Also adds access to an instruction's length, name, operand types.
 
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 28783)
+--- vm_core.h	(revision 28955)
 +++ vm_core.h	(working copy)
-@@ -497,6 +500,7 @@
+@@ -496,6 +500,7 @@
  VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, VALUE, const rb_compile_option_t*);
  VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
  VALUE rb_iseq_disasm(VALUE self);
@@ -19,7 +19,7 @@ Index: vm_core.h
  int rb_iseq_first_lineno(rb_iseq_t *iseq);
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 28783)
+--- iseq.c	(revision 28955)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -252,7 +252,7 @@ Index: iseq.c
      /* rb_define_singleton_method(rb_cISeq, "load", iseq_s_load, -1); */
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 28783)
+--- iseq.h	(revision 28955)
 +++ iseq.h	(working copy)
 @@ -105,6 +103,12 @@
  #define DEFINED_ZSUPER INT2FIX(9)
@@ -269,7 +269,7 @@ Index: iseq.h
  #endif
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 28783)
+--- template/insns_info.inc.tmpl	(revision 28955)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -42,38 +42,6 @@
  }
@@ -312,7 +312,7 @@ Index: template/insns_info.inc.tmpl
  insn_ret_num(VALUE insn)
 Index: thread.c
 ===================================================================
---- thread.c	(revision 28783)
+--- thread.c	(revision 28955)
 +++ thread.c	(working copy)
 @@ -336,6 +336,14 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -331,7 +331,7 @@ Index: thread.c
  {
 Index: test/ruby/test_disam.rb
 ===================================================================
---- test/ruby/test_disasm.rb	(revision 28783)
+--- test/ruby/test_disasm.rb	(revision 28955)
 +++ test/ruby/test_disasm.rb	(working copy)
 @@ -0,0 +1,17 @@
 +# Some simple tests of RubyVM::InstructionSequence#disasm, and

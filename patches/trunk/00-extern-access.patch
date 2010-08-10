@@ -21,9 +21,9 @@ For proc.c we allow external access to method_arity by removing "static".
 
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 28908)
+--- vm_core.h	(revision 28955)
 +++ vm_core.h	(working copy)
-@@ -390,6 +395,17 @@
+@@ -390,6 +395,16 @@
      /* passing state */
      int state;
  
@@ -32,7 +32,6 @@ Index: vm_core.h
 +    rb_event_flag_t event_flags;
 +    int tracing;  /* 0 if not tracing. If less than 0, skip that many
 +		     C call/return pairs */
-+    int exec_event_tracing;  /* 0 if not in rb_threadptr_evec_event_hooks. */
 +
 +    /* misc */
 +    int method_missing_reason;
@@ -81,7 +80,7 @@ Index: vm_core.h
  #endif
 Index: proc.c
 ===================================================================
---- proc.c	(revision 28908)
+--- proc.c	(revision 28955)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);

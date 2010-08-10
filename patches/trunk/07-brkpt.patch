@@ -73,7 +73,7 @@ Index: thread.c
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -4024,6 +4013,8 @@
+@@ -4026,6 +4013,8 @@
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -84,7 +84,7 @@ Index: thread.c
        case RUBY_EVENT_RETURN:
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 28783)
+--- vm_core.h	(revision 28955)
 +++ vm_core.h	(working copy)
 @@ -253,6 +253,8 @@
  
@@ -140,7 +140,7 @@ Index: vm_insnhelper.c
      else {
  	VALUE *p_rsp;
 Index: brkpt.c
---- brkpt.c	(revision 28783)
+--- brkpt.c	(revision 28955)
 +++ brkpt.c	(working copy)
 @@ -0,0 +1,232 @@
 +/**********************************************************************
@@ -376,7 +376,7 @@ Index: brkpt.c
 +    rb_define_method(rb_cISeq, "brkpts",           iseq_brkpts, 0);
 +}
 Index: test/ruby/test_brkpt.rb
---- test/ruby/test_brkpt.rb	(revision 28783)
+--- test/ruby/test_brkpt.rb	(revision 28955)
 +++ test/ruby/test_brkpt.rb	(working copy)
 @@ -0,0 +1,60 @@
 +require 'test/unit'

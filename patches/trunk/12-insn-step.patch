@@ -6,7 +6,7 @@ when in the hook code when this is called. But still there are some stubbing out
 
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 28783)
+--- include/ruby/ruby.h	(revision 28955)
 +++ include/ruby/ruby.h	(working copy)
 @@ -1368,8 +1352,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
@@ -19,9 +19,9 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_VM       0x10000
  #define RUBY_EVENT_SWITCH   0x20000
  #define RUBY_EVENT_COVERAGE 0x40000
---- thread.c	(revision 28783)
+--- thread.c	(revision 28955)
 +++ thread.c	(working copy)
-@@ -4082,6 +4096,8 @@
+@@ -4084,6 +4096,8 @@
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -30,7 +30,7 @@ Index: include/ruby/ruby.h
        case RUBY_EVENT_SWITCH:
          return "switch";
        case RUBY_EVENT_COVERAGE:
-@@ -4116,7 +4137,8 @@
+@@ -4118,7 +4137,8 @@
      VALUE klass = 0;
  
      if (p->event == RUBY_EVENT_C_CALL ||
@@ -42,7 +42,7 @@ Index: include/ruby/ruby.h
      } else if (p->event == RUBY_EVENT_RAISE) {
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 28783)
+--- tool/instruction.rb	(revision 28955)
 +++ tool/instruction.rb	(working copy)
 @@ -807,8 +807,18 @@
        commit  "  POPN(#{@popn});" if @popn > 0
@@ -75,7 +75,7 @@ Index: tool/instruction.rb
        make_header_defines insn
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 28783)
+--- vm_exec.h	(revision 28955)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
@@ -121,7 +121,7 @@ Index: vm_exec.h
 diff -u -r ruby-test/vm_insnhelper.c ruby-test-combined/vm_insnhelper.c
 Index: vm_insnshelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 28783)
+--- vm_insnhelper.c	(revision 28955)
 +++ vm_insnhelper.c	(working copy)
 @@ -497,6 +497,7 @@
  
@@ -133,7 +133,7 @@ Index: vm_insnshelper.c
  			 cfp->iseq->breakpoints[opt_pc]))
 Index: test/ruby/test_tracefunc_adds.rb
 ===================================================================
---- test/ruby/test_tracefunc_adds.rb	(revision 28783)
+--- test/ruby/test_tracefunc_adds.rb	(revision 28955)
 +++ test/ruby/test_tracefunc_adds.rb	(working copy)
 @@ -15,7 +15,8 @@
    @@C_CALL_EVENT_MASK    = 0x0020

@@ -39,7 +39,7 @@ and compatible, I haven't done that.
 
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 28642)
+--- vm_core.h	(revision 28955)
 +++ vm_core.h	(working copy)
 @@ -330,6 +330,9 @@
      rb_iseq_t *block_iseq;	/* cfp[8] / block[3] */
@@ -51,7 +51,7 @@ Index: vm_core.h
  } rb_control_frame_t;
  
  typedef struct rb_block_struct {
-@@ -568,6 +572,10 @@
+@@ -567,6 +572,10 @@
  
  #define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)
  
@@ -62,7 +62,7 @@ Index: vm_core.h
  /* other frame flag */
  #define VM_FRAME_FLAG_PASSED 0x0100
  
-@@ -692,14 +697,30 @@
+@@ -691,14 +697,31 @@
  void
  rb_threadptr_exec_event_hooks(rb_thread_t *th, rb_event_flag_t flag, VALUE self, ID id, VALUE klass);
  
@@ -75,7 +75,8 @@ Index: vm_core.h
 -    } \
 -} while (0)
 +#define EXEC_EVENT_HOOK(th, flag, self, id, klass)			\
-+  if (LIKELY(0 == th->tracing)) {					\
++    if (LIKELY(0 == th->tracing &&					\
++	       !(th->cfp->tracing & VM_FRAME_TRACE_OFF))) {		\
 +	rb_event_flag_t wait_event__ = th->event_flags;			\
 +	if (UNLIKELY(wait_event__)) {					\
 +	    if (wait_event__ & (flag | RUBY_EVENT_VM)) {		\
@@ -103,7 +104,7 @@ Index: vm_core.h
  #pragma GCC visibility push(default)
 Index: thread.c
 ===================================================================
---- thread.c	(revision 28783)
+--- thread.c	(revision 28955)
 +++ thread.c	(working copy)
 @@ -3797,10 +3788,12 @@
      const rb_event_flag_t wait_event = th->event_flags;
@@ -121,6 +122,25 @@ Index: thread.c
  	if (th->vm->event_hooks == NULL) {
  	    th->event_flags &= (~RUBY_EVENT_VM);
  	}
+@@ -3805,7 +3806,9 @@
+ 	    th->event_flags &= (~RUBY_EVENT_VM);
+ 	}
+ 	else {
+-	    exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
++	    if (!(VM_FRAME_TRACE_OFF & th->cfp->tracing)) {
++		exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
++	    }
+ 	}
+     }
+     th->errinfo = errinfo;
+@@ -4106,6 +4182,7 @@
+     }
+     else {
+ 	th->tracing = 1;
++	th->cfp->tracing &= VM_FRAME_TRACE_OFF;
+     }
+ 
+     raised = rb_threadptr_reset_raised(th);
 --- vm.c	(revision 27742)
 +++ vm.c	(working copy)
 @@ -1166,7 +1166,8 @@
@@ -145,7 +165,7 @@ Index: thread.c
 Index: vm_insnhelper.c
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 28783)
+--- vm_insnhelper.c	(revision 28955)
 +++ vm_insnhelper.c	(working copy)
 @@ -26,9 +26,12 @@
  	      const VALUE *pc, VALUE *sp, VALUE *lfp,
