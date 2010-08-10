@@ -62,77 +62,57 @@ Index: vm_core.h
  /* other frame flag */
  #define VM_FRAME_FLAG_PASSED 0x0100
  
-@@ -691,14 +697,31 @@
- void
- rb_threadptr_exec_event_hooks(rb_thread_t *th, rb_event_flag_t flag, VALUE self, ID id, VALUE klass);
- 
--#define EXEC_EVENT_HOOK(th, flag, self, id, klass) do { \
--    rb_event_flag_t wait_event__ = th->event_flags; \
--    if (UNLIKELY(wait_event__)) { \
--	if (wait_event__ & (flag | RUBY_EVENT_VM)) { \
--	    rb_threadptr_exec_event_hooks(th, flag, self, id, klass); \
--	} \
--    } \
--} while (0)
-+#define EXEC_EVENT_HOOK(th, flag, self, id, klass)			\
-+    if (LIKELY(0 == th->tracing &&					\
-+	       !(th->cfp->tracing & VM_FRAME_TRACE_OFF))) {		\
-+	rb_event_flag_t wait_event__ = th->event_flags;			\
-+	if (UNLIKELY(wait_event__)) {					\
-+	    if (wait_event__ & (flag | RUBY_EVENT_VM)) {		\
-+		rb_threadptr_exec_event_hooks(th, flag, self, id, klass); \
-+	    }								\
-+	}								\
-+    }
-+
-+/* Customized version of EXEC_EVENT_HOOK for RUBY_EVENT_RETURN events */
-+#define EXEC_EVENT_RETURN_HOOK(th, flag, self, id, klass)		\
-+    if (LIKELY(0 == th->tracing &&					\
-+	       (!(th->cfp->tracing & VM_FRAME_TRACE_OFF)		\
-+		|| (th->cfp->tracing & VM_FRAME_TRACE_RETURN)))) {	\
-+	rb_event_flag_t wait_event__ = th->event_flags;			\
-+	if (UNLIKELY(wait_event__)) {					\
-+	    if (wait_event__ & (flag | RUBY_EVENT_VM)) {		\
-+	        th->tracing = 1;					\
-+		rb_threadptr_exec_event_hooks(th, flag, self, id, klass); \
-+		th->tracing = 0;					\
-+	    }								\
-+	}								\
-+    }
- 
- #if defined __GNUC__ && __GNUC__ >= 4
- #pragma GCC visibility push(default)
 Index: thread.c
 ===================================================================
 --- thread.c	(revision 28955)
 +++ thread.c	(working copy)
-@@ -3797,10 +3788,12 @@
-     const rb_event_flag_t wait_event = th->event_flags;
+@@ -3793,22 +3801,34 @@
+ void
+ rb_threadptr_exec_event_hooks(rb_thread_t *th, rb_event_flag_t flag, VALUE self, ID id, VALUE klass)
+ {
+-    const VALUE errinfo = th->errinfo;
+-    const rb_event_flag_t wait_event = th->event_flags;
++    /* Either we haven't turned off tracing via the thread mechanism
++       or we set a return trace and the event is a some kind of return. */
++    int do_tracing;
  
      if (self == rb_mRubyVMFrozenCore) return;
 -    if (wait_event & flag) {
 -	exec_event_hooks(th->event_hooks, flag, self, id, klass);
-+    if (wait_event & flag && th->tracing <= 0) {
-+	if (!RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, th->cfp)
-+	      && !(th->cfp->tracing & VM_FRAME_TRACE_OFF))
-+	    exec_event_hooks(th->event_hooks, flag, self, id, klass);
-     }
+-    }
 -    if (wait_event & RUBY_EVENT_VM) {
-+    if (wait_event & RUBY_EVENT_VM && th->tracing <= 0) {
- 	if (th->vm->event_hooks == NULL) {
- 	    th->event_flags &= (~RUBY_EVENT_VM);
- 	}
-@@ -3805,7 +3806,9 @@
- 	    th->event_flags &= (~RUBY_EVENT_VM);
- 	}
- 	else {
+-	if (th->vm->event_hooks == NULL) {
+-	    th->event_flags &= (~RUBY_EVENT_VM);
+-	}
+-	else {
 -	    exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
-+	    if (!(VM_FRAME_TRACE_OFF & th->cfp->tracing)) {
++
++    do_tracing = UNLIKELY( (th->tracing <= 0 && 
++			    !(th->cfp->tracing & VM_FRAME_TRACE_OFF)) ||
++			   ((flag & RUBY_EVENT_C_RETURN | RUBY_EVENT_RETURN)
++			    && th->cfp->tracing & VM_FRAME_TRACE_RETURN) );
++    if (do_tracing) {
++	const VALUE errinfo = th->errinfo;
++	const rb_event_flag_t wait_event = th->event_flags;
++	
++	if (wait_event & flag) {
++	    if (UNLIKELY(!RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, th->cfp)))
++		exec_event_hooks(th->event_hooks, flag, self, id, klass);
++	}
++	if (wait_event & RUBY_EVENT_VM) {
++	    if (th->vm->event_hooks == NULL) {
++		th->event_flags &= (~RUBY_EVENT_VM);
++	    }
++	    else {
 +		exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
 +	    }
  	}
++	th->errinfo = errinfo;
      }
-     th->errinfo = errinfo;
+-    th->errinfo = errinfo;
+ }
+ 
+ void
 @@ -4106,6 +4182,7 @@
      }
      else {
@@ -141,27 +121,6 @@ Index: thread.c
      }
  
      raised = rb_threadptr_reset_raised(th);
---- vm.c	(revision 27742)
-+++ vm.c	(working copy)
-@@ -1166,7 +1166,8 @@
- 	while (th->cfp->pc == 0 || th->cfp->iseq == 0) {
- 	    if (UNLIKELY(VM_FRAME_TYPE(th->cfp) == VM_FRAME_MAGIC_CFUNC)) {
- 		const rb_method_entry_t *me = th->cfp->me;
--		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, th->cfp->self, me->called_id, me->klass);
-+		EXEC_EVENT_RETURN_HOOK(th, RUBY_EVENT_C_RETURN, th->cfp->self, 
-+					   me->called_id, me->klass);
- 	    }
- 	    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
- 	}
-@@ -1334,7 +1346,7 @@
- 
- 	    switch (VM_FRAME_TYPE(th->cfp)) {
- 	      case VM_FRAME_MAGIC_METHOD:
--		EXEC_EVENT_HOOK(th, RUBY_EVENT_RETURN, th->cfp->self, 0, 0);
-+		EXEC_EVENT_RETURN_HOOK(th, RUBY_EVENT_RETURN, th->cfp->self, 0, 0);
- 		break;
- 	      case VM_FRAME_MAGIC_CLASS:
- 		EXEC_EVENT_HOOK(th, RUBY_EVENT_END, th->cfp->self, 0, 0);
 Index: vm_insnhelper.c
 Index: vm_insnhelper.c
 ===================================================================
