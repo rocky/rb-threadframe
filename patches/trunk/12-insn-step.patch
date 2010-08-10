@@ -1,6 +1,9 @@
 This patch add for VM instruction stepping, via a vm instruction event in the
 event mask. By default, this is not set when tracing is enabled.
 
+For now, this is largely disabled because there are various stack-related inconsistancies
+when in the hook code when this is called. But still there are some stubbing out.
+
 Index: include/ruby/ruby.h
 ===================================================================
 --- include/ruby/ruby.h	(revision 28783)
@@ -41,24 +44,35 @@ Index: tool/instruction.rb
 ===================================================================
 --- tool/instruction.rb	(revision 28783)
 +++ tool/instruction.rb	(working copy)
-@@ -854,6 +854,17 @@
-       commit "INSN_ENTRY(#{insn.name}){"
-       make_header_prepare_stack insn
-       commit "{"
-+      # rocky: for reasons that I don't understand, calling the
+@@ -807,8 +807,18 @@
+       commit  "  POPN(#{@popn});" if @popn > 0
+     end
+ 
+-    def make_hader_debug insn
++    def make_header_debug insn
+       comment "  /* for debug */"
++      # FIXME: rocky: for reasons that I don't understand, calling the
 +      # instruction trace hook in a "leave" instruction causes a
 +      # SEGV via an illegal access csuch as via vm.c line 1144: 
 +      #    ep = ... cfp->iseq ...  
 +      # 
++      # Same for newarray when f.type is EVWAL. 
 +      # Since we can handle this event via RUBY_EVENT_END I don't
 +      # think there is any loss in functionality.
 +      # Not sure if "send" should be included.
-+      unless %w(leave send).member?(insn.name)
-+        commit "  TRACE_INSN(#{insn.name});"
-+      end
-       make_header_stack_val  insn
-       make_header_default_operands insn
-       make_header_operands   insn
++      # commit "  TRACE_INSN(#{insn.name});"
+       commit  "  DEBUG_ENTER_INSN(\"#{insn.name}\");"
+     end
+ 
+@@ -860,7 +870,7 @@
+       make_header_stack_pops insn
+       make_header_temporary_vars insn
+       #
+-      make_hader_debug insn
++      make_header_debug insn
+       make_header_pc insn
+       make_header_popn insn
+       make_header_defines insn
 Index: vm_exec.h
 ===================================================================
 --- vm_exec.h	(revision 28783)
