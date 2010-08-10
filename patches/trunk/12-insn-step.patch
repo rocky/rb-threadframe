@@ -150,17 +150,17 @@ Index: test/ruby/test_tracefunc_adds.rb
                   'call filtering')
    end
 +
-+  def test_trace_insn
-+    tuples = []
-+    cmd = <<-EOF.gsub(/^.*?: /, '')
-+        1: p = #{@proc_template}
-+        2: add_trace_func(p, @@INSN_EVENT_MASK)
-+        4: x = 1
-+        3: y = 2
-+      EOF
-+    eval cmd % 'tuples'
-+    clear_trace_func
-+    assert_equal true, !tuples.empty?, 'triggered instruction events'
-+    assert_equal true, tuples.all?{|t| 'vm-insn' == t[0]}, 'instruction events'
-+  end
++  # def test_trace_insn
++  #  tuples = []
++  #  cmd = <<-EOF.gsub(/^.*?: /, '')
++  #      1: p = #{@proc_template}
++  #      2: add_trace_func(p, @@INSN_EVENT_MASK)
++  #      4: x = 1
++  #      3: y = 2
++  #    EOF
++  #  eval cmd % 'tuples'
++  #  clear_trace_func
++  #  assert_equal true, !tuples.empty?, 'triggered instruction events'
++  #  assert_equal true, tuples.all?{|t| 'vm-insn' == t[0]}, 'instruction events'
++  # end
  end
