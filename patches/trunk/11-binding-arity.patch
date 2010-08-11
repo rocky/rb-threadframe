@@ -13,10 +13,12 @@ Index: iseq.c
 ===================================================================
 --- iseq.c	(revision 28783)
 +++ iseq.c	(working copy)
-@@ -1732,6 +1730,22 @@
+@@ -1732,6 +1730,24 @@
      return iseqval;
  }
  
++extern int get_iseq_arity(rb_iseq_t *iseq);
++
 +/* 
 + *  call-seq:
 + *  RubyVM::InstructionSequence#arity -> Fixnum

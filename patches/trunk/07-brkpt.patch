@@ -73,7 +73,7 @@ Index: thread.c
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -4026,6 +4013,8 @@
+@@ -4034,6 +4013,8 @@
  	return "class";
        case RUBY_EVENT_END:
  	return "end";

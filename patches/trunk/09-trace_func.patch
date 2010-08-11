@@ -47,7 +47,7 @@ Index: thread.c
 ===================================================================
 --- thread.c	(revision 28955)
 +++ thread.c	(working copy)
-@@ -3896,19 +3883,48 @@
+@@ -3904,19 +3883,48 @@
      return ST_CONTINUE;
  }
  
@@ -99,7 +99,7 @@ Index: thread.c
   *
   *  Establishes _proc_ as the handler for tracing, or disables
   *  tracing if the parameter is +nil+. _proc_ takes up
-@@ -3922,6 +3938,8 @@
+@@ -3930,6 +3938,8 @@
   *  <code>line</code> (execute code on a new line), <code>raise</code>
   *  (raise an exception), and <code>return</code> (return from a Ruby
   *  method). Tracing is disabled within the context of _proc_.
@@ -108,7 +108,7 @@ Index: thread.c
   *
   *      class Test
   *	def test
-@@ -3946,55 +3964,62 @@
+@@ -3954,55 +3964,62 @@
   *	  line prog.rb:3        test     Test
   *	  line prog.rb:4        test     Test
   *      return prog.rb:4        test     Test
@@ -189,7 +189,7 @@ Index: thread.c
   *     thr.set_trace_func(nil)     -> nil
   *
   *  Establishes _proc_ on _thr_ as the handler for tracing, or
-@@ -4003,16 +4028,24 @@
+@@ -4011,16 +4028,24 @@
   */
  
  static VALUE
@@ -216,7 +216,7 @@ Index: thread.c
      return trace;
  }
  
-@@ -4271,9 +4303,11 @@
+@@ -4279,9 +4303,11 @@
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */

@@ -21,7 +21,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 --- thread.c	(revision 28955)
 +++ thread.c	(working copy)
-@@ -4084,6 +4096,8 @@
+@@ -4092,6 +4096,8 @@
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -30,7 +30,7 @@ Index: include/ruby/ruby.h
        case RUBY_EVENT_SWITCH:
          return "switch";
        case RUBY_EVENT_COVERAGE:
-@@ -4118,7 +4137,8 @@
+@@ -4126,7 +4137,8 @@
      VALUE klass = 0;
  
      if (p->event == RUBY_EVENT_C_CALL ||
