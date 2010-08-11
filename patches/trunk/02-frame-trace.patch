@@ -127,7 +127,7 @@ Index: thread.c
      else {
  	th->tracing = 1;
 +	cfp_tracing = th->cfp->tracing;
-+	th->cfp->tracing &= VM_FRAME_TRACE_OFF;
++	/* th->cfp->tracing |= VM_FRAME_TRACE_OFF; */
      }
  
      raised = rb_threadptr_reset_raised(th);
