@@ -113,14 +113,32 @@ Index: thread.c
  }
  
  void
-@@ -4106,6 +4182,7 @@
+@@ -4097,7 +4181,7 @@
+ ruby_suppress_tracing(VALUE (*func)(VALUE, int), VALUE arg, int always)
+ {
+     rb_thread_t *th = GET_THREAD();
+-    int state, tracing;
++    int state, tracing, cfp_tracing;
+     volatile int raised;
+     VALUE result = Qnil;
+ 
+@@ -4106,6 +4182,8 @@
      }
      else {
  	th->tracing = 1;
++	cfp_tracing = th->cfp->tracing;
 +	th->cfp->tracing &= VM_FRAME_TRACE_OFF;
      }
  
      raised = rb_threadptr_reset_raised(th);
+@@ -4121,6 +4207,7 @@
+     POP_TAG();
+ 
+     th->tracing = tracing;
++    th->cfp->tracing = tracing;
+     if (state) {
+ 	JUMP_TAG(state);
+     }
 Index: vm_insnhelper.c
 Index: vm_insnhelper.c
 ===================================================================
