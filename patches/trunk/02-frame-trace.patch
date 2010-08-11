@@ -72,8 +72,6 @@ Index: thread.c
  {
 -    const VALUE errinfo = th->errinfo;
 -    const rb_event_flag_t wait_event = th->event_flags;
-+    /* Either we haven't turned off tracing via the thread mechanism
-+       or we set a return trace and the event is a some kind of return. */
 +    int do_tracing;
  
      if (self == rb_mRubyVMFrozenCore) return;
@@ -87,6 +85,8 @@ Index: thread.c
 -	else {
 -	    exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
 +
++    /* Either we haven't turned off tracing via the thread mechanism
++       or we set a return trace and the event is a some kind of return. */
 +    do_tracing = UNLIKELY( (th->tracing <= 0 && 
 +			    !(th->cfp->tracing & VM_FRAME_TRACE_OFF)) ||
 +			   ((flag & RUBY_EVENT_C_RETURN | RUBY_EVENT_RETURN)
@@ -143,7 +143,7 @@ Index: vm_insnhelper.c
      cfp->dfp = sp;
      cfp->proc = 0;
      cfp->me = 0;
-+    cfp->tracing = tracing;
++    cfp->tracing = tracing & ~VM_FRAME_TRACE_RETURN;
  
  #define COLLECT_PROFILE 0
  #if COLLECT_PROFILE
