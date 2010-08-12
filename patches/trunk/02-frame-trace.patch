@@ -89,7 +89,7 @@ Index: thread.c
 +       or we set a return trace and the event is a some kind of return. */
 +    do_tracing = UNLIKELY( (th->tracing <= 0 && 
 +			    !(th->cfp->tracing & VM_FRAME_TRACE_OFF)) ||
-+			   ((flag & RUBY_EVENT_C_RETURN | RUBY_EVENT_RETURN)
++			   ((flag & (RUBY_EVENT_C_RETURN | RUBY_EVENT_RETURN))
 +			    && th->cfp->tracing & VM_FRAME_TRACE_RETURN) );
 +    if (do_tracing) {
 +	const VALUE errinfo = th->errinfo;
@@ -135,7 +135,7 @@ Index: thread.c
      POP_TAG();
  
      th->tracing = tracing;
-+    th->cfp->tracing = tracing;
++    th->cfp->tracing = cfp_tracing;
      if (state) {
  	JUMP_TAG(state);
      }
