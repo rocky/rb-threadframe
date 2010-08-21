@@ -234,6 +234,28 @@ THREAD_FRAME_FP_METHOD(sp)
 
 /*
  *  call-seq:
+ *     RubyVM::ThreadFrame#sp_size  -> FixNum
+ * 
+ * Returns the number of stack or sp entries in the current
+ * frame. That is the, number values that have been pushed onto the
+ * stack since the current call.  This is different than
+ * RubyVM::ThreadFrame#stack_size which counts the number of frames in
+ * the call stack. +nil+ is returned if there is an error.
+ */
+VALUE 
+thread_frame_sp_size(VALUE klass) 
+{
+    rb_control_frame_t *prev_cfp;
+    THREAD_FRAME_SETUP_WITH_ERROR ;
+
+    prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(tf->cfp);
+    if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, prev_cfp))
+	return Qnil;
+    return INT2FIX(tf->cfp->sp - prev_cfp->sp - 1);
+}
+
+/*
+ *  call-seq:
  *     RubyVM::ThreadFrame#sp_set(n, newvalue)  -> object
  * 
  * Returns a RubyVM object stored at stack position <i>i</i>. The top object
@@ -954,6 +976,7 @@ Init_thread_frame(void)
      */
     rb_define_method(rb_cThreadFrame, "sp", thread_frame_sp, 1);
     rb_define_method(rb_cThreadFrame, "sp_set", thread_frame_sp_set, 2);
+    rb_define_method(rb_cThreadFrame, "sp_size", thread_frame_sp_size, 0);
 
     /* I think I like the more explicit stack_size over size or length. */
     rb_define_method(rb_cThreadFrame, "stack_size", 
