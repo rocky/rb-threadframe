@@ -227,7 +227,9 @@ thread_frame_sp(VALUE klass, VALUE index)
     /* handled by THREAD_FRAME_FP_METHOD macro;  */
 }
 #endif
-/* The above declaration is to make RDOC happy. */
+/* The above declaration is to make RDOC happy. 
+   FIXME: Figure out a way to check if "index" is valid!
+*/
 THREAD_FRAME_FP_METHOD(sp)
 
 /*
@@ -747,15 +749,21 @@ thread_frame_source_container(VALUE klass)
        VM_FRAME_MAGIC_EVAL. I think apparently the misinformation
        regarding (eval) propagates back to other kinds of frames such
        as VM_MAGIC_BLOCK and so on.
-     */
+       Aug 20 2010: Changed back to || see ??? below.
+    */
     if ( file != Qnil && 
-	 (0 == strncmp(RSTRING_PTR(file), "(eval", sizeof("(eval")) 
-	  || 0 == strncmp(RSTRING_PTR(file), "<compiled>", sizeof("<compiled>")) 
-	  || (VM_FRAME_MAGIC_EVAL == VM_FRAME_TYPE(tf->cfp)))
+	 ((0 == strncmp(RSTRING_PTR(file), "(eval", sizeof("(eval")) 
+	   || 0 == strncmp(RSTRING_PTR(file), "<compiled>", sizeof("<compiled>")))
+	  && (VM_FRAME_MAGIC_EVAL == VM_FRAME_TYPE(tf->cfp)))
 	) {
 	VALUE prev   = 	thread_frame_prev_internal(tf->cfp, tf->th, 1);
 	contain_type = "string";
 	is_eval      = 1;
+	/* ??? FIXME: Picking up a sp argument is kind of
+	   dangerous. Right now Right now I don't have a way to
+	   determine wither 3 is legit, although there's probably a
+	   way to figure this out.
+	 */
 	if (prev) file = thread_frame_sp(prev, INT2FIX(3));
     } else
 	contain_type = "file";
