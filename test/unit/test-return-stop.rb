@@ -40,9 +40,6 @@ class TestReturnStop < Test::Unit::TestCase
   end
 
   def test_return_stop
-    puts "FIXME: reinstate test_return_stop"
-    assert true
-    return
     recurse(1, true)
     set_trace_func(nil)
     first = @tuples.dup
