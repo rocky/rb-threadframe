@@ -232,6 +232,16 @@ thread_frame_sp(VALUE klass, VALUE index)
 */
 THREAD_FRAME_FP_METHOD(sp)
 
+static int
+thread_frame_sp_size_internal(thread_frame_t *tf) 
+{
+    rb_control_frame_t *prev_cfp;
+    prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(tf->cfp);
+    if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, prev_cfp))
+	return Qnil;
+    return tf->cfp->sp - prev_cfp->sp - 1;
+}
+
 /*
  *  call-seq:
  *     RubyVM::ThreadFrame#sp_size  -> FixNum
@@ -245,13 +255,8 @@ THREAD_FRAME_FP_METHOD(sp)
 VALUE 
 thread_frame_sp_size(VALUE klass) 
 {
-    rb_control_frame_t *prev_cfp;
     THREAD_FRAME_SETUP_WITH_ERROR ;
-
-    prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(tf->cfp);
-    if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, prev_cfp))
-	return Qnil;
-    return INT2FIX(tf->cfp->sp - prev_cfp->sp - 1);
+    return INT2FIX(thread_frame_sp_size_internal(tf));
 }
 
 /*
@@ -755,7 +760,7 @@ thread_frame_s_prev(int argc, VALUE *argv, VALUE klass)
 static VALUE
 thread_frame_source_container(VALUE klass)
 {
-    VALUE file = Qnil;
+    VALUE filename = Qnil;
     const char *contain_type;
     rb_control_frame_t *cfp;
     int is_eval = 0;
@@ -765,40 +770,33 @@ thread_frame_source_container(VALUE klass)
     for ( cfp = tf->cfp; cfp && !cfp->iseq && RUBYVM_CFUNC_FRAME_P(cfp); 
 	  cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp) ) ;
 
-    if (tf->th->vm->progname) file = tf->th->vm->progname;
 
-    /* FIXME: Is this right? Do more?  Initially I had &&
-       VM_FRAME_MAGIC_EVAL. I think apparently the misinformation
-       regarding (eval) propagates back to other kinds of frames such
-       as VM_MAGIC_BLOCK and so on.
-       Aug 20 2010: Changed back to || see ??? below.
-    */
-    if ( file != Qnil && 
-	 ((0 == strncmp(RSTRING_PTR(file), "(eval", sizeof("(eval")) 
-	   || 0 == strncmp(RSTRING_PTR(file), "<compiled>", sizeof("<compiled>")))
-	  && (VM_FRAME_MAGIC_EVAL == VM_FRAME_TYPE(tf->cfp)))
-	) {
-	VALUE prev   = 	thread_frame_prev_internal(tf->cfp, tf->th, 1);
-	contain_type = "string";
-	is_eval      = 1;
-	/* ??? FIXME: Picking up a sp argument is kind of
-	   dangerous. Right now Right now I don't have a way to
-	   determine wither 3 is legit, although there's probably a
-	   way to figure this out.
-	 */
-	if (prev) file = thread_frame_sp(prev, INT2FIX(3));
-    } else
-	contain_type = "file";
-
-    if (cfp->iseq) {
-	VALUE ary = iseq_source_container_internal(cfp->iseq);
-	if (is_eval) rb_ary_store(ary, 1, file);
-	return ary;
+    if (cfp->iseq) 
+	filename = cfp->iseq->filename;
+    else {
+	if (tf->th->vm->progname) 
+	    filename = tf->th->vm->progname;
+	else 
+	    return Qnil;
     }
-	
-    if (!tf->th->vm->progname) return Qnil;
+    
+    contain_type = source_container_type(filename);
 
-    return rb_ary_new3(2, rb_str_new2(contain_type), file);
+    is_eval = ( 0 == strcmp("string", contain_type)
+		&& VM_FRAME_MAGIC_EVAL == VM_FRAME_TYPE(tf->cfp) );
+
+    if ( is_eval ) {
+	/* Try to pick up string from stack. */
+	VALUE prev = thread_frame_prev_internal(tf->cfp, tf->th, 1);
+	thread_frame_t *prev_tf;
+	Data_Get_Struct(prev, thread_frame_t, prev_tf);
+	
+	if (RUBYVM_CFUNC_FRAME_P(prev_tf->cfp) && 
+	    thread_frame_stack_size_internal(prev_tf->cfp, prev_tf->th) >= 3)
+	    filename = thread_frame_sp(prev, INT2FIX(3));
+    }
+
+    return rb_ary_new3(2, rb_str_new2(contain_type), filename);
 }
 
 /*

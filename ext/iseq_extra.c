@@ -239,26 +239,32 @@ VALUE iseq_killcache(VALUE iseqval)
     return INT2FIX(count);
 }
 
-
-VALUE
-iseq_source_container_internal(rb_iseq_t *iseq)
+const char *
+source_container_type(VALUE fileval) 
 {
-    VALUE fileval = iseq->filename;
-    const char *file = RSTRING_PTR(fileval);
-    const char *contain_type;
-    size_t len = strlen(file);
-    
+    const char *filename = RSTRING_PTR(fileval);
+    size_t len = strlen(filename);
+
     /* FIXME: Looking for (...) is a hack that I would love to know how
        to remove. Probably Ruby has to be changed to record this kind
        of information.
      */
     if (len > 0 && 
-	((file[0] == '(' && file[len-1] == ')')
-	 || 0 == strncmp(file, "<compiled>", 
+	((filename[0] == '(' && filename[len-1] == ')')
+	 || 0 == strncmp(filename, "<compiled>", 
 			 sizeof("<compiled>"))))
-	contain_type = "string";
+	return "string";
     else
-	contain_type = "file";
+	return "file";
+}
+
+
+VALUE
+iseq_source_container_internal(rb_iseq_t *iseq)
+{
+    VALUE fileval = iseq->filename;
+    const char *contain_type = source_container_type(fileval);
+    
     return rb_ary_new3(2, rb_str_new2(contain_type), fileval);
 }
 

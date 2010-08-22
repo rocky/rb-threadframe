@@ -24,8 +24,7 @@ class TestSource < Test::Unit::TestCase
     eval_str = '  RubyVM::ThreadFrame.current.source_container # test'
     tuple = eval(eval_str)
     assert_equal('string',  tuple[0])
-    puts "FIXME: reinstate test of eval_str"
-    # assert_equal(eval_str,  tuple[1])
+    assert_equal(eval_str,  tuple[1])
 
   end
 
