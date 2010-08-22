@@ -9,6 +9,7 @@ class TestReturnStop < Test::Unit::TestCase
   def setup
     @tuples = []
     @p = Proc.new { |event, file, lineno, mid, binding, klass|
+      # RubyVM::ThreadFrame.current.trace_off = true
       @tuples << [event, lineno, mid, klass]
       # p [event, lineno, mid, klass]
     }
@@ -33,8 +34,8 @@ class TestReturnStop < Test::Unit::TestCase
     end
   end
 
-  def tup_to_s(t)
-    @tuples.map do |t| 
+  def tup_to_s(tuples)
+    tuples.map do |t| 
       '[' + t.map{|t2| t2.inspect}.join(', ') + ']'
     end.join("\n")
   end
@@ -46,14 +47,13 @@ class TestReturnStop < Test::Unit::TestCase
     assert_equal('return', @tuples[0][0],
                  "First tuple recorded should have been a return event," + 
                  "got: #{ tup_to_s(@tuples)}")
-    ## FIXME: there's still a bug in the code somewhere.
-    # Compare with what we get when we don't turn tracing off.
-    # recurse(1, false)
+    recurse(1, false)
+    set_trace_func(nil)
 
-    # assert_equal(true, @tuples.size > first.size,
-    #              'should have gotten more tuples recorded')
-    # assert_equal(true, @tuples.member?(first[0]),
-    #              'should find "return" event in longer trace')
+    assert_equal(true, @tuples.size > first.size,
+                 'should have gotten more tuples recorded')
+    assert_equal(true, @tuples.member?(first[0]),
+                 'should find "return" event in longer trace')
     # puts tup_to_s(first)
     # puts '-' * 30
     # puts tup_to_s(@tuples)

@@ -122,19 +122,22 @@ Index: thread.c
      volatile int raised;
      VALUE result = Qnil;
  
-@@ -4106,6 +4182,8 @@
+@@ -4106,6 +4182,10 @@
      }
      else {
  	th->tracing = 1;
 +	cfp_tracing = th->cfp->tracing;
++       /* FIXME: The following doesn't work because this needs to be done in the
++          hook frame which we haven't created yet. */	
 +	/* th->cfp->tracing |= VM_FRAME_TRACE_OFF; */
      }
  
      raised = rb_threadptr_reset_raised(th);
-@@ -4121,6 +4207,7 @@
+@@ -4121,6 +4207,8 @@
      POP_TAG();
  
      th->tracing = tracing;
++    /* FIXME: not really needed see above FIXME. */
 +    th->cfp->tracing = cfp_tracing;
      if (state) {
  	JUMP_TAG(state);
