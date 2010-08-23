@@ -232,14 +232,20 @@ thread_frame_sp(VALUE klass, VALUE index)
 */
 THREAD_FRAME_FP_METHOD(sp)
 
-static int
+static long int
 thread_frame_sp_size_internal(thread_frame_t *tf) 
 {
     rb_control_frame_t *prev_cfp;
+    long int ret_val;
     prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(tf->cfp);
     if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, prev_cfp))
 	return Qnil;
-    return tf->cfp->sp - prev_cfp->sp - 1;
+    ret_val = tf->cfp->sp - prev_cfp->sp - 1;
+    /* FIXME: Why For C Functions we tack on 3? Possibly we're doing
+       the previous frame and possibly that's where the action is that
+       we should be looking at.? */
+    if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) ret_val += 3;
+    return ret_val;
 }
 
 /*
@@ -263,7 +269,7 @@ thread_frame_sp_size(VALUE klass)
  *  call-seq:
  *     RubyVM::ThreadFrame#sp_set(n, newvalue)  -> object
  * 
- * Returns a RubyVM object stored at stack position <i>i</i>. The top object
+ * Sets VM stack position <i>n</i> to <i>newvalue</i>. The top object
  * is position 0. 1 is the next object.
  */
 static VALUE 
@@ -274,9 +280,12 @@ thread_frame_sp_set(VALUE klass, VALUE index, VALUE newvalue)
     } else {
         long int i = FIX2INT(index);
 	THREAD_FRAME_SETUP_WITH_ERROR ;
-	/* FIXME: check index is within range. */
-        /* stack  grows "down" */
-	tf->cfp->sp[-i] = newvalue;
+	if (i <= thread_frame_sp_size_internal(tf)) {
+	    /* stack  grows "down" */
+	    tf->cfp->sp[-i] = newvalue;
+	} else {
+	    rb_raise(rb_eArgError, "argument too big");
+	}
 	return newvalue;
     }
 }

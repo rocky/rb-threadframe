@@ -35,6 +35,11 @@ class TestSpSize < Test::Unit::TestCase
     assert_equal(f1_s, f1a_s)
     assert_equal(f1_s[0]+1,   f2_s[0])
     assert_equal(f1_s[1..-1], f2_s[1..-1])
+
+    assert_raises ArgumentError do 
+      tf = RubyVM::ThreadFrame.current
+      tf.sp_set(tf.sp_size, "Should not be able to set this.")
+    end
   end
 
 end
