@@ -525,10 +525,11 @@ Index: iseq.c
  static VALUE
  iseq_s_disasm(VALUE klass, VALUE body)
  {
-@@ -1493,6 +1729,24 @@
+@@ -1493,6 +1729,25 @@
      return iseqval;
  }
  
++extern int get_iseq_arity(rb_iseq_t *iseq);
 +/* 
 + *  call-seq:
 + *  RubyVM::InstructionSequence#arity -> Fixnum
@@ -550,7 +551,8 @@ Index: iseq.c
  void
  Init_ISeq(void)
  {
-@@ -1501,9 +1739,12 @@
+@@ -1500,10 +1759,13 @@
+     rb_cISeq = rb_define_class_under(rb_cRubyVM, "InstructionSequence", rb_cObject);
      rb_define_alloc_func(rb_cISeq, iseq_alloc);
      rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
 +    rb_define_method(rb_cISeq, "arity", rb_iseq_arity, 0);
@@ -1042,10 +1044,10 @@ Index: thread.c
 +        /* rb_thread_method_and_id() wants a place to store a klass
 +	    value which subsequently we will not use.  */
 +        VALUE junk_klass; 
-+        rb_thread_method_id_and_class(GET_THREAD(), &id, &junk_klass);
++	 rb_thread_method_id_and_class(GET_THREAD(), &id, &junk_klass);
 +	 /* When the event is RUBY_EVENT_RAISE, we have stored the raise
 +	    message as the trace-hook klass parameter. */ 
-+        klass = p->klass;
++	 klass = p->klass;
 +    } else {
  	rb_thread_method_id_and_class(GET_THREAD(), &id, &klass);
      }
@@ -1256,7 +1258,7 @@ Index: vm_insnhelper.c
      cfp->dfp = sp;
      cfp->proc = 0;
      cfp->me = 0;
-+    cfp->tracing = tracing;
++    cfp->tracing = tracing & ~VM_FRAME_TRACE_RETURN;
  
  #define COLLECT_PROFILE 0
  #if COLLECT_PROFILE
@@ -1307,7 +1309,7 @@ Index: vm_insnhelper.c
  		      iseq->iseq_encoded + opt_pc, sp, 0, 0);
  
  	cfp->sp = rsp - 1 /* recv */;
-+	if (LIKELY(0 == th->tracing)) {
++	if (LIKELY(0 == th->tracing && !(VM_FRAME_TRACE_OFF & cfp->tracing))) {
 +	    EXEC_EVENT_HOOK(th, RUBY_EVENT_INSN, cfp->self, 0, 0);
 +	    if (UNLIKELY(cfp->iseq &&
 +			 cfp->iseq->breakpoints &&
@@ -1607,7 +1609,7 @@ Index: brkpt.c
 + *  call-seq:
 + *     RubyVM::InstructionSequence#dealloc -> bool
 + *
-+ *  DeAllocates a breakpoint byte vector of zeros for each 
++ *  Deallocates a breakpoint byte vector of zeros for each 
 + *  instruction in the instruction sequence. True is returned if 
 + *  a vector was allocated, false if there already was one allocated,
 + *  and nil if there was some problem.
@@ -1647,7 +1649,7 @@ Index: brkpt.c
 +	/* FIXME: check that offset is at a valid instruction offset */
 +	if (uoffset >= size) {
 +	    rb_raise(rb_eTypeError, 
-+		     "instruction sequence offset %lu should be in the range -%l .. %lu",
++		     "instruction sequence offset %lu should be in the range -%lu .. %lu",
 +		     uoffset, size, size-1);
 +	}
 +	return uoffset;
@@ -1886,15 +1888,29 @@ Index: test/ruby/test_iseq.rb
 ===================================================================
 --- test/ruby/test_iseq.rb	(revision 28642)
 +++ test/ruby/test_iseq.rb	(working copy)
-@@ -0,0 +1,1 @@
+@@ -0,0 +1,50 @@
 +# See that setting ISEQS__ and SCRIPT_ISEQS__ saves 
 +# RubyVM::Instruction_sequenses
 +require 'test/unit'
 +
 +class TestIseqAccess < Test::Unit::TestCase
-+  def test_basic
-+    Kernel.const_set(:SCRIPT_ISEQS__, {})
++  def setup
++    old_verbosity = $VERBOSE
++    $VERBOSE = nil
 +    Kernel.const_set(:ISEQS__, {})
++    Kernel.const_set(:SCRIPT_ISEQS__, {})
++    $VERBOSE = old_verbosity
++  end
++
++  def teardown
++    old_verbosity = $VERBOSE
++    $VERBOSE = nil
++    Kernel.const_set(:ISEQS__, nil)
++    Kernel.const_set(:SCRIPT_ISEQS__, nil)
++    $VERBOSE = old_verbosity
++  end
++
++  def test_basic
 +    sizes=[]
 +    [ISEQS__, SCRIPT_ISEQS__].each do |iseq_hash|
 +      sizes << iseq_hash.size
@@ -1911,8 +1927,16 @@ Index: test/ruby/test_iseq.rb
 +      assert_equal Array, a.class
 +      assert_equal RubyVM::InstructionSequence, iseq_hash.values[0][0].class
 +    end
-+    Kernel.const_set(:SCRIPT_ISEQS__, nil)
-+    Kernel.const_set(:ISEQS__, nil)
++  end
++
++  # Check RubyVM::InstructionSequence#arity
++  def test_arity
++    eval 'def five; 5 end'
++    eval 'def add(a,b); a+b end'
++    eval 'def splat(*a); 5 end'
++    [['five', 0,], ['add', 2], ['splat', -1]].each do |meth, expect|
++      assert_equal(expect, ISEQS__[meth][0].arity)
++    end
 +  end
 +end
 Index: test/ruby/test_tracefunc_adds.rb
