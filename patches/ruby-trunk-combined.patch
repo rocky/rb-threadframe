@@ -1,6 +1,6 @@
 Index: method.h
 ===================================================================
---- method.h	(revision 28931)
+--- method.h	(revision 28972)
 +++ method.h	(working copy)
 @@ -46,7 +46,11 @@
  
@@ -17,7 +17,7 @@ Index: method.h
  typedef struct rb_method_attr_struct {
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 28931)
+--- include/ruby/ruby.h	(revision 28972)
 +++ include/ruby/ruby.h	(working copy)
 @@ -1368,7 +1368,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
@@ -32,7 +32,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 Index: configure.in
 ===================================================================
---- configure.in	(revision 28931)
+--- configure.in	(revision 28972)
 +++ configure.in	(working copy)
 @@ -434,9 +434,6 @@
                               [wflag=-Wall])
@@ -46,7 +46,7 @@ Index: configure.in
  test -z "${ac_env_CXXFLAGS_set}" -a -n "${cxxflags+set}" && eval CXXFLAGS="\"$cxxflags $ARCH_FLAG\""
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 28931)
+--- vm_core.h	(revision 28972)
 +++ vm_core.h	(working copy)
 @@ -253,6 +253,8 @@
  
@@ -67,7 +67,7 @@ Index: vm_core.h
  } rb_control_frame_t;
  
  typedef struct rb_block_struct {
-@@ -390,6 +395,17 @@
+@@ -390,6 +395,16 @@
      /* passing state */
      int state;
  
@@ -76,7 +76,6 @@ Index: vm_core.h
 +    rb_event_flag_t event_flags;
 +    int tracing;  /* 0 if not tracing. If less than 0, skip that many
 +		     C call/return pairs */
-+    int exec_event_tracing;  /* 0 if not in rb_threadptr_evec_event_hooks. */
 +
 +    /* misc */
 +    int method_missing_reason;
@@ -85,7 +84,7 @@ Index: vm_core.h
      /* for rb_iterate */
      const rb_block_t *passed_block;
  
-@@ -412,6 +428,14 @@
+@@ -412,6 +427,14 @@
      int priority;
      int slice;
  
@@ -100,7 +99,7 @@ Index: vm_core.h
      native_thread_data_t native_thread_data;
      void *blocking_region_buffer;
  
-@@ -461,22 +485,7 @@
+@@ -461,22 +484,7 @@
      jmp_buf machine_regs;
      int mark_stack_len;
  
@@ -123,7 +122,7 @@ Index: vm_core.h
  #ifdef USE_SIGALTSTACK
      void *altstack;
  #endif
-@@ -490,6 +499,7 @@
+@@ -490,6 +498,7 @@
  VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, VALUE, const rb_compile_option_t*);
  VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
  VALUE rb_iseq_disasm(VALUE self);
@@ -131,7 +130,7 @@ Index: vm_core.h
  int rb_iseq_disasm_insn(VALUE str, VALUE *iseqval, size_t pos, rb_iseq_t *iseq, VALUE child);
  const char *ruby_node_name(int node);
  int rb_iseq_first_lineno(rb_iseq_t *iseq);
-@@ -564,6 +574,10 @@
+@@ -564,6 +573,10 @@
  
  #define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)
  
@@ -142,49 +141,9 @@ Index: vm_core.h
  /* other frame flag */
  #define VM_FRAME_FLAG_PASSED 0x0100
  
-@@ -688,15 +702,31 @@
- void
- rb_threadptr_exec_event_hooks(rb_thread_t *th, rb_event_flag_t flag, VALUE self, ID id, VALUE klass);
- 
--#define EXEC_EVENT_HOOK(th, flag, self, id, klass) do { \
--    rb_event_flag_t wait_event__ = th->event_flags; \
--    if (UNLIKELY(wait_event__)) { \
--	if (wait_event__ & (flag | RUBY_EVENT_VM)) { \
--	    rb_threadptr_exec_event_hooks(th, flag, self, id, klass); \
--	} \
--    } \
--} while (0)
-+#define EXEC_EVENT_HOOK(th, flag, self, id, klass)			\
-+  if (LIKELY(0 == th->tracing)) {					\
-+	rb_event_flag_t wait_event__ = th->event_flags;			\
-+	if (UNLIKELY(wait_event__)) {					\
-+	    if (wait_event__ & (flag | RUBY_EVENT_VM)) {		\
-+		rb_threadptr_exec_event_hooks(th, flag, self, id, klass); \
-+	    }								\
-+	}								\
-+    }
- 
-+/* Customized version of EXEC_EVENT_HOOK for RUBY_EVENT_RETURN events */
-+#define EXEC_EVENT_RETURN_HOOK(th, flag, self, id, klass)		\
-+    if (LIKELY(0 == th->tracing &&					\
-+	       (!(th->cfp->tracing & VM_FRAME_TRACE_OFF)		\
-+		|| (th->cfp->tracing & VM_FRAME_TRACE_RETURN)))) {	\
-+	rb_event_flag_t wait_event__ = th->event_flags;			\
-+	if (UNLIKELY(wait_event__)) {					\
-+	    if (wait_event__ & (flag | RUBY_EVENT_VM)) {		\
-+	        th->tracing = 1;					\
-+		rb_threadptr_exec_event_hooks(th, flag, self, id, klass); \
-+		th->tracing = 0;					\
-+	    }								\
-+	}								\
-+    }
-+
- #if defined __GNUC__ && __GNUC__ >= 4
- #pragma GCC visibility push(default)
- #endif
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 28931)
+--- iseq.c	(revision 28972)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -501,10 +460,12 @@ Index: iseq.c
  static VALUE
  iseq_s_disasm(VALUE klass, VALUE body)
  {
-@@ -1496,6 +1732,24 @@
+@@ -1496,6 +1732,26 @@
      return iseqval;
  }
  
++extern int get_iseq_arity(rb_iseq_t *iseq);
++
 +/* 
 + *  call-seq:
 + *  RubyVM::InstructionSequence#arity -> Fixnum
@@ -526,7 +487,7 @@ Index: iseq.c
  void
  Init_ISeq(void)
  {
-@@ -1503,10 +1757,13 @@
+@@ -1503,10 +1759,13 @@
      rb_cISeq = rb_define_class_under(rb_cRubyVM, "InstructionSequence", rb_cObject);
      rb_define_alloc_func(rb_cISeq, iseq_alloc);
      rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
@@ -540,7 +501,7 @@ Index: iseq.c
  
      /* disable this feature because there is no verifier. */
      /* rb_define_singleton_method(rb_cISeq, "load", iseq_s_load, -1); */
-@@ -1519,5 +1776,7 @@
+@@ -1519,5 +1778,7 @@
      rb_define_singleton_method(rb_cISeq, "compile_option=", iseq_s_compile_option_set, 1);
      rb_define_singleton_method(rb_cISeq, "disasm", iseq_s_disasm, 1);
      rb_define_singleton_method(rb_cISeq, "disassemble", iseq_s_disasm, 1);
@@ -550,11 +511,11 @@ Index: iseq.c
  
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 28931)
+--- iseq.h	(revision 28972)
 +++ iseq.h	(working copy)
-@@ -109,4 +109,10 @@
- #pragma GCC visibility pop
- #endif
+@@ -105,6 +105,12 @@
+ #define DEFINED_ZSUPER INT2FIX(9)
+ #define DEFINED_FUNC   INT2FIX(10)
  
 +/* some utilities */
 +extern int insn_len(VALUE insn);
@@ -562,10 +523,12 @@ Index: iseq.h
 +extern const char *insn_op_types(VALUE insn);
 +extern int insn_op_type(VALUE insn, long pos);
 +
- #endif /* RUBY_COMPILE_H */
+ #if defined __GNUC__ && __GNUC__ >= 4
+ #pragma GCC visibility pop
+ #endif
 Index: load.c
 ===================================================================
---- load.c	(revision 28931)
+--- load.c	(revision 28972)
 +++ load.c	(working copy)
 @@ -294,11 +294,13 @@
      if (state == 0) {
@@ -584,9 +547,9 @@ Index: load.c
      }
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 28931)
+--- vm_eval.c	(revision 28972)
 +++ vm_eval.c	(working copy)
-@@ -68,22 +68,32 @@
+@@ -68,22 +68,29 @@
        }
        case VM_METHOD_TYPE_NOTIMPLEMENTED:
        case VM_METHOD_TYPE_CFUNC: {
@@ -603,8 +566,7 @@ Index: vm_eval.c
 +	    me->def->body.cfunc.actual_argc = argc;
 +
  	    cfp->me = me;
-+	    if (0 == th->tracing)
-+		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
++	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
 +
  	    val = call_cfunc(def->body.cfunc.func, recv, def->body.cfunc.argc, argc, argv);
  
@@ -612,9 +574,7 @@ Index: vm_eval.c
  		rb_bug("cfp consistency error - call0");
  	    }
 +
-+	    if (0 == th->tracing && 0 == th->exec_event_tracing) {
-+		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
-+	    }
++	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
  	    vm_pop_frame(th);
  	}
 -	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
@@ -623,7 +583,7 @@ Index: vm_eval.c
        case VM_METHOD_TYPE_ATTRSET: {
 Index: proc.c
 ===================================================================
---- proc.c	(revision 28931)
+--- proc.c	(revision 28972)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -704,7 +664,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 28931)
+--- thread.c	(revision 28972)
 +++ thread.c	(working copy)
 @@ -336,6 +336,14 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -730,51 +690,53 @@ Index: thread.c
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -3797,15 +3805,39 @@
-     const rb_event_flag_t wait_event = th->event_flags;
+@@ -3793,22 +3801,34 @@
+ void
+ rb_threadptr_exec_event_hooks(rb_thread_t *th, rb_event_flag_t flag, VALUE self, ID id, VALUE klass)
+ {
+-    const VALUE errinfo = th->errinfo;
+-    const rb_event_flag_t wait_event = th->event_flags;
++    int do_tracing;
  
      if (self == rb_mRubyVMFrozenCore) return;
 -    if (wait_event & flag) {
 -	exec_event_hooks(th->event_hooks, flag, self, id, klass);
-+    if (wait_event & flag && th->tracing <= 0) {
-+	if (!RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, th->cfp)
-+	      && !(th->cfp->tracing & VM_FRAME_TRACE_OFF))
-+	    exec_event_hooks(th->event_hooks, flag, self, id, klass);
-     }
+-    }
 -    if (wait_event & RUBY_EVENT_VM) {
-+    if (wait_event & RUBY_EVENT_VM && th->tracing <= 0) {
- 	if (th->vm->event_hooks == NULL) {
- 	    th->event_flags &= (~RUBY_EVENT_VM);
+-	if (th->vm->event_hooks == NULL) {
+-	    th->event_flags &= (~RUBY_EVENT_VM);
++
++    /* Either we haven't turned off tracing via the thread mechanism
++       or we set a return trace and the event is a some kind of return. */
++    do_tracing = UNLIKELY( (th->tracing <= 0 && 
++			    !(th->cfp->tracing & VM_FRAME_TRACE_OFF)) ||
++			   ((flag & (RUBY_EVENT_C_RETURN | RUBY_EVENT_RETURN))
++			    && th->cfp->tracing & VM_FRAME_TRACE_RETURN) );
++    if (do_tracing) {
++	const VALUE errinfo = th->errinfo;
++	const rb_event_flag_t wait_event = th->event_flags;
++	
++	if (wait_event & flag) {
++	    if (UNLIKELY(!RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, th->cfp)))
++		exec_event_hooks(th->event_hooks, flag, self, id, klass);
  	}
- 	else {
+-	else {
 -	    exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
-+	    if (UNLIKELY(0 == th->exec_event_tracing && !(VM_FRAME_TRACE_OFF & th->cfp->tracing))) {
-+		/* Modified from ruby_suppress_tracing */
-+		int state;
-+		volatile int raised = rb_threadptr_reset_raised(th);
-+		rb_block_t * base_block_save = th->base_block;
-+		th->exec_event_tracing = 1;
-+		
-+		PUSH_TAG();
-+		if ((state = EXEC_TAG()) == 0) {
-+		    exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
-+		}
-+		
-+		th->base_block = base_block_save;
-+		if (raised) {
-+		    rb_threadptr_set_raised(th);
-+		}
-+		POP_TAG();
-+		
-+		th->exec_event_tracing = 0;
-+		if (state) {
-+		    JUMP_TAG(state);
-+		}
++	if (wait_event & RUBY_EVENT_VM) {
++	    if (th->vm->event_hooks == NULL) {
++		th->event_flags &= (~RUBY_EVENT_VM);
++	    }
++	    else {
++		exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
 +	    }
  	}
++	th->errinfo = errinfo;
      }
-     th->errinfo = errinfo;
-@@ -3884,19 +3916,48 @@
+-    th->errinfo = errinfo;
+ }
+ 
+ void
+@@ -3884,19 +3904,48 @@
      return ST_CONTINUE;
  }
  
@@ -826,7 +788,7 @@ Index: thread.c
   *
   *  Establishes _proc_ as the handler for tracing, or disables
   *  tracing if the parameter is +nil+. _proc_ takes up
-@@ -3910,6 +3971,8 @@
+@@ -3910,6 +3959,8 @@
   *  <code>line</code> (execute code on a new line), <code>raise</code>
   *  (raise an exception), and <code>return</code> (return from a Ruby
   *  method). Tracing is disabled within the context of _proc_.
@@ -835,7 +797,7 @@ Index: thread.c
   *
   *      class Test
   *	def test
-@@ -3934,55 +3997,62 @@
+@@ -3934,55 +3985,62 @@
   *	  line prog.rb:3        test     Test
   *	  line prog.rb:4        test     Test
   *      return prog.rb:4        test     Test
@@ -916,7 +878,7 @@ Index: thread.c
   *     thr.set_trace_func(nil)     -> nil
   *
   *  Establishes _proc_ on _thr_ as the handler for tracing, or
-@@ -3991,16 +4061,24 @@
+@@ -3991,16 +4049,24 @@
   */
  
  static VALUE
@@ -943,7 +905,7 @@ Index: thread.c
      return trace;
  }
  
-@@ -4014,6 +4092,8 @@
+@@ -4014,6 +4080,8 @@
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -952,7 +914,7 @@ Index: thread.c
        case RUBY_EVENT_CALL:
  	return "call";
        case RUBY_EVENT_RETURN:
-@@ -4024,6 +4104,14 @@
+@@ -4024,6 +4092,14 @@
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -967,7 +929,7 @@ Index: thread.c
        default:
  	return "unknown";
      }
-@@ -4052,11 +4140,19 @@
+@@ -4052,11 +4128,19 @@
      VALUE klass = 0;
  
      if (p->event == RUBY_EVENT_C_CALL ||
@@ -990,7 +952,36 @@ Index: thread.c
  	rb_thread_method_id_and_class(GET_THREAD(), &id, &klass);
      }
      if (id == ID_ALLOCATOR)
-@@ -4243,9 +4339,11 @@
+@@ -4097,7 +4181,7 @@
+ ruby_suppress_tracing(VALUE (*func)(VALUE, int), VALUE arg, int always)
+ {
+     rb_thread_t *th = GET_THREAD();
+-    int state, tracing;
++    int state, tracing, cfp_tracing;
+     volatile int raised;
+     VALUE result = Qnil;
+ 
+@@ -4106,6 +4190,10 @@
+     }
+     else {
+ 	th->tracing = 1;
++	cfp_tracing = th->cfp->tracing;
++       /* FIXME: The following doesn't work because this needs to be done in the
++          hook frame which we haven't created yet. */	
++	/* th->cfp->tracing |= VM_FRAME_TRACE_OFF; */
+     }
+ 
+     raised = rb_threadptr_reset_raised(th);
+@@ -4121,6 +4209,8 @@
+     POP_TAG();
+ 
+     th->tracing = tracing;
++    /* FIXME: not really needed see above FIXME. */
++    th->cfp->tracing = cfp_tracing;
+     if (state) {
+ 	JUMP_TAG(state);
+     }
+@@ -4243,9 +4333,11 @@
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -1007,7 +998,7 @@ Index: thread.c
      {
 Index: common.mk
 ===================================================================
---- common.mk	(revision 28931)
+--- common.mk	(revision 28972)
 +++ common.mk	(working copy)
 @@ -30,6 +30,7 @@
  
@@ -1019,7 +1010,7 @@ Index: common.mk
  		complex.$(OBJEXT) \
 Index: eval.c
 ===================================================================
---- eval.c	(revision 28931)
+--- eval.c	(revision 28972)
 +++ eval.c	(working copy)
 @@ -34,7 +34,7 @@
  
@@ -1055,7 +1046,7 @@ Index: eval.c
  
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 28931)
+--- vm_exec.h	(revision 28972)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
@@ -1123,7 +1114,7 @@ Index: vm_exec.h
  #define debugs printf
 Index: vm.c
 ===================================================================
---- vm.c	(revision 28931)
+--- vm.c	(revision 28972)
 +++ vm.c	(working copy)
 @@ -691,6 +691,7 @@
      if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
@@ -1133,41 +1124,9 @@ Index: vm.c
  
  	if (iseq->insn_info_table[0].position == pos) goto found;
  	for (i = 1; i < iseq->insn_info_size; i++) {
-@@ -1164,8 +1165,20 @@
- 
- 	while (th->cfp->pc == 0 || th->cfp->iseq == 0) {
- 	    if (UNLIKELY(VM_FRAME_TYPE(th->cfp) == VM_FRAME_MAGIC_CFUNC)) {
--		const rb_method_entry_t *me = th->cfp->me;
--		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, th->cfp->self, me->called_id, me->klass);
-+		/* rocky: The below tests and assignments are not
-+		   quite right.  The problem I am having is when a
-+		   there is an exception in hook code raised from a C
-+		   return event. This causes the below EXEC_EVENT_HOOK to
-+		   loop indefinitely. The below has the bad effect of
-+		   not reseting exec_event_tracing sometimes.
-+		 */
-+		if (0 == th->tracing && 0 == th->exec_event_tracing) {
-+		    const rb_method_entry_t *me = th->cfp->me;
-+		    th->exec_event_tracing = 1;
-+		    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, th->cfp->self, 
-+				    me->called_id, me->klass);
-+		    th->exec_event_tracing = 0;
-+		}
- 	    }
- 	    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
- 	}
-@@ -1333,7 +1346,7 @@
- 
- 	    switch (VM_FRAME_TYPE(th->cfp)) {
- 	      case VM_FRAME_MAGIC_METHOD:
--		EXEC_EVENT_HOOK(th, RUBY_EVENT_RETURN, th->cfp->self, 0, 0);
-+		EXEC_EVENT_RETURN_HOOK(th, RUBY_EVENT_RETURN, th->cfp->self, 0, 0);
- 		break;
- 	      case VM_FRAME_MAGIC_CLASS:
- 		EXEC_EVENT_HOOK(th, RUBY_EVENT_END, th->cfp->self, 0, 0);
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 28931)
+--- vm_insnhelper.c	(revision 28972)
 +++ vm_insnhelper.c	(working copy)
 @@ -26,9 +26,12 @@
  	      const VALUE *pc, VALUE *sp, VALUE *lfp,
@@ -1186,7 +1145,7 @@ Index: vm_insnhelper.c
      cfp->dfp = sp;
      cfp->proc = 0;
      cfp->me = 0;
-+    cfp->tracing = tracing;
++    cfp->tracing = tracing & ~VM_FRAME_TRACE_RETURN;
  
  #define COLLECT_PROFILE 0
  #if COLLECT_PROFILE
@@ -1248,29 +1207,40 @@ Index: vm_insnhelper.c
  	VALUE *p_rsp;
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 28931)
+--- tool/instruction.rb	(revision 28972)
 +++ tool/instruction.rb	(working copy)
-@@ -854,6 +854,17 @@
-       commit "INSN_ENTRY(#{insn.name}){"
-       make_header_prepare_stack insn
-       commit "{"
-+      # rocky: for reasons that I don't understand, calling the
+@@ -807,8 +807,18 @@
+       commit  "  POPN(#{@popn});" if @popn > 0
+     end
+ 
+-    def make_hader_debug insn
++    def make_header_debug insn
+       comment "  /* for debug */"
++      # FIXME: rocky: for reasons that I don't understand, calling the
 +      # instruction trace hook in a "leave" instruction causes a
 +      # SEGV via an illegal access csuch as via vm.c line 1144: 
 +      #    ep = ... cfp->iseq ...  
 +      # 
++      # Same for newarray when f.type is EVWAL. 
 +      # Since we can handle this event via RUBY_EVENT_END I don't
 +      # think there is any loss in functionality.
 +      # Not sure if "send" should be included.
-+      unless %w(leave send).member?(insn.name)
-+        commit "  TRACE_INSN(#{insn.name});"
-+      end
-       make_header_stack_val  insn
-       make_header_default_operands insn
-       make_header_operands   insn
++      # commit "  TRACE_INSN(#{insn.name});"
+       commit  "  DEBUG_ENTER_INSN(\"#{insn.name}\");"
+     end
+ 
+@@ -860,7 +870,7 @@
+       make_header_stack_pops insn
+       make_header_temporary_vars insn
+       #
+-      make_hader_debug insn
++      make_header_debug insn
+       make_header_pc insn
+       make_header_popn insn
+       make_header_defines insn
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 28931)
+--- test/ruby/test_settracefunc.rb	(revision 28972)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -23,8 +23,6 @@
       4: x = 1 + 1
@@ -1448,7 +1418,7 @@ Index: test/ruby/test_settracefunc.rb
  end
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 28931)
+--- template/insns_info.inc.tmpl	(revision 28972)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -42,38 +42,6 @@
  }
@@ -1869,6 +1839,7 @@ Index: test/ruby/test_iseq.rb
 Index: test/ruby/test_tracefunc_adds.rb
 --- test/ruby/test_tracefunc_adds.rb	(revision 28642)
 +++ test/ruby/test_tracefunc_adds.rb	(working copy)
+@@ -0,0 +1,145 @@
 +require 'test/unit'
 +
 +# tests set_trace_func with event bitmasks, clear_trace_func, 
