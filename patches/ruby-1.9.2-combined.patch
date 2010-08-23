@@ -93,7 +93,7 @@ Index: vm_core.h
  } rb_control_frame_t;
  
  typedef struct rb_block_struct {
-@@ -390,6 +395,17 @@
+@@ -390,6 +395,16 @@
      /* passing state */
      int state;
  
@@ -102,7 +102,6 @@ Index: vm_core.h
 +    rb_event_flag_t event_flags;
 +    int tracing;  /* 0 if not tracing. If less than 0, skip that many
 +		     C call/return pairs */
-+    int exec_event_tracing;  /* 0 if not in rb_threadptr_evec_event_hooks. */
 +
 +    /* misc */
 +    int method_missing_reason;
@@ -168,44 +167,6 @@ Index: vm_core.h
  /* other frame flag */
  #define VM_FRAME_FLAG_PASSED 0x0100
  
-@@ -691,13 +706,29 @@
- void
- rb_threadptr_exec_event_hooks(rb_thread_t *th, rb_event_flag_t flag, VALUE self, ID id, VALUE klass);
- 
--#define EXEC_EVENT_HOOK(th, flag, self, id, klass) do { \
--    rb_event_flag_t wait_event__ = th->event_flags; \
--    if (UNLIKELY(wait_event__)) { \
--	if (wait_event__ & (flag | RUBY_EVENT_VM)) { \
--	    rb_threadptr_exec_event_hooks(th, flag, self, id, klass); \
--	} \
--    } \
--} while (0)
-+#define EXEC_EVENT_HOOK(th, flag, self, id, klass)			\
-+  if (LIKELY(0 == th->tracing)) {					\
-+	rb_event_flag_t wait_event__ = th->event_flags;			\
-+	if (UNLIKELY(wait_event__)) {					\
-+	    if (wait_event__ & (flag | RUBY_EVENT_VM)) {		\
-+		rb_threadptr_exec_event_hooks(th, flag, self, id, klass); \
-+	    }								\
-+	}								\
-+    }
- 
-+/* Customized version of EXEC_EVENT_HOOK for RUBY_EVENT_RETURN events */
-+#define EXEC_EVENT_RETURN_HOOK(th, flag, self, id, klass)		\
-+    if (LIKELY(0 == th->tracing &&					\
-+	       (!(th->cfp->tracing & VM_FRAME_TRACE_OFF)		\
-+		|| (th->cfp->tracing & VM_FRAME_TRACE_RETURN)))) {	\
-+	rb_event_flag_t wait_event__ = th->event_flags;			\
-+	if (UNLIKELY(wait_event__)) {					\
-+	    if (wait_event__ & (flag | RUBY_EVENT_VM)) {		\
-+	        th->tracing = 1;					\
-+		rb_threadptr_exec_event_hooks(th, flag, self, id, klass); \
-+		th->tracing = 0;					\
-+	    }								\
-+	}								\
-+    }
-+
- #endif /* RUBY_VM_CORE_H */
 Index: iseq.c
 ===================================================================
 --- iseq.c	(revision 28682)
@@ -611,7 +572,7 @@ Index: vm_eval.c
 ===================================================================
 --- vm_eval.c	(revision 28682)
 +++ vm_eval.c	(working copy)
-@@ -67,22 +67,32 @@
+@@ -67,22 +68,29 @@
  	break;
        }
        case VM_METHOD_TYPE_CFUNC: {
@@ -621,15 +582,14 @@ Index: vm_eval.c
  	    rb_control_frame_t *cfp =
  		vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
  			      recv, (VALUE)blockptr, 0, reg_cfp->sp, 0, 1);
-+
+ 
 +	    /* Store actual argument count. Note that cfunc.argc
 +	       contains the prototype value.
 +	    */
 +	    me->def->body.cfunc.actual_argc = argc;
- 
++
  	    cfp->me = me;
-+	    if (0 == th->tracing)
-+		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
++	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
 +
  	    val = call_cfunc(def->body.cfunc.func, recv, def->body.cfunc.argc, argc, argv);
  
@@ -637,52 +597,13 @@ Index: vm_eval.c
  		rb_bug("cfp consistency error - call0");
  	    }
 +
-+	    if (0 == th->tracing && 0 == th->exec_event_tracing) {
-+		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
-+	    }
++	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
  	    vm_pop_frame(th);
  	}
 -	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
  	break;
        }
        case VM_METHOD_TYPE_ATTRSET: {
-@@ -868,7 +880,8 @@
- #endif
- 		    if (UNLIKELY(VM_FRAME_TYPE(th->cfp) == VM_FRAME_MAGIC_CFUNC)) {
- 			const rb_method_entry_t *me = th->cfp->me;
--			EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, th->cfp->self, me->called_id, me->klass);
-+			EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, 
-+					th->cfp->self, me->called_id, me->klass);
- 		    }
- 
- 		    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
-@@ -1024,7 +1037,25 @@
-     if (state) {
- 	if (state == TAG_RAISE) {
- 	    VALUE errinfo = th->errinfo;
--	    if (strcmp(file, "(eval)") == 0) {
-+	    /* The below test for eval is inadequate in several
-+	       respects.  First rather than testing on a string like
-+	       "(eval" or "(eval)" as was done originally, there
-+	       should be a more positive indicator that "file" is not
-+	       a real file but say, a string. Then there is the harder
-+	       issue of what should be done to show the backtrace for
-+	       this. Personally, I think part of the string should be
-+	       shown. Finally because "(eval)" is used as the "file"
-+	       name, it is harder to find this particular instruction
-+	       sequence from the instruction sequence name over some
-+	       other eval string.
-+
-+	       To start to deal with instruction sequence name
-+	       unhelpfulness, we will prepare for the day when we have
-+	       a more descriptive container such as the leading part
-+	       of the string we are about to eval, e.g. (eval "x = y +
-+	       ...")
-+	     */
-+	    if (strncmp(file, "(eval", sizeof("(eval")-1) == 0) {
- 		VALUE mesg, errat, bt2;
- 		extern VALUE rb_get_backtrace(VALUE info);
- 		ID id_mesg;
 Index: proc.c
 ===================================================================
 --- proc.c	(revision 28682)
@@ -792,51 +713,53 @@ Index: thread.c
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -3788,15 +3800,39 @@
-     const rb_event_flag_t wait_event = th->event_flags;
+@@ -3784,22 +3801,34 @@
+ void
+ rb_threadptr_exec_event_hooks(rb_thread_t *th, rb_event_flag_t flag, VALUE self, ID id, VALUE klass)
+ {
+-    const VALUE errinfo = th->errinfo;
+-    const rb_event_flag_t wait_event = th->event_flags;
++    int do_tracing;
  
      if (self == rb_mRubyVMFrozenCore) return;
 -    if (wait_event & flag) {
 -	exec_event_hooks(th->event_hooks, flag, self, id, klass);
-+    if (wait_event & flag && th->tracing <= 0) {
-+	if (!RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, th->cfp)
-+	      && !(th->cfp->tracing & VM_FRAME_TRACE_OFF))
-+	    exec_event_hooks(th->event_hooks, flag, self, id, klass);
-     }
+-    }
 -    if (wait_event & RUBY_EVENT_VM) {
-+    if (wait_event & RUBY_EVENT_VM && th->tracing <= 0) {
- 	if (th->vm->event_hooks == NULL) {
- 	    th->event_flags &= (~RUBY_EVENT_VM);
+-	if (th->vm->event_hooks == NULL) {
+-	    th->event_flags &= (~RUBY_EVENT_VM);
++
++    /* Either we haven't turned off tracing via the thread mechanism
++       or we set a return trace and the event is a some kind of return. */
++    do_tracing = UNLIKELY( (th->tracing <= 0 && 
++			    !(th->cfp->tracing & VM_FRAME_TRACE_OFF)) ||
++			   ((flag & (RUBY_EVENT_C_RETURN | RUBY_EVENT_RETURN))
++			    && th->cfp->tracing & VM_FRAME_TRACE_RETURN) );
++    if (do_tracing) {
++	const VALUE errinfo = th->errinfo;
++	const rb_event_flag_t wait_event = th->event_flags;
++	
++	if (wait_event & flag) {
++	    if (UNLIKELY(!RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, th->cfp)))
++		exec_event_hooks(th->event_hooks, flag, self, id, klass);
  	}
- 	else {
+-	else {
 -	    exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
-+	    if (0 == th->exec_event_tracing) {
-+		/* Modified from ruby_suppress_tracing */
-+		int state;
-+		volatile int raised = rb_threadptr_reset_raised(th);
-+		rb_block_t * base_block_save = th->base_block;
-+		th->exec_event_tracing = 1;
-+		
-+		PUSH_TAG();
-+		if ((state = EXEC_TAG()) == 0) {
-+		    exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
-+		}
-+		
-+		th->base_block = base_block_save;
-+		if (raised) {
-+		    rb_threadptr_set_raised(th);
-+		}
-+		POP_TAG();
-+		
-+		th->exec_event_tracing = 0;
-+		if (state) {
-+		    JUMP_TAG(state);
-+		}
++	if (wait_event & RUBY_EVENT_VM) {
++	    if (th->vm->event_hooks == NULL) {
++		th->event_flags &= (~RUBY_EVENT_VM);
++	    }
++	    else {
++		exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
 +	    }
  	}
++	th->errinfo = errinfo;
      }
-     th->errinfo = errinfo;
-@@ -3875,19 +3911,48 @@
+-    th->errinfo = errinfo;
+ }
+ 
+ void
+@@ -3875,19 +3904,48 @@
      return ST_CONTINUE;
  }
  
@@ -1052,7 +975,36 @@ Index: thread.c
  	rb_thread_method_id_and_class(GET_THREAD(), &id, &klass);
      }
      if (id == ID_ALLOCATOR)
-@@ -4234,9 +4337,11 @@
+@@ -4088,7 +4181,7 @@
+ ruby_suppress_tracing(VALUE (*func)(VALUE, int), VALUE arg, int always)
+ {
+     rb_thread_t *th = GET_THREAD();
+-    int state, tracing;
++    int state, tracing, cfp_tracing;
+     volatile int raised;
+     VALUE result = Qnil;
+ 
+@@ -4097,6 +4190,10 @@
+     }
+     else {
+ 	th->tracing = 1;
++	cfp_tracing = th->cfp->tracing;
++       /* FIXME: The following doesn't work because this needs to be done in the
++          hook frame which we haven't created yet. */	
++	/* th->cfp->tracing |= VM_FRAME_TRACE_OFF; */
+     }
+ 
+     raised = rb_threadptr_reset_raised(th);
+@@ -4112,6 +4209,8 @@
+     POP_TAG();
+ 
+     th->tracing = tracing;
++    /* FIXME: not really needed see above FIXME. */
++    th->cfp->tracing = cfp_tracing;
+     if (state) {
+ 	JUMP_TAG(state);
+     }
+@@ -4234,9 +4333,11 @@
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -1205,38 +1157,6 @@ Index: vm.c
  
  	if (iseq->insn_info_table[0].position == pos) goto found;
  	for (i = 1; i < iseq->insn_info_size; i++) {
-@@ -1164,8 +1165,20 @@
- 
- 	while (th->cfp->pc == 0 || th->cfp->iseq == 0) {
- 	    if (UNLIKELY(VM_FRAME_TYPE(th->cfp) == VM_FRAME_MAGIC_CFUNC)) {
--		const rb_method_entry_t *me = th->cfp->me;
--		EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, th->cfp->self, me->called_id, me->klass);
-+		/* rocky: The below tests and assignments are not
-+		   quite right.  The problem I am having is when a
-+		   there is an exception in hook code raised from a C
-+		   return event. This causes the below EXEC_EVENT_HOOK to
-+		   loop indefinitely. The below has the bad effect of
-+		   not reseting exec_event_tracing sometimes.
-+		 */
-+		if (0 == th->tracing && 0 == th->exec_event_tracing) {
-+		    const rb_method_entry_t *me = th->cfp->me;
-+		    th->exec_event_tracing = 1;
-+		    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, th->cfp->self, 
-+				    me->called_id, me->klass);
-+		    th->exec_event_tracing = 0;
-+		}
- 	    }
- 	    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
- 	}
-@@ -1333,7 +1346,7 @@
- 
- 	    switch (VM_FRAME_TYPE(th->cfp)) {
- 	      case VM_FRAME_MAGIC_METHOD:
--		EXEC_EVENT_HOOK(th, RUBY_EVENT_RETURN, th->cfp->self, 0, 0);
-+		EXEC_EVENT_RETURN_HOOK(th, RUBY_EVENT_RETURN, th->cfp->self, 0, 0);
- 		break;
- 	      case VM_FRAME_MAGIC_CLASS:
- 		EXEC_EVENT_HOOK(th, RUBY_EVENT_END, th->cfp->self, 0, 0);
 Index: vm_insnhelper.c
 ===================================================================
 --- vm_insnhelper.c	(revision 28682)
