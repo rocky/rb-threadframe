@@ -1324,6 +1324,18 @@ Index: tool/instruction.rb
        make_header_stack_val  insn
        make_header_default_operands insn
        make_header_operands   insn
+Index: tool/mkconfig.rb
+===================================================================
+--- tool/mkconfig.rb	(revision 29222)
++++ tool/mkconfig.rb	(working copy)
+@@ -141,6 +141,7 @@
+ print "  DESTDIR = ", (drive ? "TOPDIR && TOPDIR[/\\A[a-z]:/i] || " : ""), "'' unless defined? DESTDIR\n"
+ print "  CONFIG = {}\n"
+ print "  CONFIG[\"DESTDIR\"] = DESTDIR\n"
++print "  CONFIG[\"rb-threadframe\"] = \"0.3\"\n"
+ 
+ versions = {}
+ IO.foreach(File.join(srcdir, "version.h")) do |l|
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
 --- test/ruby/test_settracefunc.rb	(revision 29222)
