@@ -1,4 +1,6 @@
 /* 
+ * Copyright (C) 2010 Rocky Bernstein
+ *
  *  Access to Ruby's rb_control_frame_t and methods for working with that.
  *  Things like getting a binding for a control frame.
  */

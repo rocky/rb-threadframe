@@ -1,3 +1,6 @@
+/* 
+ * Copyright (C) 2010 Rocky Bernstein
+ */
 #if 0  /* The following is to fake out rdoc, until I find a better fix. */
 /* 
  *  Additions to the RubyVM::Method class
