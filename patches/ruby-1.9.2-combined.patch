@@ -1,6 +1,6 @@
 Index: method.h
 ===================================================================
---- method.h	(revision 29209)
+--- method.h	(revision 29222)
 +++ method.h	(working copy)
 @@ -46,7 +46,11 @@
  
@@ -17,7 +17,7 @@ Index: method.h
  typedef struct rb_method_attr_struct {
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 29209)
+--- include/ruby/ruby.h	(revision 29222)
 +++ include/ruby/ruby.h	(working copy)
 @@ -1352,7 +1352,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
@@ -32,7 +32,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 Index: insns.def
 ===================================================================
---- insns.def	(revision 29209)
+--- insns.def	(revision 29222)
 +++ insns.def	(working copy)
 @@ -15,7 +15,7 @@
  
@@ -45,7 +45,7 @@ Index: insns.def
      (return value)
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 29209)
+--- vm_core.h	(revision 29222)
 +++ vm_core.h	(working copy)
 @@ -34,7 +34,7 @@
  #ifndef ENABLE_VM_OBJSPACE
@@ -170,7 +170,7 @@ Index: vm_core.h
  
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 29209)
+--- iseq.c	(revision 29222)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -537,7 +537,7 @@ Index: iseq.c
  
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 29209)
+--- iseq.h	(revision 29222)
 +++ iseq.h	(working copy)
 @@ -101,4 +101,10 @@
  #define DEFINED_ZSUPER INT2FIX(9)
@@ -552,7 +552,7 @@ Index: iseq.h
  #endif /* RUBY_COMPILE_H */
 Index: load.c
 ===================================================================
---- load.c	(revision 29209)
+--- load.c	(revision 29222)
 +++ load.c	(working copy)
 @@ -293,11 +293,13 @@
      if (state == 0) {
@@ -571,7 +571,7 @@ Index: load.c
      }
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 29209)
+--- vm_eval.c	(revision 29222)
 +++ vm_eval.c	(working copy)
 @@ -68,22 +68,31 @@
        }
@@ -609,7 +609,7 @@ Index: vm_eval.c
        case VM_METHOD_TYPE_ATTRSET: {
 Index: proc.c
 ===================================================================
---- proc.c	(revision 29209)
+--- proc.c	(revision 29222)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -690,7 +690,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 29209)
+--- thread.c	(revision 29222)
 +++ thread.c	(working copy)
 @@ -336,6 +336,14 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -1046,7 +1046,7 @@ Index: thread.c
      {
 Index: common.mk
 ===================================================================
---- common.mk	(revision 29209)
+--- common.mk	(revision 29222)
 +++ common.mk	(working copy)
 @@ -30,6 +30,7 @@
  
@@ -1058,7 +1058,7 @@ Index: common.mk
  		complex.$(OBJEXT) \
 Index: eval.c
 ===================================================================
---- eval.c	(revision 29209)
+--- eval.c	(revision 29222)
 +++ eval.c	(working copy)
 @@ -34,7 +34,7 @@
  
@@ -1104,7 +1104,7 @@ Index: eval.c
      JUMP_TAG(TAG_RAISE);
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 29209)
+--- vm_exec.h	(revision 29222)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
@@ -1172,7 +1172,7 @@ Index: vm_exec.h
  #define debugs printf
 Index: vm.c
 ===================================================================
---- vm.c	(revision 29209)
+--- vm.c	(revision 29222)
 +++ vm.c	(working copy)
 @@ -691,6 +691,7 @@
      if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
@@ -1204,9 +1204,25 @@ Index: vm.c
  	    }
  	    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
  	}
+Index: version.h
+===================================================================
+--- version.h	(revision 29222)
++++ version.h	(working copy)
+@@ -20,9 +20,9 @@
+ #endif
+ 
+ #if RUBY_PATCHLEVEL == -1
+-#define RUBY_PATCHLEVEL_STR "dev"
++#define RUBY_PATCHLEVEL_STR "frame-dev"
+ #else
+-#define RUBY_PATCHLEVEL_STR "p"STRINGIZE(RUBY_PATCHLEVEL)
++#define RUBY_PATCHLEVEL_STR "frame-p"STRINGIZE(RUBY_PATCHLEVEL)
+ #endif
+ 
+ #ifndef RUBY_REVISION
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 29209)
+--- vm_insnhelper.c	(revision 29222)
 +++ vm_insnhelper.c	(working copy)
 @@ -26,9 +26,12 @@
  	      const VALUE *pc, VALUE *sp, VALUE *lfp,
@@ -1288,7 +1304,7 @@ Index: vm_insnhelper.c
  	VALUE *p_rsp;
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 29209)
+--- tool/instruction.rb	(revision 29222)
 +++ tool/instruction.rb	(working copy)
 @@ -854,6 +854,17 @@
        commit "INSN_ENTRY(#{insn.name}){"
@@ -1310,7 +1326,7 @@ Index: tool/instruction.rb
        make_header_operands   insn
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 29209)
+--- test/ruby/test_settracefunc.rb	(revision 29222)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -23,8 +23,6 @@
       4: x = 1 + 1
@@ -1486,9 +1502,31 @@ Index: test/ruby/test_settracefunc.rb
 +  end
 +
  end
+Index: test/ruby/test_rubyoptions.rb
+===================================================================
+--- test/ruby/test_rubyoptions.rb	(revision 29222)
++++ test/ruby/test_rubyoptions.rb	(working copy)
+@@ -64,7 +64,7 @@
+ 
+   def test_verbose
+     assert_in_out_err(%w(-vve) + [""]) do |r, e|
+-      assert_match(/^ruby #{RUBY_VERSION}(?:[p ]|dev).*? \[#{RUBY_PLATFORM}\]$/, r.join)
++      assert_match(/^ruby #{RUBY_VERSION}frame-(?:[p ]|dev).*? \[#{RUBY_PLATFORM}\]$/, r.join)
+       assert_equal RUBY_DESCRIPTION, r.join.chomp
+       assert_equal([], e)
+     end
+@@ -110,7 +110,7 @@
+ 
+   def test_version
+     assert_in_out_err(%w(--version)) do |r, e|
+-      assert_match(/^ruby #{RUBY_VERSION}(?:[p ]|dev).*? \[#{RUBY_PLATFORM}\]$/, r.join)
++      assert_match(/^ruby #{RUBY_VERSION}frame-(?:[p ]|dev).*? \[#{RUBY_PLATFORM}\]$/, r.join)
+       assert_equal RUBY_DESCRIPTION, r.join.chomp
+       assert_equal([], e)
+     end
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 29209)
+--- template/insns_info.inc.tmpl	(revision 29222)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -42,38 +42,6 @@
  }
