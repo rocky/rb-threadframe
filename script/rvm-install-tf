@@ -1,0 +1,30 @@
+#!/bin/bash
+# Install threadframe 
+if [[ -f /etc/rvmrc ]] ; then source /etc/rvmrc ; fi
+if [[ -f "$HOME/.rvmrc" ]] ; then source "$HOME/.rvmrc" ; fi
+rvm_path="${rvm_path:-$HOME/.rvm}"
+mkdir -p $rvm_path/src/
+builtin cd $rvm_path/src
+
+doit() {
+    $* || {
+	rc=$?
+	echo "Failed (exit $rc) running:
+	$*"
+	exit $rc
+    }
+}
+
+branch_sans_ruby=1.9.2-head
+ruby_branch=ruby-${branch_sans_ruby}
+rm -fr rb-threadframe
+doit "git clone git://github.com/rocky/rb-threadframe.git"
+doit "builtin cd rb-threadframe"
+rvm remove $branch_sans_ruby
+rm -fr $rvm_rubies_path/ruby_1_9_2
+rm -fr $rvm_src_path/$ruby_branch
+rm -fr $rvm_repo_path/$ruby_branch
+doit "rvm install $branch_sans_ruby --patch patches/ruby-1.9.2-combined.patch%0"
+#doit "rvm use $ruby_branch"
+# doit "rake install"
+    

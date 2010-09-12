@@ -1,6 +1,7 @@
 #!/usr/bin/env rake
 # -*- Ruby -*-
 require 'rubygems'
+require 'rake'
 require 'rake/gempackagetask'
 require 'rake/rdoctask'
 require 'rake/testtask'
@@ -21,7 +22,7 @@ EXT_FILES     = FileList[%w(ext/*.c ext/*.h)]
 INCLUDE_FILES = FileList['include/*.h']
 LIB_FILES     = FileList['lib/*.rb']
 TEST_FILES    = FileList['test/**/*.rb']
-COMMON_FILES  = FileList[%w(README.md Rakefile)]
+COMMON_FILES  = FileList[%w(README.md Rakefile LICENSE NEWS)]
 ALL_FILES     = COMMON_FILES + INCLUDE_FILES + LIB_FILES + EXT_FILES + 
   TEST_FILES
 
@@ -125,7 +126,7 @@ EOF
   spec.platform = Gem::Platform::RUBY
   spec.files = ALL_FILES.to_a  
 
-  spec.required_ruby_version = '>= 1.9.1'
+  spec.required_ruby_version = '>= 1.9.2'
   spec.date = Time.now
   # spec.rubyforge_project = 'rocky-hacks'
   
@@ -158,3 +159,4 @@ task :install_full => :package do
     install(spec)
   end
 end    
+
