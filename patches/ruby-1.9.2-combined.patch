@@ -1579,17 +1579,6 @@ Index: template/insns_info.inc.tmpl
  #ifdef USE_INSN_RET_NUM
  static int
  insn_ret_num(VALUE insn)
-Index: rbconfig.rb
---- rbconfig.rb	(revision 28642)
-+++ rbconfig.rb	(working copy)
-@@ -10,6 +10,7 @@
-   DESTDIR = '' unless defined? DESTDIR
-   CONFIG = {}
-   CONFIG["DESTDIR"] = DESTDIR
-+  CONFIG["rb-threadframe"] = "0.3"
-   CONFIG["MAJOR"] = "1"
-   CONFIG["MINOR"] = "9"
-   CONFIG["TEENY"] = "1"
 Index: brkpt.c
 --- brkpt.c	(revision 28642)
 +++ brkpt.c	(working copy)
