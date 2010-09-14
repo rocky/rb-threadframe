@@ -4,7 +4,7 @@ if [[ -f /etc/rvmrc ]] ; then source /etc/rvmrc ; fi
 if [[ -f "$HOME/.rvmrc" ]] ; then source "$HOME/.rvmrc" ; fi
 rvm_path="${rvm_path:-$HOME/.rvm}"
 
-if cmp /bin/sh /bin/dash ; then
+if cmp /bin/sh /bin/dash 2>/dev/null; then
     echo "Warning your /bin/sh is dash. Making Ruby might not work 1>&2"
 fi
 
