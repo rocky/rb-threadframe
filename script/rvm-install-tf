@@ -31,5 +31,5 @@ rm -fr $rvm_src_path/$ruby_branch
 rm -fr $rvm_repo_path/$ruby_branch
 doit "rvm install $branch_sans_ruby --patch patches/ruby-1.9.2-combined.patch%0"
 doit "rvm use $ruby_branch"
-doit "gem insall rb-threadframe"
+doit "gem install rb-threadframe"
     
