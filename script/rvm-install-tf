@@ -30,6 +30,6 @@ rm -fr $rvm_rubies_path/ruby_1_9_2
 rm -fr $rvm_src_path/$ruby_branch
 rm -fr $rvm_repo_path/$ruby_branch
 doit "rvm install $branch_sans_ruby --patch patches/ruby-1.9.2-combined.patch%0"
-doit "rvm use $ruby_branch"
-doit "gem install rb-threadframe"
+# doit "rvm use $ruby_branch"
+# doit "gem install rb-threadframe"
     
