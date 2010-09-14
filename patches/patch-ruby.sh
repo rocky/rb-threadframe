@@ -5,7 +5,7 @@ function __FILE__ {
 file=$(__FILE__)
 dirname=${file%/*}
 
-patchfile=${1:-'head'}
+patchfile=${1:-'1.9.2'}
 case $patchfile in
     1.9.3 | head | trunk )
 	for file in \
