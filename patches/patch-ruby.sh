@@ -5,7 +5,7 @@ function __FILE__ {
 file=$(__FILE__)
 dirname=${file%/*}
 
-if cmp /bin/sh /bin/dash 2>&1 >/dev/null; then
+if cmp /bin/sh /bin/dash 2>/dev/null >/dev/null; then
     echo 'Warning your /bin/sh is dash. Making Ruby might not work!' 1>&2
 fi
 
