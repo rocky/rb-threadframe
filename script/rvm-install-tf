@@ -5,14 +5,14 @@ if [[ -f "$HOME/.rvmrc" ]] ; then source "$HOME/.rvmrc" ; fi
 rvm_path="${rvm_path:-$HOME/.rvm}"
 
 if cmp /bin/sh /bin/dash 2>/dev/null; then
-    echo "Warning your /bin/sh is dash. Making Ruby might not work 1>&2"
+    echo 'Warning your /bin/sh is dash. Making Ruby might not work!' 1>&2
 fi
 
 mkdir -p $rvm_path/src/
 builtin cd $rvm_path/src
 
 doit() {
-    $* || {
+    eval $* || {
 	rc=$?
 	echo "Failed (exit $rc) running:
 	$*"
@@ -30,6 +30,6 @@ rm -fr $rvm_rubies_path/ruby_1_9_2
 rm -fr $rvm_src_path/$ruby_branch
 rm -fr $rvm_repo_path/$ruby_branch
 doit "rvm install $branch_sans_ruby --patch patches/ruby-1.9.2-combined.patch%0"
-#doit "rvm use $ruby_branch"
-# doit "rake install"
+doit "rvm use $ruby_branch"
+doit "gem insall rb-threadframe"
     

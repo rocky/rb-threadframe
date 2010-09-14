@@ -6,7 +6,7 @@ file=$(__FILE__)
 dirname=${file%/*}
 
 if cmp /bin/sh /bin/dash 2>/dev/null ; then
-    echo "Warning your /bin/sh is dash. Making Ruby might not work 1>&2"
+    echo 'Warning your /bin/sh is dash. Making Ruby might not work!' 1>&2
 fi
 
 patchfile=${1:-'1.9.2'}
