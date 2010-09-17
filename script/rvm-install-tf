@@ -1,17 +1,27 @@
 #!/bin/bash
 # Install threadframe 
-if [[ -f /etc/rvmrc ]] ; then source /etc/rvmrc ; fi
-if [[ -f "$HOME/.rvmrc" ]] ; then source "$HOME/.rvmrc" ; fi
-rvm_path="${rvm_path:-$HOME/.rvm}"
+
+## Debugging 
+# DEBUG='--trace' 
+# VERBOSE=yes
+
+## Error checking...
+if [[ -z $rvm_path ]] ; then
+    echo 'rvm_path seems not to be set. Aborting.' 1>&2
+    exit 2
+fi
 
 if cmp /bin/sh /bin/dash 2>/dev/null >/dev/null; then
     echo 'Warning your /bin/sh is dash. Making Ruby might not work!' 1>&2
 fi
 
+
+## OK. Now get to work...
 mkdir -p $rvm_path/src/
 builtin cd $rvm_path/src
 
 doit() {
+    [[ -n $VERBOSE ]] && echo "-- Running $* ..."
     eval $* || {
 	rc=$?
 	echo "Failed (exit $rc) running:
@@ -21,15 +31,39 @@ doit() {
 }
 
 branch_sans_ruby=1.9.2-head
-ruby_branch=ruby-${branch_sans_ruby}
-rm -fr rb-threadframe
-doit "git clone git://github.com/rocky/rb-threadframe.git"
-doit "builtin cd rb-threadframe"
-rvm remove $branch_sans_ruby
-rm -fr $rvm_rubies_path/ruby_1_9_2
-rm -fr $rvm_src_path/$ruby_branch
-rm -fr $rvm_repo_path/$ruby_branch
-doit "rvm install $branch_sans_ruby --patch patches/ruby-1.9.2-combined.patch%0"
-# doit "rvm use $ruby_branch"
-# doit "gem install rb-threadframe"
+rvm_name=${branch_sans_ruby}
+rvm_name=${branch_sans_ruby}-nframe
+
+typeset -a steps
+
+# steps=(remove-tf git-tf remove-patched-ruby install-patched-ruby \
+#        install-gem)
+steps=(remove-tf git-tf remove-patched-ruby install-patched-ruby)
+
+for ((i=0; i<${#steps[@]}; i++)) ; do
+    step=${steps[i]}
+    case $step in 
+	remove-tf)
+	    rm -fr rb-threadframe
+	    ;;
+	git-tf)
+	    doit "git clone git://github.com/rocky/rb-threadframe.git"
+	    doit "builtin cd rb-threadframe"
+	    ;;
+	remove-patched-ruby)
+	    doit "rvm remove $rvm_name"
+	    rm -fr $rvm_repo_path/$ruby_branch  # Had problems with svn locked.
+	    ;;
+	install-patched-ruby)
+	    doit "rvm $DEBUG install ${rvm_name} --patch patches/ruby-1.9.2-combined.patch%0" 
+	    ;;
+	# install-gem)
+	#     source ${rvm_path}/scripts/rvm
+	## have also trie:d __rvm_use
+	#     doit "rvm $DEBUG use $rvm_name"
+	## Have also tried simple "gem install" and "rvm gemset". 
+	#     doit "rvm gem install rb-threadframe"
+	#     ;;
+    esac
+done
     
