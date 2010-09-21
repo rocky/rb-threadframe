@@ -1,12 +1,12 @@
 #!/usr/bin/env rake
 # -*- Ruby -*-
 require 'rubygems'
-require 'rake'
 require 'rake/gempackagetask'
 require 'rake/rdoctask'
 require 'rake/testtask'
+require 'fileutils'
 
-rake_dir = File.dirname(__FILE__)
+ROOT_DIR = File.dirname(__FILE__)
 
 require 'rbconfig'
 RUBY_PATH = File.join(RbConfig::CONFIG['bindir'],  
@@ -14,17 +14,26 @@ RUBY_PATH = File.join(RbConfig::CONFIG['bindir'],
 
 SO_NAME = 'thread_frame.so'
 
-PACKAGE_VERSION = open("ext/thread_frame.c") do |f| 
-  f.grep(/^#define THREADFRAME_VERSION/).first[/"(.+)"/,1]
+def gemspec
+  @gemspec ||= eval(File.read('.gemspec'), binding, '.gemspec')
 end
 
-EXT_FILES     = FileList[%w(ext/*.c ext/*.h)]
-INCLUDE_FILES = FileList['include/*.h']
-LIB_FILES     = FileList['lib/*.rb']
-TEST_FILES    = FileList['test/**/*.rb']
-COMMON_FILES  = FileList[%w(README.md Rakefile LICENSE NEWS)]
-ALL_FILES     = COMMON_FILES + INCLUDE_FILES + LIB_FILES + EXT_FILES + 
-  TEST_FILES
+desc "Build the gem"
+task :package=>:gem
+task :gem=>:gemspec do
+  Dir.chdir(ROOT_DIR) do
+    sh "gem build .gemspec"
+    FileUtils.mkdir_p 'pkg'
+    FileUtils.mv "#{gemspec.name}-#{gemspec.version}.gem", 'pkg'
+  end
+end
+
+desc "Install the gem locally"
+task :install => :gem do
+  Dir.chdir(ROOT_DIR) do
+    sh %{gem install --local pkg/#{gemspec.name}-#{gemspec.version}}
+  end
+end
 
 desc 'Create the core thread-frame shared library extension'
 task :ext do
@@ -35,7 +44,7 @@ end
 
 desc 'Remove built files'
 task :clean do
-  cd 'ext' do
+  Dir.chdir File.join(ROOT_DIR, 'ext') do
     if File.exist?('Makefile')
       sh 'make clean'
       rm 'Makefile'
@@ -87,76 +96,38 @@ task :test do
   raise "Test failures" unless exceptions.empty?
 end
 
-desc "Test everything - same as test."
-
+desc "test in isolation."
 task :'check' do
-  run_standalone_ruby_file(File.join(%W(#{rake_dir} test unit)))
+  run_standalone_ruby_file(File.join(%W(#{ROOT_DIR} test unit)))
+end
+
+desc "Generate the gemspec"
+task :generate do
+  puts gemspec.to_ruby
+end
+
+desc "Validate the gemspec"
+task :gemspec do
+  gemspec.validate
 end
 
 # ---------  RDoc Documentation ------
 desc 'Generate rdoc documentation'
 Rake::RDocTask.new('rdoc') do |rdoc|
-  rdoc.rdoc_dir = 'doc/rdoc'
+  rdoc.rdoc_dir = 'doc'
   rdoc.title    = 'rb-threadframe'
-  # Show source inline with line numbers
-  rdoc.options << '--inline-source' << '--line-numbers'
   # Make the readme file the start page for the generated html
-  rdoc.options << '--main' << 'README.md'
+  rdoc.options += %w(--main  README.md)
   rdoc.rdoc_files.include('ext/**/*.c',
                           'README.md')
 end
+desc "Same as rdoc"
+task :doc => :rdoc
 
-# Base GEM Specification
-spec = Gem::Specification.new do |spec|
-  spec.name = "rb-threadframe"
-  
-  spec.homepage = "http://github.com/rocky/rb-threadframe/tree/master"
-  spec.summary = "Frame introspection"
-  spec.description = <<-EOF
-
-rb-threadframe gives introspection access for frames of a thread.
-EOF
-
-  spec.version = PACKAGE_VERSION
-  spec.require_path = 'lib'
-  spec.extensions = ["ext/extconf.rb"]
-
-  spec.author = "R. Bernstein"
-  spec.email = "rocky@gnu.org"
-  spec.platform = Gem::Platform::RUBY
-  spec.files = ALL_FILES.to_a  
-
-  spec.required_ruby_version = '>= 1.9.2'
-  spec.date = Time.now
-  # spec.rubyforge_project = 'rocky-hacks'
-  
-  # rdoc
-  spec.has_rdoc = true
-  spec.extra_rdoc_files = ['README.md', 'threadframe.rd'] + 
-                           FileList['ext/*.c']
+task :clobber_package do
+  FileUtils.rm_rf File.join(ROOT_DIR, 'pkg')
 end
 
-# Rake task to build the default package
-Rake::GemPackageTask.new(spec) do |pkg|
-  pkg.need_tar = true
+task :clobber_rdoc do
+  FileUtils.rm_rf File.join(ROOT_DIR, 'doc')
 end
-
-def install(spec, *opts)
-  args = ['gem', 'install', "pkg/#{spec.name}-#{spec.version}.gem"] + opts
-  system(*args)
-end
-
-desc 'Install locally'
-task :install => :package do
-  Dir.chdir(File::dirname(__FILE__)) do
-    # ri and rdoc take lots of time
-    install(spec, '--no-ri', '--no-rdoc')
-  end
-end    
-
-task :install_full => :package do
-  Dir.chdir(File::dirname(__FILE__)) do
-    install(spec)
-  end
-end    
-

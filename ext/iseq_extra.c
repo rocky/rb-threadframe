@@ -5,7 +5,8 @@
 /* 
  *  Additions to the RubyVM::InstructionSequence class
  */
-VALUE rb_cIseq = rb_define_class_under(rb_cRubyVM, "InstructionSequence", ...)
+VALUE rb_cIseq = rb_define_class_under(rb_cRubyVM, "InstructionSequence", 
+				       rb_cObject);
 #endif
 
 #include "../include/vm_core_mini.h"   /* Pulls in ruby.h and node.h */
