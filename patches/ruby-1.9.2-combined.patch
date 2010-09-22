@@ -1,6 +1,6 @@
 Index: method.h
 ===================================================================
---- method.h	(revision 29222)
+--- method.h	(revision 29314)
 +++ method.h	(working copy)
 @@ -46,7 +46,11 @@
  
@@ -17,7 +17,7 @@ Index: method.h
  typedef struct rb_method_attr_struct {
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 29222)
+--- include/ruby/ruby.h	(revision 29314)
 +++ include/ruby/ruby.h	(working copy)
 @@ -1352,7 +1352,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
@@ -32,7 +32,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 Index: insns.def
 ===================================================================
---- insns.def	(revision 29222)
+--- insns.def	(revision 29314)
 +++ insns.def	(working copy)
 @@ -15,7 +15,7 @@
  
@@ -45,7 +45,7 @@ Index: insns.def
      (return value)
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 29222)
+--- vm_core.h	(revision 29314)
 +++ vm_core.h	(working copy)
 @@ -34,7 +34,7 @@
  #ifndef ENABLE_VM_OBJSPACE
@@ -170,7 +170,7 @@ Index: vm_core.h
  
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 29222)
+--- iseq.c	(revision 29314)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -537,7 +537,7 @@ Index: iseq.c
  
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 29222)
+--- iseq.h	(revision 29314)
 +++ iseq.h	(working copy)
 @@ -101,4 +101,10 @@
  #define DEFINED_ZSUPER INT2FIX(9)
@@ -552,7 +552,7 @@ Index: iseq.h
  #endif /* RUBY_COMPILE_H */
 Index: load.c
 ===================================================================
---- load.c	(revision 29222)
+--- load.c	(revision 29314)
 +++ load.c	(working copy)
 @@ -293,11 +293,13 @@
      if (state == 0) {
@@ -571,7 +571,7 @@ Index: load.c
      }
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 29222)
+--- vm_eval.c	(revision 29314)
 +++ vm_eval.c	(working copy)
 @@ -68,22 +68,31 @@
        }
@@ -609,7 +609,7 @@ Index: vm_eval.c
        case VM_METHOD_TYPE_ATTRSET: {
 Index: proc.c
 ===================================================================
---- proc.c	(revision 29222)
+--- proc.c	(revision 29314)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -690,7 +690,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 29222)
+--- thread.c	(revision 29314)
 +++ thread.c	(working copy)
 @@ -336,6 +336,14 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -1046,7 +1046,7 @@ Index: thread.c
      {
 Index: common.mk
 ===================================================================
---- common.mk	(revision 29222)
+--- common.mk	(revision 29314)
 +++ common.mk	(working copy)
 @@ -30,6 +30,7 @@
  
@@ -1058,7 +1058,7 @@ Index: common.mk
  		complex.$(OBJEXT) \
 Index: eval.c
 ===================================================================
---- eval.c	(revision 29222)
+--- eval.c	(revision 29314)
 +++ eval.c	(working copy)
 @@ -34,7 +34,7 @@
  
@@ -1102,9 +1102,24 @@ Index: eval.c
      EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, self, mid, klass);
      rb_thread_raised_clear(th);
      JUMP_TAG(TAG_RAISE);
+Index: error.c
+===================================================================
+--- error.c	(revision 29314)
++++ error.c	(working copy)
+@@ -233,7 +233,9 @@
+ 		"You may have encountered a bug in the Ruby interpreter"
+ 		" or extension libraries.\n"
+ 		"Bug reports are welcome.\n"
+-		"For details: http://www.ruby-lang.org/bugreport.html\n\n");
++		"If this is related to debugging or RubyVM::Threadframe, see:\n"
++		"http://github.com/rocky/rb-threadframe/issues\n"
++		"If not, see: http://redmine.ruby-lang.org/projects/ruby-192/issues\n\n");
+     }
+ }
+ 
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 29222)
+--- vm_exec.h	(revision 29314)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
@@ -1172,7 +1187,7 @@ Index: vm_exec.h
  #define debugs printf
 Index: vm.c
 ===================================================================
---- vm.c	(revision 29222)
+--- vm.c	(revision 29314)
 +++ vm.c	(working copy)
 @@ -691,6 +691,7 @@
      if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
@@ -1206,7 +1221,7 @@ Index: vm.c
  	}
 Index: version.h
 ===================================================================
---- version.h	(revision 29222)
+--- version.h	(revision 29314)
 +++ version.h	(working copy)
 @@ -20,9 +20,9 @@
  #endif
@@ -1222,7 +1237,7 @@ Index: version.h
  #ifndef RUBY_REVISION
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 29222)
+--- vm_insnhelper.c	(revision 29314)
 +++ vm_insnhelper.c	(working copy)
 @@ -26,9 +26,12 @@
  	      const VALUE *pc, VALUE *sp, VALUE *lfp,
@@ -1304,7 +1319,7 @@ Index: vm_insnhelper.c
  	VALUE *p_rsp;
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 29222)
+--- tool/instruction.rb	(revision 29314)
 +++ tool/instruction.rb	(working copy)
 @@ -854,6 +854,17 @@
        commit "INSN_ENTRY(#{insn.name}){"
@@ -1326,7 +1341,7 @@ Index: tool/instruction.rb
        make_header_operands   insn
 Index: tool/mkconfig.rb
 ===================================================================
---- tool/mkconfig.rb	(revision 29222)
+--- tool/mkconfig.rb	(revision 29314)
 +++ tool/mkconfig.rb	(working copy)
 @@ -141,6 +141,7 @@
  print "  DESTDIR = ", (drive ? "TOPDIR && TOPDIR[/\\A[a-z]:/i] || " : ""), "'' unless defined? DESTDIR\n"
@@ -1338,7 +1353,7 @@ Index: tool/mkconfig.rb
  IO.foreach(File.join(srcdir, "version.h")) do |l|
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 29222)
+--- test/ruby/test_settracefunc.rb	(revision 29314)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -23,8 +23,6 @@
       4: x = 1 + 1
@@ -1516,7 +1531,7 @@ Index: test/ruby/test_settracefunc.rb
  end
 Index: test/ruby/test_rubyoptions.rb
 ===================================================================
---- test/ruby/test_rubyoptions.rb	(revision 29222)
+--- test/ruby/test_rubyoptions.rb	(revision 29314)
 +++ test/ruby/test_rubyoptions.rb	(working copy)
 @@ -64,7 +64,7 @@
  
@@ -1536,9 +1551,25 @@ Index: test/ruby/test_rubyoptions.rb
        assert_equal RUBY_DESCRIPTION, r.join.chomp
        assert_equal([], e)
      end
+@@ -392,11 +392,12 @@
+       )?
+       \[NOTE\]\n
+       You\smay\shave\sencountered\sa\sbug\sin\sthe\sRuby\sinterpreter\sor\sextension\slibraries.\n
+-      Bug\sreports\sare\swelcome.\n
+-      For\sdetails:\shttp:\/\/www.ruby-lang.org/bugreport.html\n
++      Bug\sreports\sare\swelcome\.\n
++      If\sthis\sis\srelated\sto\sdebugging\sor\sRubyVM::Threadframe,\ssee:\n
++      http://github.com/rocky/rb-threadframe/issues\n
++      If\snot,\ssee:\shttp://redmine.ruby-lang.org/projects/ruby-192/issues\n
+       \n
+       (?:#{additional})
+-      \z
+       )x,
+       nil,
+       opts)
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 29222)
+--- template/insns_info.inc.tmpl	(revision 29314)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -42,38 +42,6 @@
  }
