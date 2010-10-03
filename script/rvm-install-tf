@@ -52,7 +52,12 @@ for ((i=0; i<${#steps[@]}; i++)) ; do
 	    ;;
 	remove-patched-ruby)
 	    doit "rvm remove $rvm_name"
-	    rm -fr $rvm_repo_path/$ruby_branch  # Had problems with svn locked.
+	    rvm_ruby_path="$rvm_repo_path/$ruby_branch"
+	    if [ $rvm_ruby_path == "/" ]; then
+	       echo "EGAD!  The variables rvm_repo_path and ruby_branch aren't defined.  Cowardly refusing to run 'rm -fr $rvm_ruby_path'"
+	     else
+	       rm -fr $rvm_ruby_path  # Had problems with svn locked.
+	    fi
 	    ;;
 	install-patched-ruby)
 	    doit "rvm $DEBUG install ${rvm_name} --patch patches/ruby-1.9.2-combined.patch%0" 
