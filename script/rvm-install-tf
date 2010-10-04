@@ -7,8 +7,12 @@
 
 ## Error checking...
 if [[ -z $rvm_path ]] ; then
-    echo 'rvm_path seems not to be set. Aborting.' 1>&2
+    echo 'rvm_path seems not to be set. Is rvm in use? Aborting.' 1>&2
     exit 2
+fi
+if [[ -z $rvm_repo_path ]] ; then
+    echo 'rvm_repo_path seems not to be set. Is rvm in use? Aborting.' 1>&2
+    exit 3
 fi
 
 if cmp /bin/sh /bin/dash 2>/dev/null >/dev/null; then
