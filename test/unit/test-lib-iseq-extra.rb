@@ -54,4 +54,12 @@ class TestLibISeqExtra < Test::Unit::TestCase
     assert_equal(0, sha1 =~ /^[0-9a-f]+$/)
   end
 
+  def test_iseq_parent
+    parent_iseq = RubyVM::ThreadFrame::current.iseq
+    1.times do 
+      tf = RubyVM::ThreadFrame::current
+      assert_equal(true, tf.iseq.parent.equal?(parent_iseq))
+    end
+  end
+
 end

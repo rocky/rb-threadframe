@@ -104,6 +104,35 @@ iseq_equal(VALUE iseqval1, VALUE iseqval2)
 	return Qfalse;
 }
 
+VALUE 
+iseq_parent(VALUE self)
+{
+    rb_iseq_t *piseq;
+    rb_iseq_t *parent_iseq;
+    VALUE parent_iseqval;
+    GetISeqPtr(self, piseq);
+
+    if (!RTEST(piseq->parent_iseq)) return Qnil;
+    parent_iseqval = iseq_alloc_shared(rb_cISeq);
+    GetISeqPtr(parent_iseqval, parent_iseq);
+    memcpy(parent_iseq, piseq->parent_iseq, sizeof(struct rb_iseq_struct));
+    return parent_iseqval;
+}
+
+VALUE 
+iseq_local_iseq(VALUE self)
+{
+    rb_iseq_t *piseq;
+    rb_iseq_t *local_iseq;
+    VALUE local_iseqval;
+    GetISeqPtr(self, piseq);
+
+    if (!RTEST(piseq->local_iseq)) return Qnil;
+    local_iseqval = iseq_alloc_shared(rb_cISeq);
+    GetISeqPtr(local_iseqval, local_iseq);
+    memcpy(local_iseq, piseq->local_iseq, sizeof(struct rb_iseq_struct));
+    return local_iseqval;
+}
 
 /* 
  * call-seq:
@@ -391,12 +420,14 @@ Init_iseq_extra(void)
     rb_define_method(rb_cISeq, "klass",            iseq_klass, 0) ;
     rb_define_method(rb_cISeq, "lineno",           iseq_line_no, 0) ;
     rb_define_method(rb_cISeq, "line_range",       iseq_line_range, 0) ;
+    rb_define_method(rb_cISeq, "local_iseq",       iseq_local_iseq, 0) ;
     rb_define_method(rb_cISeq, "local_name",       iseq_local_name, 1) ;
     rb_define_method(rb_cISeq, "local_size",       iseq_local_size, 0) ;
     rb_define_method(rb_cISeq, "local_table_size", iseq_local_table_size, 0) ;
     rb_define_method(rb_cISeq, "offset2lines",     iseq_offset2lines, 1) ;
     rb_define_method(rb_cISeq, "offsetlines",      iseq_offsetlines, 0) ;
     rb_define_method(rb_cISeq, "orig",             iseq_orig, 0) ;
+    rb_define_method(rb_cISeq, "parent",           iseq_parent, 0) ;
     rb_define_method(rb_cISeq, "name",             iseq_name, 0) ;
     rb_define_method(rb_cISeq, "self",             iseq_self, 0) ;
     rb_define_method(rb_cISeq, "source_container", iseq_source_container, 0) ;
