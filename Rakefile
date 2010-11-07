@@ -1,9 +1,6 @@
 #!/usr/bin/env rake
 # -*- Ruby -*-
 require 'rubygems'
-require 'rake/gempackagetask'
-require 'rake/rdoctask'
-require 'rake/testtask'
 require 'fileutils'
 
 ROOT_DIR = File.dirname(__FILE__)
@@ -12,12 +9,11 @@ require 'rbconfig'
 RUBY_PATH = File.join(RbConfig::CONFIG['bindir'],  
                       RbConfig::CONFIG['RUBY_INSTALL_NAME'])
 
-SO_NAME = 'thread_frame.so'
-
 def gemspec
   @gemspec ||= eval(File.read('.gemspec'), binding, '.gemspec')
 end
 
+require 'rake/gempackagetask'
 desc "Build the gem"
 task :package=>:gem
 task :gem=>:gemspec do
@@ -71,6 +67,7 @@ end
 
 task :default => [:test]
 
+require 'rake/testtask'
 desc 'Test units - the smaller tests'
 task :'test:unit' => [:ext] do |t|
   Rake::TestTask.new(:'test:unit') do |t|
@@ -112,6 +109,7 @@ task :gemspec do
 end
 
 # ---------  RDoc Documentation ------
+require 'rake/rdoctask'
 desc 'Generate rdoc documentation'
 Rake::RDocTask.new('rdoc') do |rdoc|
   rdoc.rdoc_dir = 'doc'

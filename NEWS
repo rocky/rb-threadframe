@@ -1,2 +1,7 @@
+October 27 2010 (0.33)
+- Revise rvm install script to be more roboust
+- Change bug report location so we don't spam Ruby's redmine 
+- Add RubyVM::InstructionSequence#parent and #local_iseq fields
+
 September 12 2010 (0.32)
-  First release on gemcutter
+-  First release on gemcutter

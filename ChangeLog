@@ -1,3 +1,847 @@
+2010-10-04  rocky <rockyb@rubyforge.org>
+
+	* .gemspec, Makefile, ext/iseq_extra.c, include/vm_core_mini.h,
+	test/unit/test-lib-iseq-extra.rb: Add
+	RubyVM::InstructionSequence#parent and #local_iseq fields. Add
+	Makefile.
+
+2010-10-03  rocky <rockyb@rubyforge.org>
+
+	* script/rvm-install-tf: Check that rvm_repo_path is set. Also guard
+	agains rm -rf /.  Thanks to Tim C. Harper.
+
+2010-10-02  Tim Harper <timcharper@gmail.com>
+
+	* script/rvm-install-tf: cowardly refuse to 'rm -fr /'
+
+2010-09-21  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, patches/ruby-1.9.2-combined.patch: 
+	thread_frame.c: bump version # combined.patch: As a good citizen,
+	adjust the location where errors on SEGV's go so my bugs don't get
+	reported to redmine.
+
+2010-09-21  rocky <rockyb@rubyforge.org>
+
+	* .gemspec, Rakefile, ext/iseq_extra.c: Add .gemspec; Go over
+	top-level Rakefile. See if nodoc will help with the rvm install
+	problem.
+
+2010-09-16  rocky <rockyb@rubyforge.org>
+
+	* script/rvm-install-tf: Greatly revise rvm-install-tf script to
+	make it more robust.
+
+2010-09-14  rocky <rockyb@rubyforge.org>
+
+	* script/rvm-install-tf: Until I figure out how to source "rvm use",
+	back out of installing rb-threadframe
+
+2010-09-14  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh, script/rvm-install-tf: Switch than fight.
+
+2010-09-13  rocky <rockyb@rubyforge.org>
+
+	* script/rvm-install-tf: Typo
+
+2010-09-13  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh, script/rvm-install-tf: This time, for sure!
+
+
+2010-09-13  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh, script/rvm-install-tf: Ooops. Fix error
+	message
+
+2010-09-13  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh, script/rvm-install-tf: Null out errors on
+	sh/dash cmp
+
+2010-09-13  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh, patches/ruby-1.9.2-combined.patch,
+	script/rvm-install-tf: ruby-1.9.2-combined.patch: previous change
+	was bogus. rbconfig.rb didn't previously exist rest: look out for
+	/bin/sh == /bin/dash
+
+2010-09-13  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh: Default to 1.9.2
+
+2010-09-13  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch: More aggressive change to
+	rbconfig.rb
+
+2010-09-12  rocky <rockyb@rubyforge.org>
+
+	* NEWS: 0.32 is first real release.
+
+2010-09-12  rocky <rockyb@rubyforge.org>
+
+	* LICENSE, ext/thread_frame.c: Messed up on date on LICENSE
+
+2010-09-12  rocky <rockyb@rubyforge.org>
+
+	* NEWS, ext/thread_frame.c: Forgot to add LICENSE and NEWS. Redo
+	with version 0.31
+
+2010-09-12  rocky <rockyb@rubyforge.org>
+
+	* NEWS, Rakefile, patches/patch-ruby.sh, script/rvm-install-tf: 
+	Rakefile, NEWS: get ready for first public release patch-ruby.sh:
+	remove rc2 script/rvm-install-tf: builds patched ruby via rvm
+
+2010-09-11  rocky <rockyb@rubyforge.org>
+
+	* LICENSE, ext/iseq_extra.c, ext/proc_extra.c, ext/thread_extra.c,
+	ext/thread_frame.c: Administrivia in preparation for release.
+
+2010-09-11  rocky <rockyb@rubyforge.org>
+
+	* ext/extconf.rb, ext/thread_frame.c,
+	patches/ruby-1.9.2-combined.patch: ruby-1.9.2-combine.patch: add
+	rb-threadframe patch to RbConfig:CONFIG['rb-threadframe']
+	thread_frame.c: bump to version 0.03 extconf.rb: fail unless we have
+	a patched Ruby.
+
+2010-09-11  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch: Change version indicator so
+	everyone knows this has been patched for threadframe.
+
+2010-09-09  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch: Patches for SVN tag
+	ruby_v1_9_2_0. (Is this the 1.9.2 release?) Need exec_trace_flag in
+	vm_core.h to avoid SEGVs.
+
+2010-09-05  rocky <rockyb@rubyforge.org>
+
+	* README.md: Add link to wiki
+
+2010-08-23  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch: 1.9.2 patches now in sync with
+	1.9.3 (trunk)
+
+2010-08-23  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch: Toward reducing the differences
+	between the trunk (1.9.3) patches and the 1.9.2 patches.
+
+2010-08-22  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, test/unit/test-sp-size.rb: thread_frame.c:
+	thread_frame_sp_set(): check to see that set value is not too large.
+	thread_frame_sp_size_internal(): Hack for C functions - add 3 to arg
+	size to get C args. Possibly we are pulling the previous frame where
+	the action really is.  thread_frame_sp - doc comment typo.
+
+2010-08-22  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-trunk-combined.patch: Update trunk combined patch in
+	peparation for updating combined 1.9.2 patch.
+
+2010-08-22  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/02-frame-trace.patch, test/unit/test-return-stop.rb: 
+	02-frame-trace.patch: document what's known about VM_TRACE_OFF
+	test-return-stop.rb: reinstate some of the tests and fix a small
+	diagnosis-report bug.
+
+2010-08-22  rocky <rockyb@rubyforge.org>
+
+	* test/unit/test-return-stop.rb: Reinstate first test_return_stop
+	test.
+
+2010-08-21  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, ext/iseq_extra.h, ext/thread_frame.c,
+	test/unit/test-source.rb: thread_frame.c:
+	thread_frame_source_container() More stringent checks before using
+	eval string. And while we are at it, simplify this code.
+	iseq_extra.{c,h}: Add source_container_type() and DRY code.
+
+2010-08-21  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, test/unit/test-sp-size.rb: thread_frame.c: Add
+	RubyVM::ThreadFrame#sp_size to give number of entries currently on
+	call stack.
+
+2010-08-20  rocky <rocky@gnu.org>
+
+	* ext/thread_frame.c, test/unit/test-return-stop.rb,
+	test/unit/test-source.rb: thread_frame_source_container(): need to
+	back off of picking up string from for eval sp until have a better
+	check that the sp is valid.
+
+2010-08-11  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/02-frame-trace.patch: rb_threadptr_exex_event_hooks:
+	need to add parenthesis around bit | to get precidence right.
+
+2010-08-11  rocky <rocky@gnu.org>
+
+	* patches/trunk/02-frame-trace.patch, test/unit/test-return-stop.rb: 
+	Add test for turning of tracing per frame. Note: I think there are
+	still bugs in there.
+
+2010-08-11  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/02-frame-trace.patch: thread.c: wasn't setting frame
+	trace bit. Restore old value.
+
+2010-08-11  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/02-frame-trace.patch: Clear return bit on frame flag
+	inheritance.
+
+2010-08-10  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/07-brkpt.patch, patches/trunk/08-raise-msg.patch,
+	patches/trunk/09-trace_func.patch,
+	patches/trunk/11-binding-arity.patch,
+	patches/trunk/12-insn-step.patch: Patch lint.
+
+2010-08-10  rocky <rocky@gnu.org>
+
+	* patches/trunk/02-frame-trace.patch: 02-frame-trace.patch:
+	(thread.c) go over yet again the conditions under which we call a
+	trace hook taking into account that return bits and frame tracing
+	bits may be set.  NOTE: possibly this still isn't right and it is
+	definitely not optimal in for counting return skips.  TODO: I need
+	to add tests -- possibly in threadframe.
+
+2010-08-10  rocky <rocky@gnu.org>
+
+	* patches/trunk/00-extern-access.patch,
+	patches/trunk/02-frame-trace.patch,
+	patches/trunk/03-disasm-insns.patch, patches/trunk/07-brkpt.patch,
+	patches/trunk/08-raise-msg.patch,
+	patches/trunk/09-trace_func.patch,
+	patches/trunk/12-insn-step.patch,
+	patches/trunk/13-hook-error-recover.patch: *.patch: Remove hacky
+	exec_event_tracing. I think the per-frame trace bit should cover
+	these cases more cleanly. Update to SVN revision 28955.  TODO:
+	revise combined patches for trunk and 1.9.2.
+
+2010-08-10  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/12-insn-step.patch: 
+	patches/trunk/12-insn-step.patch: Comment out instruction step unit
+	test.
+
+2010-08-10  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/12-insn-step.patch: 12-insn-step.patch: Disable bulk
+	of instruction-step patch for now as it can cause SEGVs in some
+	frames on certain instructions. However keep stubbing code such as
+	instruction event mask.
+
+2010-08-09  rocky <rockyb@rubyforge.org>
+
+	* Rakefile: Rakefile: Config -> RbConfig.
+
+2010-08-09  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/02-frame-trace.patch,
+	patches/trunk/03-disasm-insns.patch: Minor - adjust patch offsets.
+
+2010-08-09  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-trunk-combined.patch, patches/trunk/07-brkpt.patch,
+	patches/trunk/09-trace_func.patch,
+	patches/trunk/12-insn-step.patch,
+	patches/trunk/13-hook-error-recover.patch: *.patch: catch a couple
+	more places to avoid tracing if cfp->tracing when VM_FRAME_TRACE_OFF
+	bit is set.  Update to SVN rev 28931
+
+2010-08-08  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh, patches/ruby-trunk-combined.patch,
+	patches/trunk/00-extern-access.patch,
+	patches/trunk/00-remove_gcc_visibility.patch,
+	patches/trunk/06-C-argc.patch, patches/trunk/09-trace_func.patch,
+	patches/trunk/13-hook-error-recover.patch: Update to SVN Revision
+	28924. Need 00-remove_gcc_visibility.patch in order to be able to
+	see rb_cRubyVM, rb_ISeq and ruby_current_thread.
+
+2010-08-01  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c: Missed a spot in removing start_lineno
+
+2010-08-01  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, test/unit/test-iseq.rb: Revert last change and
+	try again. start_lineno is back to lineno. Add
+	RubyVM::InstructionSequence#line_range  Sometimes iseq.lineno is it
+	is not the starting line of the instruction sequence? See FIXME in
+	test/unit/test-seq.rb.
+
+2010-08-01  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c: RubyVM::InstructionSequence#line_no ->
+	start_lineno. Rdoc it.
+
+2010-07-29  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/00-extern-access.patch,
+	patches/trunk/01-get-sourceline.patch,
+	patches/trunk/02-frame-trace.patch,
+	patches/trunk/03-disasm-insns.patch,
+	patches/trunk/04-iseq-access.patch,
+	patches/trunk/05-iseq-create.patch, patches/trunk/06-C-argc.patch,
+	patches/trunk/07-brkpt.patch, patches/trunk/08-raise-msg.patch,
+	patches/trunk/09-trace_func.patch,
+	patches/trunk/10-iseq-top-name.patch,
+	patches/trunk/11-binding-arity.patch,
+	patches/trunk/12-insn-step.patch,
+	patches/trunk/13-hook-error-recover.patch,
+	patches/trunk/14-eval-iseq-name.patch: Revise for SVN revision
+	28783. Remove shmutz from leading comment of 11-binding-arity.patch.
+	Note SVN 28783 with or without patching fails on "make check" with
+	test_require_too_long_filename(TestRequire): Timeout::Error:
+	Timeout::Error
+	/src/external-vcs/ruby-test/test/ruby/envutil.rb:68:in `invoke_ruby'
+	/src/external-vcs/ruby-test/test/ruby/envutil.rb:153:in
+	`assert_in_out_err'
+	/src/external-vcs/ruby-test/test/ruby/test_require.rb:23:in
+	`test_require_too_long_filename'
+
+2010-07-29  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, include/ruby19_externs.h,
+	patches/ruby-1.9.2-combined.patch: ruby19_externs.h thread_frame.c:
+	iseq_arity -> rb_iseq_arity (moved to Ruby 1.9)
+	ruby-1.9.2-combined.patch: keep in sync.
+
+2010-07-29  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c: iseq_extra.c: iseq_arith is now in 1.9
+
+2010-07-29  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-trunk-combined.patch,
+	patches/trunk/04-iseq-access.patch,
+	patches/trunk/11-binding-arity.patch: Synch trunk combined patches.
+	Remove test const already init warning.
+
+2010-07-29  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, patches/trunk/04-iseq-access.patch,
+	patches/trunk/11-binding-arity.patch,
+	patches/trunk/14-eval-iseq-name.patch: Move
+	RubyVM::InstructionSequence#iseq into Ruby 1.9. Warning: need to
+	redo combined patches.
+
+2010-07-28  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/14-eval-iseq-name.patch: Start patch to change
+	"file" name in eval string to be more descriptive by including part
+	of the eval string. That is "(eval): ..." becomes "(eval:
+	x=1\n"...):
+
+2010-07-28  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh, patches/trunk/13-hook-error-recover.patch: 
+	Last of the *necessary* patches to get rbdbgr working.  Patch 13 is
+	a little bit hacky, but needed to keep an exception raised in a hook
+	from running into a infinate loop by virtue of the hook called again
+	with the same event or similar event after it returns.
+
+2010-07-27  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch,
+	patches/ruby-trunk-combined.patch,
+	patches/trunk/02-frame-trace.patch,
+	patches/trunk/03-disasm-insns.patch,
+	patches/trunk/08-raise-msg.patch, patches/trunk/09-trace_func.patch: 
+	Patch synchronization.
+
+2010-07-27  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch,
+	patches/ruby-trunk-combined.patch,
+	patches/trunk/09-trace_func.patch, patches/trunk/12-insn-step.patch: 
+	VM Instruction tracing patch fixes.
+
+2010-07-27  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch: Didn't remove all traces of
+	trace_skip_insn_count in 1.9.2-combined.patch.
+
+2010-07-27  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh, patches/ruby-1.9.2-combined.patch,
+	patches/ruby-trunk-combined.patch,
+	patches/trunk/00-extern-access.patch,
+	patches/trunk/12-insn-step.patch: Patch to add for VM instruction
+	stepping, via a vm instruction event in the event mask. By default,
+	this is not set when tracing is enabled.
+
+2010-07-26  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh, patches/ruby-1.9.2-combined.patch,
+	patches/ruby-trunk-combined.patch,
+	patches/trunk/11-binding-arity.patch: Patch 11: add get_iseq_arity()
+	for RubyVM::InstructionSequence#arity -> Fixnum and
+	rb_binding_frame_new() for RubyVM::ThreadFrame#binding
+
+2010-07-26  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-trunk-combined.patch,
+	patches/trunk/02-frame-trace.patch: More patch synchronization
+	between split-out and combined.
+
+2010-07-26  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/08-raise-msg.patch,
+	patches/trunk/09-trace_func.patch: Reduce differences between
+	combined patch and separated patches. No fucntional changes.
+
+2010-07-26  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-trunk-combined.patch: No functional changes - sync
+	with separated patches.
+
+2010-07-26  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/03-disasm-insns.patch,
+	patches/trunk/08-raise-msg.patch,
+	patches/trunk/10-iseq-top-name.patch: No functional changes - synch
+	combined patches.
+
+2010-07-26  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/08-raise-msg.patch,
+	patches/trunk/09-trace_func.patch: 09-trace_func.patch: missed one
+	more C return event call back before frame pop. 08-raise-msg.patch:
+	no functional change. Keep in sync with combined patches.
+
+2010-07-26  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-trunk-combined.patch: ruby-trunk-combined.patch:
+	Non-functional changes. Simplify patch file.
+
+2010-07-26  rocky <rockyb@rubyforge.org>
+
+	Merge branch 'master' of github.com:rocky/rb-threadframe
+
+2010-07-26  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh, patches/trunk/10-iseq-top-name.patch: Add
+	patch to change the instruction sequence name slightly for the
+	top-most instruction-sequence to be more unique and helpful.
+
+2010-07-25  rocky <rockyb@rubyforge.org>
+
+	* ext/.gitignore: Administrivia
+
+2010-07-25  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh, patches/trunk/02-disasm-insns.patch,
+	patches/trunk/03-disasm-insns.patch,
+	patches/trunk/03-iseq-access.patch,
+	patches/trunk/04-iseq-access.patch,
+	patches/trunk/04-iseq-create.patch, patches/trunk/05-C-argc.patch,
+	patches/trunk/05-iseq-create.patch, patches/trunk/06-C-argc.patch,
+	patches/trunk/06-brkpt.patch, patches/trunk/07-brkpt.patch,
+	patches/trunk/07-raise-msg.patch, patches/trunk/08-raise-msg.patch,
+	patches/trunk/08-trace_func.patch,
+	patches/trunk/09-trace_func.patch: Renumber patches after slipping
+	in patch 02-frame-trace.patch in the middle. Note the dependence of
+	08-trace_func.patch on patch 02-frame-trace.patch.
+
+2010-07-25  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/08-trace_func.patch: Adjust patch line offsets.
+
+2010-07-25  rocky <rockyb@rubyforge.org>
+
+	Merge branch 'master' of github.com:rocky/rb-threadframe
+
+2010-07-25  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh, patches/trunk/02-disasm-insns.patch,
+	patches/trunk/02-frame-trace.patch, patches/trunk/05-C-argc.patch,
+	patches/trunk/06-brkpt.patch, patches/trunk/07-raise-msg.patch,
+	patches/trunk/08-trace_func.patch: Adds 02-frame-trace.patch: adds
+	the ability to set tracing on or off per frame.
+
+2010-07-24  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh: Wrong path for combined patches
+
+2010-07-24  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch,
+	patches/ruby-trunk-combined.patch, patches/trunk/07-raise-msg.patch: 
+	Add another test for 07-raise-msg.patch. Revise comment regarding
+	what this patch does.
+
+2010-07-24  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, patches/patch-ruby.sh: More defensive
+	programming.
+
+2010-07-24  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c: More stringent checks to determine if a frame
+	object is valid. This check is used now in more palces. Also, some
+	small refactoring was done to DRY code done in the process.  In an
+	unpatched Ruby 1.9, the current threadframe behavior will mean an
+	infinite looping in raising an error rather than previously which
+	was a SEGV when the frame was accessed, I suspect there is a bug
+	possibly with respect to the way Ruby's handles errors raised by a
+	hook. I need to track this down soon.
+
+2010-07-23  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch,
+	patches/ruby-trunk-combined.patch,
+	patches/trunk/08-trace_func.patch: Test patche - this time, for
+	sure!
+
+2010-07-23  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch,
+	patches/ruby-trunk-combined.patch,
+	patches/trunk/08-trace_func.patch: Line got truncated in test
+
+2010-07-23  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch,
+	patches/ruby-trunk-combined.patch,
+	patches/trunk/08-trace_func.patch: Add unit test of add_trace_func,
+	clear_trace_func, and trace_func with event masks
+
+2010-07-23  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh, patches/ruby-1.9.2-combined.patch,
+	patches/ruby-trunk-combined.patch,
+	patches/trunk/01-disasm-insns.patch,
+	patches/trunk/01-get-sourceline.patch,
+	patches/trunk/02-disasm-insns.patch,
+	patches/trunk/02-iseq-access.patch,
+	patches/trunk/03-iseq-access.patch,
+	patches/trunk/03-iseq-create.patch, patches/trunk/04-C-argc.patch,
+	patches/trunk/04-iseq-create.patch, patches/trunk/05-C-argc.patch,
+	patches/trunk/05-brkpt.patch, patches/trunk/06-brkpt.patch,
+	patches/trunk/06-raise-msg.patch, patches/trunk/07-raise-msg.patch,
+	patches/trunk/07-trace_func.patch,
+	patches/trunk/08-trace_func.patch: 01-get-sourceline.patch:
+	rb_vm_get_sourceline returns the wrong line number (unconditionally
+	set to 0) when the PC is 0.  This patch corrects that.
+
+2010-07-23  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-trunk-combined.patch,
+	patches/trunk/06-raise-msg.patch, patches/trunk/07-trace_func.patch: 
+	Small changes.
+
+2010-07-22  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/07-trace_func.patch: Complete the
+	07-trace_func.patch describing what this patch does.
+
+2010-07-22  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh, patches/ruby-trunk-combined.patch,
+	patches/trunk/06-raise-msg.patch, patches/trunk/07-trace_func.patch: 
+	07-trace_func.patch allows thread hooks to be added in chained
+	fashion and add an optional event masks parameter. Also moves hook
+	call for C calls and C returns after/before stack adjustment to
+	allow the hook access to the parameters and allows a hook to change
+	the return value.  Somewhat a largish patch.
+
+2010-07-22  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh, patches/trunk/06-raise-msg.patch: This
+	patch provides a way to get the exception message on a "raise"
+	event.  It does this by storing the message as the klass parameter.
+	Note that in a hook one can get the class via a binding from the
+	frame using eval('self.class', binding)  Another small but unrelated
+	change here is to fill in some of the missing event names in the
+	case statement of routine get_event_name().
+
+2010-07-22  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh, patches/trunk/00-extern-access.patch,
+	patches/trunk/01-disasm-insns.patch,
+	patches/trunk/02-iseq-access.patch, patches/trunk/05-brkpt.patch: 
+	05-brkpt.patch wasn't complete. Should now pass
+	test/ruby/test_brkpt.rb other patches; rebase to SVN revision 28647.
+
+
+2010-07-21  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-trunk-combined.patch: base patch off of SVN Rev 26647
+	which runs "make check" without errors.
+
+2010-07-21  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch,
+	patches/ruby-trunk-combined.patch: Update comments regarding copying
+	the raise message parameter as a trace hook klass parameter
+
+2010-07-21  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-trunk-combined.patch: Small cleanups in trunk
+	combined patch.
+
+2010-07-21  rocky <rockyb@rubyforge.org>
+
+	* include, include/README.md, include/method_mini.h,
+	include/node.h, include/ruby19_externs.h, include/thread_pthread.h,
+	include/vm_core_mini.h: Reinstante ruby19 headers inside git since I
+	can't figure out how to get submodules working easily.
+
+2010-07-21  rocky <rockyb@rubyforge.org>
+
+	* include: Will this reinstate include as a directory?
+
+2010-07-21  rocky <rockyb@rubyforge.org>
+
+	* .gitmodules: Can't figure out how to make git submodules work. So
+	delete for now and add as git files.
+
+2010-07-21  rocky <rockyb@rubyforge.org>
+
+	* include, patches/patch-ruby.sh, patches/ruby-1.9.2-combined.patch: 
+	Clean up patches a little bit.
+
+2010-07-20  rocky <rockyb@rubyforge.org>
+
+	* test/unit/test-argc.rb: Add test of C tf#argc
+
+2010-07-20  rocky <rockyb@rubyforge.org>
+
+	* include, patches/ruby-1.9.2-combined.patch,
+	patches/ruby-trunk-combined.patch, patches/trunk/05-brkpt.patch: Add
+	test to see we stop at breakpoints set.
+
+2010-07-20  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh, patches/trunk/00-extern-access.patch,
+	patches/trunk/01-disasm-insns.patch,
+	patches/trunk/02-iseq-access.patch, patches/trunk/04-C-argc.patch,
+	patches/trunk/04-brkpt.patch, patches/trunk/05-brkpt.patch: 
+	04-C-argc.patch: Add support to get at run-time the number of
+	parameters passed to a C function.  other patches: update offset
+	lines for SVN revsion 28684.
+
+2010-07-20  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch: Correct patch handle getting C
+	argc correctly.
+
+2010-07-20  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, include, patches/ruby-trunk-combined.patch: 
+	Contrary to what I wrote before, we do need to track the the
+	argument count on C calls separate from cfunc.argc which is really
+	the arity. However we can't store this in block_iseq which was wrong
+	anyway. So it is now in its own a separate field as it should have
+	been from the start.  Should probably expand this to cover things
+	other than C functions and OPTIMIZED_METHOD_TYPE_SEND and
+	OPTIMIZE_METHOD_TYPE_CALL.
+
+2010-07-20  rocky <rockyb@rubyforge.org>
+
+	* include, patches/.gitignore, patches/patch-ruby.sh,
+	patches/ruby-trunk-combined.patch, patches/trunk/04-brkpt.patch,
+	test/unit/test-thread-trace-masks.rb: Correct combined patch for
+	head and split-out patch for breakpoint support.
+	test-thread-trace-masks.rb: remove test class name class and
+	possibility of duplicate initialzied constants by turning constant
+	to a class constant.
+
+2010-07-19  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, patches/ruby-1.9.2-combined.patch: Reusing
+	block_iseq for iseq was not only ugly, but *wrong* and the Ruby
+	tests caught me. It's also not necessary.  All you need is a simple:
+	INT2FIX(tf->cfp->me->def->body.cfunc.argc)
+
+2010-07-19  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh: Another bugfix.
+
+2010-07-19  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh: This time, for sure?
+
+2010-07-19  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh: Routine to apply one of the combined
+	patches or the sequence of split patches.
+
+2010-07-19  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch,
+	patches/ruby-trunk-combined.patch: Revise combined patches along the
+	lines of split-up patches.
+
+2010-07-18  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-trunk-combined.patch, patches/trunk/04-brkpt.patch: 
+	ruby-trunk-combined.patch: move breakpoint alloc, set, unset, etc.
+	into Ruby and out of iseq_extra.c
+
+2010-07-18  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, ext/thread_frame.c, patches/trunk/.gitignore,
+	patches/trunk/01-disasm-insns.patch,
+	patches/trunk/03-iseq-create.patch, patches/trunk/04-brkpt.patch,
+	test/unit/test-iseq-brkpt.rb: 04-brkpt.patch: VM-supported
+	breakpoint patch.  iseq_extra.c: Remove Ruby breakpoint routines
+	since it now goes into Ruby 1.9 01  thread_frame.c:
+	thread_context_frame -> thread_control_frame.  Revise patch
+	comments.
+
+2010-07-16  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/02-iseq-access.patch,
+	patches/trunk/03-iseq-create.patch: Changes to iseq.c.
+	02-iseq-access.patch: ISEQS__ and SCRIPT_ISEQS__ give access to
+	RubyVM::InstructionSequence if set as a hash. 03-iseq-create.patch:
+	facilitates having C extension to create a
+	RubyVM::InstructionSequence. Used by Proc#iseq and Method#iseq.
+
+2010-07-16  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch,
+	patches/ruby-trunk-combined.patch: Add back iseq_alloc_shared which
+	is needed by Proc#iseq and Method#iseq.
+
+2010-07-16  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch,
+	patches/ruby-trunk-combined.patch,
+	patches/trunk/01-disasm-insns.patch, threadframe-ruby-1.9.2.patch,
+	threadframe-ruby-trunk.patch: threadframe-ruby-*.patch: Ruby patches
+	are now all grouped together in their own directory. Add include
+	Ruby tests which we've been adding in broken-out patches.
+	01-disasm-insns.patch: move disasm test to test/ruby which seems
+	where others of this ilk go
+
+2010-07-16  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/00-extern-access.patch,
+	patches/trunk/01-disasm-insns.patch,
+	patches/trunk/01-disasm-opcode.patch: Update for SVN revision 28656.
+	Patch name change a little more precise.
+
+2010-07-15  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/01-disasm-opcode.patch: Add test of
+	RubyVM::Instruction#disasm and #disasm_nochildren.
+
+2010-07-14  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/01-disasm-opcode.patch: Typo in naming extern
+	routine rb_iseq_disasm_no_children -> rb_iseq_disasm_nochildren
+
+2010-07-14  rocky <rockyb@rubyforge.org>
+
+	* threadframe-ruby-1.9.2.patch: Typo in naming extern routine
+	rb_iseq_disasm_no_children -> rb_iseq_disasm_nochildren
+
+2010-07-14  rocky <rockyb@rubyforge.org>
+
+	* threadframe-ruby-1.9.2.patch: iseq.c: remove unused routine and
+	correct spelling typo in a comment.
+
+2010-07-14  rocky <rockyb@rubyforge.org>
+
+	* threadframe-ruby-trunk.patch: We don't use iseq_alloc_shared.
+
+2010-07-14  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/00-extern-access.patch,
+	patches/trunk/00extern-access.patch,
+	patches/trunk/01-disasm-opcode.patch: 01-disasm-opcode.patch: Add
+	more access to VM opcodes and finer control of disassembly.
+
+2010-07-14  rocky <rockyb@rubyforge.org>
+
+	* patches/trunk/00extern-access.patch: Start breaking out Ruby
+	runtime-patches for threadframe and friends.  First patch allows
+	access to some methods that are inside Ruby and to some of the
+	fields inside vm_core.h.
+
+2010-07-14  rocky <rockyb@rubyforge.org>
+
+	* threadframe-ruby-trunk.patch: Update to SVN revision 28642
+
+2010-07-14  rocky <rockyb@rubyforge.org>
+
+	* threadframe-ruby-trunk.patch: Update patch for current (1.9.3)
+	trunk - svn 28631.
+
+2010-07-14  rocky <rockyb@rubyforge.org>
+
+	* threadframe-ruby-1.9.patch, threadframe-ruby-trunk.patch: 
+	threadframe-ruby-head.patch -> threadframe-ruby-trunk.patch. This
+	time, for sure!
+
+2010-07-13  rocky <rockyb@rubyforge.org>
+
+	* threadframe-ruby-1.9.2.patch: Update for current ruby_v1_9_2_rc2
+	branch.
+
+2010-07-12  rocky <rockyb@rubyforge.org>
+
+	* Rakefile: Add include files to package/gem.
+
+2010-07-12  rocky <rockyb@rubyforge.org>
+
+	* .gitmodules, ext/iseq_extra.c, ext/method_mini.h,
+	ext/proc_extra.c, ext/ruby19_externs.h, ext/thread_extra.c,
+	ext/thread_frame.c, ext/vm_core_mini.h, include: Use remove headers
+	which are in ruby19-headers and include this now via "git submodule"
+	(in the "include" directory).
+
+2010-07-11  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, test/unit/test-source.rb: source_container
+	changes from ['string', '(eval)'] to ['string', contents of string
+	to be eval'd].  Would like to handle more and other cases, but this
+	will probably require changing the VM. So this is just a start.
+
+2010-06-16  rocky <rockyb@rubyforge.org>
+
+	* threadframe-ruby-1.9.2.patch: Ruby patches for the 1.9.2 release
+	branch
+
+2010-06-07  rocky <rockyb@rubyforge.org>
+
+	* ext/parse_tree.c, ext/parse_tree.h, ext/thread_frame.c: Remove
+	experimental parsetree code which is now in rb-parsertree19. Note
+	like node.h and vm_core_mini.h are slated to be replaced by the
+	ruby19-headers git submodule.
+
+2010-06-03  rocky <rockyb@rubyforge.org>
+
+	* ext/parse_tree.c: ParseTree -> ParseTreeTest since it's not really
+	ParseTree.
+
+2010-06-01  rocky <rockyb@rubyforge.org>
+
+	* ext/node.h, ext/parse_tree.c, ext/parse_tree.h,
+	ext/ruby19_externs.h, ext/thread_frame.c, ext/vm_core_mini.h: Start
+	ParseTree experiments.
+
+2010-05-24  rocky <rockyb@rubyforge.org>
+
+	* ChangeLog, threadframe-ruby-1.9.patch: No substantive changes.
+	Remove untabification which wasn't in original so we get only the
+	essential changes. Good for SVN Rev 27987.
+
 2010-05-24  rocky <rockyb@rubyforge.org>
 
 	* threadframe-ruby-1.9.patch: Update to Ruby 1.9 SVN revision 27984.
@@ -41,11 +885,11 @@
 
 	* test/unit/test-settracefunc.rb, test/unit/test-trace.rb,
 	threadframe-ruby-1.9.patch: Add event masks for
-	Thread#set_trace_func and Thread#add_trace_func.  tf.trace_off now
-	works at least some times.  Remove bugs introduced prior in trying
-	to work around trace_off.  By the way, .... event
-	Kernel#set_trace_func and add_trace_func are broken for handling
-	event masks. Never noticed this before. Will deal with later I hope.
+	Thread#set_trace_func and Thread#add_trace_func. tf.trace_off now
+	works at least some times. Remove bugs introduced prior in trying to
+	work around trace_off. By the way, .... event Kernel#set_trace_func
+	and add_trace_func are broken for handling event masks. Never
+	noticed this before. Will deal with later I hope.
 
 2010-05-13  rocky <rockyb@rubyforge.org>
 
@@ -56,14 +900,15 @@
 
 	* ext/thread_frame.c, ext/vm_core_mini.h, test/unit/test-trace.rb,
 	threadframe-ruby-1.9.patch: Fix bad bug which could cause recursive
-	"return" events to trigger.  1st attempt at per-frame (rather than
+	"return" events to trigger. 1st attempt at per-frame (rather than
 	per-thread) control of trace events. Not working though.
 
 2010-05-11  rocky <rockyb@rubyforge.org>
 
 	* ext/thread_frame.c, ext/vm_core_mini.h,
 	threadframe-ruby-1.9.patch: thread_frame_binding: Need to add
-	filename and line no in new bindings as a result of recent changes.  Revise to work with SVN revison 27720.
+	filename and line no in new bindings as a result of recent changes.
+	Revise to work with SVN revison 27720.
 
 2010-05-11  rocky <rockyb@rubyforge.org>
 
@@ -88,13 +933,17 @@
 2010-05-10  rocky <rockyb@rubyforge.org>
 
 	* threadframe-ruby-1.9.patch: Patch update to note that Ruby 1.9 up
-	to SVN Revision 27600 (circa May 3, 2010) works with this patch.  Something in a later SVN revision but before 27720 (around May 10,
+	to SVN Revision 27600 (circa May 3, 2010) works with this patch.
+	Something in a later SVN revision but before 27720 (around May 10,
 	2010) is not compatible.  We will track that down subsequently...
 
 2010-04-25  rocky <rockyb@rubyforge.org>
 
-	* : commit a2acaa3e4ab037c362c28b7569cc1d38c84c4068 Author: rocky
-	<rockyb@rubyforge.org> Date:   Sun Apr 25 18:51:46 2010 -0400
+	Merge branch 'master' of git@github.com:rocky/rb-threadframe
+
+2010-04-25  rocky <rockyb@rubyforge.org>
+
+	* threadframe-ruby-1.9.patch: Update for newer Ruby sources.
 
 2010-04-25  rocky <rockyb@rubyforge.org>
 
@@ -141,9 +990,9 @@
 	test/unit/test-lib-iseq-extra.rb, test/unit/test-prev.rb,
 	test/unit/test-proc.rb, test/unit/test-source.rb,
 	test/unit/test-thread.rb, threadframe-ruby-1.9.patch: Track
-	vm_core.h changes: field "filepath" added.  require_relative %w(a b
-	c) => require_relative 'a/b/c' Starting with SVN revision #26959 require_relative no longer accepts
-	an array argument.
+	vm_core.h changes: field "filepath" added. require_relative %w(a b
+	c) => require_relative 'a/b/c'  Starting with SVN revision #26959
+	require_relative no longer accepts an array argument.
 
 2010-04-04  rocky <rockyb@rubyforge.org>
 
@@ -201,13 +1050,14 @@
 2010-03-15  rocky <rockyb@rubyforge.org>
 
 	* threadframe-ruby-1.9.patch: Set "id" on raise event to be more
-	compatable. Patch against SVN revision #26862.  Adjust Ruby's unit
+	compatable. Patch against SVN revision #26862. Adjust Ruby's unit
 	trace test for new behavior.
 
 2010-03-14  rocky <rockyb@rubyforge.org>
 
 	* threadframe-ruby-1.9.patch: NOTE: SVN versions of Ruby greater
-	than 26821 might not work with this patch! A small bug found in a patch. Reformat comment.
+	than 26821 might not work with this patch!  A small bug found in a
+	patch. Reformat comment.
 
 2010-03-14  rocky <rockyb@rubyforge.org>
 
@@ -228,23 +1078,23 @@
 
 	* ext/iseq_extra.c, ext/thread_frame.c, lib/iseq_extra.rb,
 	test/unit/test-lib-iseq-extra.rb: lib/iseq_extra.rb: Method sha1
-	   returns a SHA1 hexdigest for iseq.encoded This can be in Ruby used
-	as a "signature" for the iseq ext/iseq_extra.c: Add access to
+	returns a SHA1 hexdigest for iseq.encoded    This can be in Ruby
+	used as a "signature" for the iseq ext/iseq_extra.c: Add access to
 	iseq.encoded ext/thread_frame.c: Prepare for the day when we have
-	   more informative eval "filenames" (which would contain some of the
-	   leading text from the string passed to eval.
+	more informative    eval "filenames" (which would contain some of
+	the leading text from    the string passed to eval.
 
 2010-03-06  rocky <rockyb@rubyforge.org>
 
 	* ext/thread_extra.c, ext/vm_core_mini.h, test/unit/test-thread.rb,
 	threadframe-ruby-1.9.patch: Add 2nd level of trace flag and access
-	to that.  More fields from thread moved ahead of variable parts of
+	to that. More fields from thread moved ahead of variable parts of
 	thread structure.
 
 2010-03-05  rocky <rockyb@rubyforge.org>
 
 	* threadframe-ruby-1.9.patch: Ruby 1.9 patch changes now remove the
-	c-call from set_trace_func as I think it should.  Some other small
+	c-call from set_trace_func as I think it should. Some other small
 	corrections.
 
 2010-03-03  rocky <rockyb@rubyforge.org>
@@ -296,7 +1146,7 @@
 
 	* ext/thread_frame.c, threadframe-ruby-1.9.patch: 
 	threadframe-ruby-1.9.patch: Another place where C call/return hook
-	should be done after/before push/pop frame.  thread_frame.c: add
+	should be done after/before push/pop frame. thread_frame.c: add
 	signature to next
 
 2010-02-18  rocky <rockyb@rubyforge.org>
@@ -327,8 +1177,16 @@
 
 2010-02-11  rocky <rockyb@rubyforge.org>
 
-	* : commit 1263420ff767e57988bbbbaa877430e3eebc8897 Author: rocky
-	<rockyb@rubyforge.org> Date:   Thu Feb 11 21:32:17 2010 -0500
+	Merge branch 'master' of git@github.com:rocky/rb-threadframe
+
+2010-02-11  rocky <rockyb@rubyforge.org>
+
+	* threadframe-ruby-1.9.patch: This patch adds SCRIPT_ISEQS__ which
+	is like SCRIPT_LINES__. A hash where the keys are "filenames" or
+	rather instruction-sequence names, and the value is an array of
+	instruction sequences that have that name. From this we should be
+	able to set breakpoints on a file/name basis more completely  So
+	simple, but effective it really amazes me.
 
 2009-12-17  rocky <rockyb@rubyforge.org>
 
@@ -353,8 +1211,9 @@
 	* threadframe-ruby-1.9.patch: Remove Ruby 1.9 SEGV that can occur in
 	instruction tracing a "leave" instruction.  I don't understand why
 	we get this, calling the trace where we do in a "leave" instruction
-	may somehow mess up cfp-> iseq such as via vm.c line 1144:   ep = ... cfp->iseq ...  Since we can handle this event via RUBY_EVENT_END I don't think
-	there is any loss in functionality.
+	may somehow mess up cfp-> iseq such as via vm.c line 1144:    ep =
+	... cfp->iseq ...  Since we can handle this event via RUBY_EVENT_END
+	I don't think there is any loss in functionality.
 
 2009-11-04  rocky <rockyb@rubyforge.org>
 
@@ -366,16 +1225,16 @@
 	* ext/iseq_extra.c, ext/thread_frame.c, test/unit/test-iseq.rb,
 	test/unit/test-thread.rb: iseq_brkpt_get/set(): Allow negative index
 	values to count from the end Better type checking casting. Raises
-	IndexError on error now.  local_name(): check index and give
+	IndexError on error now. local_name(): check index and give
 	IndexError if invalid
 
 2009-11-03  rocky <rockyb@rubyforge.org>
 
 	* ext/iseq_extra.c, ext/iseq_mini.h, threadframe-ruby-1.9.patch: 
 	Remove flakiness in killcache. VALUE is not int (on 64-bit
-	machines).  Expose from Ruby instruction name and opcode length so
-	we can do better about knowing when "getinlinecache" is that --
-	without copying generated headers.
+	machines). Expose from Ruby instruction name and opcode length so we
+	can do better about knowing when "getinlinecache" is that -- without
+	copying generated headers.
 
 2009-11-01  rocky <rockyb@rubyforge.org>
 
@@ -417,7 +1276,7 @@
 
 	* ext/iseq_extra.c, test/unit/test-binding.rb,
 	test/unit/test-thread.rb: Go over tests to remove FIXMEs that are
-	fixed.  iseq_extra.c: Commment fix: clear -> unset
+	fixed. iseq_extra.c: Commment fix: clear -> unset
 
 2009-10-17  rocky <rockyb@rubyforge.org>
 
@@ -443,7 +1302,7 @@
 
 	* lib/iseq_extra.rb, test/unit/test-lib-iseq-extra.rb: 
 	iseq_extra.rb: add lineoffsets to get the offset for a given line
-	number.  Correct format_args (although it's not well tested yet)
+	number. Correct format_args (although it's not well tested yet)
 
 2009-10-15  rockyb <rocky@gnu.org>
 
@@ -490,7 +1349,7 @@
 2009-09-29  R. Bernstein <rocky@gnu.org>
 
 	* ext/iseq_extra.c, ext/thread_frame.c: thread_frame.c: sp, lfp -
-	adjust arg for downward-growing stack.  Rdoc updates.
+	adjust arg for downward-growing stack. Rdoc updates.
 
 2009-09-29  rocky <rockyb@rubyforge.org>
 
@@ -505,8 +1364,9 @@
 2009-09-28  rocky <rockyb@rubyforge.org>
 
 	* ext/proc_extra.c, ext/thread_frame.c: ext/thread_frame.c: add
-	                    access to lfp and sp.  allow moving frame pointer to a more recent
-	frame.  ext/proc_extra.c: add struct METHOD and alias_count Add access to lfp and sp. Allow going
+	access to lfp and sp.                     allow moving frame pointer
+	to a more recent frame.  ext/proc_extra.c: add struct METHOD and
+	alias_count  Add access to lfp and sp. Allow going
 
 2009-09-28  rocky <rockyb@rubyforge.org>
 
@@ -527,9 +1387,10 @@
 
 	* ext/iseq_extra.c, ext/iseq_extra.h, ext/proc_extra.c,
 	ext/thread_frame.c, test/unit/test-source.rb: Add
-	RubyVM::InstructionSequence#source_container and Method#iseq.  Code
+	RubyVM::InstructionSequence#source_container and Method#iseq. Code
 	for source_container is mostly moved from RubyVM::ThreadFrame so
-	that now calls the iseq code for instruction sequences.  Move/add source_container from thread_frame into iseq.
+	that now calls the iseq code for instruction sequences.  Move/add
+	source_container from thread_frame into iseq.
 
 2009-09-26  rocky <rockyb@rubyforge.org>
 
@@ -553,9 +1414,8 @@
 2009-09-15  R. Bernstein <rocky@gnu.org>
 
 	* ext/thread_frame.c, test/unit/test-thread.rb: For now I need to be
-	more aggressive about checking for (exec) as a file name.
-	Apparently the string (exec) can propagate backwards into enclosing
-	blocks.
+	more aggressive about checking for (exec) as a file name. Apparently
+	the string (exec) can propagate backwards into enclosing blocks.
 
 2009-09-14  R. Bernstein <rocky@gnu.org>
 
@@ -569,13 +1429,22 @@
 
 2009-09-11  R. Bernstein <rocky@gnu.org>
 
-	* : commit 8c936d5165076f8a8256fec30b04815d977012de Author: R.
-	Bernstein <rocky@gnu.org> Date:   Fri Sep 11 13:32:15 2009 -0400
+	Merge branch 'master' of git@github.com:rocky/rb-threadframe
+
+2009-09-11  R. Bernstein <rocky@gnu.org>
+
+	* ext/thread_frame.c, test/unit/test-thread.rb, th.rb: Add unit test
+	for PC offset. We will use shortly in rbdbgr
 
 2009-08-21  rocky <rockyb@rubyforge.org>
 
-	* : commit a76eec1748312e4c58d1bb0e42ab4605fb517884 Author: rocky
-	<rockyb@rubyforge.org> Date:   Fri Aug 21 21:19:04 2009 -0400
+	Merge branch 'master' of git@github.com:rocky/rb-threadframe
+
+2009-08-21  rocky <rockyb@rubyforge.org>
+
+	* test/unit/test-iseq.rb, test/unit/test-source.rb,
+	test/unit/test-thread.rb: Add calls to garbage collector to make
+	sure pointers weren't horribly bolixed.
 
 2009-08-18  R. Bernstein <rocky@gnu.org>
 
@@ -609,8 +1478,14 @@
 
 2009-08-14  rocky <rockyb@rubyforge.org>
 
-	* : commit 015bb870b1ee3098bf1019d18676f70b40f409f7 Author: rocky
-	<rockyb@rubyforge.org> Date:   Fri Aug 14 00:52:37 2009 -0400
+	Merge branch 'master' of git@github.com:rocky/rb-threadframe
+	Conflicts: 	ext/vm_core_mini.h
+
+2009-08-14  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, ext/vm_core_mini.h, test/unit/test-iseq.rb: Add
+	InstructionSequence#equal? to see if two instruction sequences are
+	the same.
 
 2009-08-13  R. Bernstein <rocky@gnu.org>
 
@@ -645,8 +1520,12 @@
 
 2009-07-30  rocky <rockyb@rubyforge.org>
 
-	* : commit 0b6bed24bca2b69198fb3c27d73f7ee6f695538a Author: rocky
-	<rockyb@rubyforge.org> Date:   Thu Jul 30 21:22:53 2009 -0400
+	Merge branch 'master' of git@github.com:rocky/rb-threadframe
+
+2009-07-30  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, test/unit/test-prev.rb,
+	test/unit/test-thread.rb: Add ThreadFrame#stack_size
 
 2009-07-30  rockyb <rocky@gnu.org>
 
@@ -689,15 +1568,14 @@
 
 	* ext/iseq_extra.c, ext/method_mini.h, ext/ruby19_externs.h,
 	ext/thread_frame.c, ext/vm_core_mini.h: Track changes in C
-	structures for control frame and instruction sequence.  Add
-	structurs from method.h.  Be more explicit about what externs came
-	from where and which are patched.  frame method_class no longer
-	makes sense.
+	structures for control frame and instruction sequence. Add structurs
+	from method.h. Be more explicit about what externs came from where
+	and which are patched. frame method_class no longer makes sense.
 
 2009-07-25  rocky <rockyb@rubyforge.org>
 
 	* ext/iseq_extra.c, ext/thread_frame.c, test/unit/test-iseq.rb: 
-	iseq_extra.c: iseq_local_name() check for negative indexes.  correct
+	iseq_extra.c: iseq_local_name() check for negative indexes. correct
 	rdoc. More tests.
 
 2009-07-24  rocky <rockyb@rubyforge.org>
@@ -752,6 +1630,7 @@
 2009-07-22  rocky <rockyb@rubyforge.org>
 
 	* ext/thread_frame.c, test/unit/test-thread.rb: Add all frame types.
+
 
 2009-07-20  rocky <rockyb@rubyforge.org>
 
@@ -813,8 +1692,8 @@
 
 	* ext/proc_extra.c, ext/thread_extra.h, ext/thread_frame.c,
 	ext/vm_core_mini.h, test/unit/test-thread.rb: Add ability to get pc
-	offset into instruction sequence.  Merge rest of thread_extra.h into
-	vm_core_mini.h.  Everything in vm_core_mini.h is really a subset of
+	offset into instruction sequence. Merge rest of thread_extra.h into
+	vm_core_mini.h. Everything in vm_core_mini.h is really a subset of
 	Ruby 1.9's vm_core.h.
 
 2009-07-12  rocky <rocky@gnu.org>
@@ -876,7 +1755,7 @@
 	* ext/thread_extra.h, ext/thread_frame.c, ext/vm_core_mini.h,
 	test/unit/test-binding.rb, test/unit/test-thread.rb, th.rb: 
 	Workaround bug in Thread::Frame#prev where frame is an inline C
-	type. For now we can only deal with Ruby frames.  Reinstate
+	type. For now we can only deal with Ruby frames. Reinstate
 	Thread::Frame::current, since that's so common.
 
 2009-06-26  rocky <rocky@sanchez.(none)>
@@ -884,8 +1763,8 @@
 	* ext/thread_frame.c, test/unit/test-binding.rb,
 	test/unit/test-thread.rb: A little closer to API ... add
 	Thread:threadframe which is in API and remove Thread::Frame::current
-	which wasn't.  Is probably more correct in terms of code as well. (And probably
-	more bugs remain).
+	which wasn't.  Is probably more correct in terms of code as well.
+	(And probably more bugs remain).
 
 2009-06-25  rocky <rocky@sanchez.(none)>
 
@@ -901,7 +1780,7 @@
 2009-06-24  rocky <rocky@sanchez.(none)>
 
 	* test/test-thread.rb: Thread::Frame#new() now takes a Thread object
-	and returns a fully-initialized object now.  Add
+	and returns a fully-initialized object now. Add
 	Thread::Frame#thread.
 
 2009-06-24  rocky <rocky@sanchez.(none)>
@@ -922,6 +1801,7 @@
 2009-06-14  rocky <rocky@sanchez.(none)>
 
 	* threadframe.rd: Modifications based on qwik.atdot.net discussion.
+
 
 2009-06-14  rocky <rocky@sanchez.(none)>
 
