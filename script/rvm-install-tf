@@ -7,11 +7,11 @@
 
 ## Error checking...
 if [[ -z $rvm_path ]] ; then
-    echo 'rvm_path seems not to be set. Is rvm in use? Aborting.' 1>&2
+    echo 'Variable $rvm_path seems not to be set. Is rvm in use? Aborting.' 1>&2
     exit 2
 fi
-if [[ -z $rvm_repo_path ]] ; then
-    echo 'rvm_repo_path seems not to be set. Is rvm in use? Aborting.' 1>&2
+if [[ ! -d $rvm_path/repos ]] ; then
+    echo '$rvm_path/repos does is not a directory. Is rvm in use? Aborting.' 1>&2
     exit 3
 fi
 
@@ -56,9 +56,9 @@ for ((i=0; i<${#steps[@]}; i++)) ; do
 	    ;;
 	remove-patched-ruby)
 	    doit "rvm remove $rvm_name"
-	    rvm_ruby_path="$rvm_repo_path/$ruby_branch"
-	    if [ $rvm_ruby_path == "/" ]; then
-	       echo "EGAD!  The variables rvm_repo_path and ruby_branch aren't defined.  Cowardly refusing to run 'rm -fr $rvm_ruby_path'"
+	    rvm_ruby_path="$rvm_path/repo/$ruby_branch"
+	    if [ $rvm_ruby_path == "/repo" ]; then
+	       echo "EGAD!  The variables \$rvm_path and \$ruby_branch aren't defined.  Cowardly refusing to run 'rm -fr $rvm_ruby_path'"
 	     else
 	       rm -fr $rvm_ruby_path  # Had problems with svn locked.
 	    fi
