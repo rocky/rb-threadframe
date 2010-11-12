@@ -1405,7 +1405,7 @@ Index: ruby.c
  	}
  	for (j = 1; j < origarg.argc; j++) {
  	    origarg.argv[j] = t;
-@@ -1877,7 +1875,7 @@
+@@ -1877,7 +1875,19 @@
      origarg.argc = *argc;
      origarg.argv = *argv;
 +
