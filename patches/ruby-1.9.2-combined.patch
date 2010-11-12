@@ -1247,7 +1247,7 @@ Index: vm.c
      rb_undef_method(CLASS_OF(rb_cRubyVM), "new");
  
 +    /** ::VM::OS_ARGV and OS_STARTUP_DIR */
-+    origarg.os_startup_dir = ruby_getcwd();
++    origarg.os_startup_dir = my_getcwd();
 +    rb_define_const(rb_cRubyVM, "OS_STARTUP_DIR", 
 +		    rb_str_new2(origarg.os_startup_dir));
 +    {
