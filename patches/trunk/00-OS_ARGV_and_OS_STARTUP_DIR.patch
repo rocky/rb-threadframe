@@ -1,0 +1,116 @@
+Index: include/ruby/ruby.h
+===================================================================
+--- include/ruby/ruby.h	(revision 29767)
++++ include/ruby/ruby.h	(working copy)
+@@ -1454,6 +1454,12 @@
+ #include "ruby/subst.h"
+ #endif
+ 
++struct origarg {
++    int argc;
++    char **argv;
++    char *os_startup_dir;
++};
++
+ #if defined(__cplusplus)
+ #if 0
+ { /* satisfy cc-mode */
+Index: vm.c
+===================================================================
+--- vm.c	(revision 29767)
++++ vm.c	(working copy)
+@@ -1975,6 +1975,8 @@
+     return ary;
+ }
+ 
++extern struct origarg origarg;
++
+ void
+ Init_VM(void)
+ {
+@@ -1987,6 +1990,21 @@
+     rb_undef_alloc_func(rb_cRubyVM);
+     rb_undef_method(CLASS_OF(rb_cRubyVM), "new");
+ 
++    /** ::VM::OS_ARGV and OS_STARTUP_DIR */
++    rb_define_const(rb_cRubyVM, "OS_STARTUP_DIR", 
++		    strlen(origarg.os_startup_dir) > 0 ? 
++		    rb_str_new2(origarg.os_startup_dir) : Qnil);
++    {
++	int argc;
++	char **argv;
++	VALUE ary = rb_ary_new();
++	rb_define_const(rb_cRubyVM, "OS_ARGV", ary);
++	for (argc = origarg.argc, argv = origarg.argv; 
++	     argc > 0; argc--, argv++) {
++	    rb_ary_push(ary, rb_str_new2(*argv));
++	}
++    }
++
+     /* ::VM::FrozenCore */
+     fcore = rb_class_new(rb_cBasicObject);
+     RBASIC(fcore)->flags = T_ICLASS;
+Index: ruby.c
+===================================================================
+--- ruby.c	(revision 29767)
++++ ruby.c	(working copy)
+@@ -118,13 +118,11 @@
+ static void forbid_setid(const char *, struct cmdline_options *);
+ #define forbid_setid(s) forbid_setid(s, opt)
+ 
+-static struct {
+-    int argc;
+-    char **argv;
++struct origarg origarg;
++
+ #if !defined(PSTAT_SETCMD) && !defined(HAVE_SETPROCTITLE)
+-    size_t len;
++    size_t origarg_len;
+ #endif
+-} origarg;
+ 
+ static void
+ usage(const char *name)
+@@ -1752,8 +1750,8 @@
+     setproctitle("%.*s", (int)i, s);
+ #else
+ 
+-    if ((size_t)i > origarg.len - origarg.argc) {
+-	i = (long)(origarg.len - origarg.argc);
++    if ((size_t)i > origarg_len - origarg.argc) {
++	i = (long)(origarg_len - origarg.argc);
+     }
+ 
+     memcpy(origarg.argv[0], s, i);
+@@ -1763,8 +1761,8 @@
+ 	char *t = origarg.argv[0] + i;
+ 	*t = '\0';
+ 
+-	if ((size_t)(i + 1) < origarg.len) {
+-	    memset(t + 1, '\0', origarg.len - i - 1);
++	if ((size_t)(i + 1) < origarg_len) {
++	    memset(t + 1, '\0', origarg_len - i - 1);
+ 	}
+ 	for (j = 1; j < origarg.argc; j++) {
+ 	    origarg.argv[j] = t;
+@@ -1891,8 +1889,19 @@
+ #endif
+     origarg.argc = *argc;
+     origarg.argv = *argv;
++    origarg.os_startup_dir = malloc(MAXPATHLEN);
++#ifdef HAVE_GETCWD
++    if (!getcwd(origarg.os_startup_dir, MAXPATHLEN)) 
++	origarg.os_startup_dir[0] = '\0';
++#else
++    if (!getwd(origarg.os_startup_dir)) 
++	origarg.os_startup_dir[0] = '\0';
++#endif
++    origarg.os_startup_dir = realloc(origarg.os_startup_dir, 
++				     strlen(origarg.os_startup_dir)+1);
++
+ #if !defined(PSTAT_SETCMD) && !defined(HAVE_SETPROCTITLE)
+-    origarg.len = get_arglen(origarg.argc, origarg.argv);
++    origarg_len = get_arglen(origarg.argc, origarg.argv);
+ #endif
+ #if defined(USE_DLN_A_OUT)
+     dln_argv0 = origarg.argv[0];

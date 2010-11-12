@@ -1247,9 +1247,9 @@ Index: vm.c
      rb_undef_method(CLASS_OF(rb_cRubyVM), "new");
  
 +    /** ::VM::OS_ARGV and OS_STARTUP_DIR */
-+    origarg.os_startup_dir = my_getcwd();
 +    rb_define_const(rb_cRubyVM, "OS_STARTUP_DIR", 
-+		    rb_str_new2(origarg.os_startup_dir));
++		    strlen(origarg.os_startup_dir) > 0 ? 
++		    rb_str_new2(origarg.os_startup_dir) : Qnil);
 +    {
 +	int argc;
 +	char **argv;
@@ -1408,6 +1408,18 @@ Index: ruby.c
 @@ -1877,7 +1875,7 @@
      origarg.argc = *argc;
      origarg.argv = *argv;
++
++    origarg.os_startup_dir = malloc(MAXPATHLEN);
++#ifdef HAVE_GETCWD
++    if (!getcwd(origarg.os_startup_dir, MAXPATHLEN)) 
++	origarg.os_startup_dir[0] = '\0';
++#else
++    if (!getwd(origarg.os_startup_dir)) 
++	origarg.os_startup_dir[0] = '\0';
++#endif
++    origarg.os_startup_dir = realloc(origarg.os_startup_dir, 
++				     strlen(origarg.os_startup_dir)+1);
++
  #if !defined(PSTAT_SETCMD) && !defined(HAVE_SETPROCTITLE)
 -    origarg.len = get_arglen(origarg.argc, origarg.argv);
 +    origarg_len = get_arglen(origarg.argc, origarg.argv);
