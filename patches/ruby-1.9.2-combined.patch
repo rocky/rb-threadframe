@@ -30,6 +30,19 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_VM       0x10000
  #define RUBY_EVENT_SWITCH   0x20000
  #define RUBY_EVENT_COVERAGE 0x40000
+@@ -1433,6 +1435,12 @@
+ #define close ruby_close
+ #endif
+ 
++struct origarg {
++    int argc;
++    char **argv;
++    char *os_startup_dir;
++};
++
+ #if defined(__cplusplus)
+ #if 0
+ { /* satisfy cc-mode */
 Index: insns.def
 ===================================================================
 --- insns.def	(revision 29314)
@@ -1219,6 +1232,38 @@ Index: vm.c
  	    }
  	    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
  	}
+@@ -1988,6 +2002,9 @@
+     return ary;
+ }
+ 
++#include "ruby/util.h"
++extern struct origarg origarg;
++
+ void
+ Init_VM(void)
+ {
+@@ -2000,6 +2017,21 @@
+     rb_undef_alloc_func(rb_cRubyVM);
+     rb_undef_method(CLASS_OF(rb_cRubyVM), "new");
+ 
++    /** ::VM::OS_ARGV and OS_STARTUP_DIR */
++    origarg.os_startup_dir = ruby_getcwd();
++    rb_define_const(rb_cRubyVM, "OS_STARTUP_DIR", 
++		    rb_str_new2(origarg.os_startup_dir));
++    {
++	int argc;
++	char **argv;
++	VALUE ary = rb_ary_new();
++	rb_define_const(rb_cRubyVM, "OS_ARGV", ary);
++	for (argc = origarg.argc, argv = origarg.argv; 
++	     argc > 0; argc--, argv++) {
++	    rb_ary_push(ary, rb_str_new2(*argv));
++	}
++    }
++
+     /* ::VM::FrozenCore */
+     fcore = rb_class_new(rb_cBasicObject);
+     RBASIC(fcore)->flags = T_ICLASS;
 Index: version.h
 ===================================================================
 --- version.h	(revision 29314)
@@ -1317,6 +1362,58 @@ Index: vm_insnhelper.c
      }
      else {
  	VALUE *p_rsp;
+Index: ruby.c
+===================================================================
+--- ruby.c	(revision 29247)
++++ ruby.c	(working copy)
+@@ -118,13 +118,11 @@
+ static void forbid_setid(const char *, struct cmdline_options *);
+ #define forbid_setid(s) forbid_setid(s, opt)
+ 
+-static struct {
+-    int argc;
+-    char **argv;
++struct origarg origarg;
++
+ #if !defined(PSTAT_SETCMD) && !defined(HAVE_SETPROCTITLE)
+-    size_t len;
++    size_t origarg_len;
+ #endif
+-} origarg;
+ 
+ static void
+ usage(const char *name)
+@@ -1737,8 +1735,8 @@
+     setproctitle("%.*s", (int)i, s);
+ #else
+ 
+-    if ((size_t)i > origarg.len - origarg.argc) {
+-	i = (long)(origarg.len - origarg.argc);
++    if ((size_t)i > origarg_len - origarg.argc) {
++	i = (long)(origarg_len - origarg.argc);
+     }
+ 
+     memcpy(origarg.argv[0], s, i);
+@@ -1748,8 +1746,8 @@
+ 	char *t = origarg.argv[0] + i;
+ 	*t = '\0';
+ 
+-	if ((size_t)(i + 1) < origarg.len) {
+-	    memset(t + 1, '\0', origarg.len - i - 1);
++	if ((size_t)(i + 1) < origarg_len) {
++	    memset(t + 1, '\0', origarg_len - i - 1);
+ 	}
+ 	for (j = 1; j < origarg.argc; j++) {
+ 	    origarg.argv[j] = t;
+@@ -1877,7 +1875,7 @@
+     origarg.argc = *argc;
+     origarg.argv = *argv;
+ #if !defined(PSTAT_SETCMD) && !defined(HAVE_SETPROCTITLE)
+-    origarg.len = get_arglen(origarg.argc, origarg.argv);
++    origarg_len = get_arglen(origarg.argc, origarg.argv);
+ #endif
+ #if defined(USE_DLN_A_OUT)
+     dln_argv0 = origarg.argv[0];
 Index: tool/instruction.rb
 ===================================================================
 --- tool/instruction.rb	(revision 29314)
