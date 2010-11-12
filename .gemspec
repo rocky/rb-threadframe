@@ -32,7 +32,7 @@ EOF
   spec.license      = 'MIT'
   spec.platform     = Gem::Platform::RUBY
   spec.require_path = 'lib'
-  spec.required_ruby_version = '= 1.9.2'
+  spec.required_ruby_version = '~> 1.9.2'
   spec.summary      = "Frame introspection"
 
   spec.version      = PACKAGE_VERSION
