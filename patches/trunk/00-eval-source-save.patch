@@ -1,0 +1,58 @@
+Index: vm_core.h
+===================================================================
+--- vm_core.h	(revision 29927)
++++ vm_core.h	(working copy)
+@@ -254,6 +254,10 @@
+ 
+     /* used at compile time */
+     struct iseq_compile_data *compile_data;
++
++    /* If this instruction sequence came from eval, the string of the
++       source as a String. */
++    VALUE source;
+ };
+ 
+ enum ruby_special_exceptions {
+Index: iseq.c
+===================================================================
+--- iseq.c	(revision 29927)
++++ iseq.c	(working copy)
+@@ -731,6 +731,18 @@
+     return 0;
+ }
+ 
++/**
++ * Return String used in the creation of this instruction sequence. If none
++ * recorded, 0 (or false) is returned.
++ */
++VALUE
++rb_iseq_source(VALUE self)
++{
++    rb_iseq_t *iseq = iseq_check(self);
++    rb_secure(1);
++    return iseq->source;
++}
++
+ static VALUE
+ insn_operand_intern(rb_iseq_t *iseq,
+ 		    VALUE insn, int op_no, VALUE op,
+@@ -1510,6 +1522,7 @@
+     rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
+     rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
+     rb_define_method(rb_cISeq, "eval", iseq_eval, 0);
++    rb_define_method(rb_cISeq, "source", rb_iseq_source, 0);
+ 
+ #if 0 /* TBD */
+     rb_define_method(rb_cISeq, "marshal_dump", iseq_marshal_dump, 0);
+Index: vm_eval.c
+===================================================================
+--- vm_eval.c	(revision 29927)
++++ vm_eval.c	(working copy)
+@@ -1020,6 +1020,7 @@
+ 
+ 	/* save new env */
+ 	GetISeqPtr(iseqval, iseq);
++	iseq->source = src;
+ 	if (bind && iseq->local_table_size > 0) {
+ 	    bind->env = rb_vm_make_env_object(th, th->cfp);
+ 	}
