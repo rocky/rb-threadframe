@@ -1,6 +1,6 @@
 Index: method.h
 ===================================================================
---- method.h	(revision 29927)
+--- method.h	(revision 29960)
 +++ method.h	(working copy)
 @@ -46,7 +46,11 @@
  
@@ -17,7 +17,7 @@ Index: method.h
  typedef struct rb_method_attr_struct {
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 29927)
+--- include/ruby/ruby.h	(revision 29960)
 +++ include/ruby/ruby.h	(working copy)
 @@ -1352,7 +1352,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
@@ -45,7 +45,7 @@ Index: include/ruby/ruby.h
  { /* satisfy cc-mode */
 Index: insns.def
 ===================================================================
---- insns.def	(revision 29927)
+--- insns.def	(revision 29960)
 +++ insns.def	(working copy)
 @@ -15,7 +15,7 @@
  
@@ -58,7 +58,7 @@ Index: insns.def
      (return value)
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 29927)
+--- vm_core.h	(revision 29960)
 +++ vm_core.h	(working copy)
 @@ -34,7 +34,7 @@
  #ifndef ENABLE_VM_OBJSPACE
@@ -167,8 +167,12 @@ Index: vm_core.h
  #ifdef USE_SIGALTSTACK
      void *altstack;
  #endif
-@@ -490,6 +504,7 @@
- VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, VALUE, const rb_compile_option_t*);
+@@ -487,9 +501,10 @@
+ VALUE rb_iseq_new_top(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE parent);
+ VALUE rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath);
+ VALUE rb_iseq_new_with_bopt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, VALUE, VALUE);
+-VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, VALUE, const rb_compile_option_t*);
++VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, VALUE, VALUE, const rb_compile_option_t*);
  VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
  VALUE rb_iseq_disasm(VALUE self);
 +VALUE rb_iseq_disasm_nochildren(VALUE self);
@@ -188,7 +192,7 @@ Index: vm_core.h
  
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 29927)
+--- iseq.c	(revision 29960)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -253,8 +257,51 @@ Index: iseq.c
  static size_t
  iseq_memsize(const void *ptr)
  {
-@@ -395,6 +444,48 @@
- 				parent, ISEQ_TYPE_MAIN, &COMPILE_OPTION_DEFAULT);
+@@ -281,13 +330,17 @@
+ }
+ 
+ static VALUE
+-cleanup_iseq_build(rb_iseq_t *iseq)
++cleanup_iseq_build(rb_iseq_t *iseq, VALUE type, VALUE src, int saving_iseq)
+ {
+     struct iseq_compile_data *data = iseq->compile_data;
+     VALUE err = data->err_info;
+-    iseq->compile_data = 0;
+-    compile_data_free(data);
+-
++    if (0 == saving_iseq) {
++	iseq->compile_data = 0;
++	compile_data_free(data);
++    } else if (ISEQ_TYPE_EVAL == type) {
++	iseq->source = src;
++    }
++    
+     if (RTEST(err)) {
+ 	rb_funcall2(err, rb_intern("set_backtrace"), 1, &iseq->filename);
+ 	rb_exc_raise(err);
+@@ -375,14 +428,14 @@
+ rb_iseq_new(NODE *node, VALUE name, VALUE filename, VALUE filepath,
+ 	      VALUE parent, VALUE type)
+ {
+-    return rb_iseq_new_with_opt(node, name, filename, filepath, INT2FIX(0), parent, type,
++    return rb_iseq_new_with_opt(node, name, filename, filepath, INT2FIX(0), parent, type, Qnil, 
+ 				&COMPILE_OPTION_DEFAULT);
+ }
+ 
+ VALUE
+ rb_iseq_new_top(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE parent)
+ {
+-    return rb_iseq_new_with_opt(node, name, filename, filepath, INT2FIX(0), parent, ISEQ_TYPE_TOP,
++    return rb_iseq_new_with_opt(node, name, filename, filepath, INT2FIX(0), parent, ISEQ_TYPE_TOP, Qnil, 
+ 				&COMPILE_OPTION_DEFAULT);
+ }
+ 
+@@ -392,34 +445,84 @@
+     rb_thread_t *th = GET_THREAD();
+     VALUE parent = th->base_block->iseq->self;
+     return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), filename, filepath, INT2FIX(0),
+-				parent, ISEQ_TYPE_MAIN, &COMPILE_OPTION_DEFAULT);
++				parent, ISEQ_TYPE_MAIN, Qnil, &COMPILE_OPTION_DEFAULT);
  }
  
 +/* A debugger or similar introspection tool needs to be able to find
@@ -270,12 +317,14 @@ Index: iseq.c
 + * new instruction sequence is added, it is accessible from ISEQS__
 + * using its iseq_name as a key.  
 + */
-+static void
++static int
 +update_file_iseq(VALUE filename, VALUE iseq_name, VALUE iseq)
 +{
 +    ID hash_id;
++    int rc = 0;
 +    CONST_ID(hash_id, "SCRIPT_ISEQS__");
 +    if (rb_const_defined_at(rb_cObject, hash_id)) {
++	rc = 1;
 +	VALUE hash = rb_const_get_at(rb_cObject, hash_id);
 +	if (TYPE(hash) == T_HASH) {
 +	    VALUE iseqs = rb_hash_aref(hash, filename);
@@ -287,6 +336,7 @@ Index: iseq.c
 +    }
 +    CONST_ID(hash_id, "ISEQS__");
 +    if (rb_const_defined_at(rb_cObject, hash_id)) {
++	rc = 1;
 +	VALUE hash = rb_const_get_at(rb_cObject, hash_id);
 +	if (TYPE(hash) == T_HASH) {
 +	    VALUE iseqs = rb_hash_aref(hash, iseq_name);
@@ -296,21 +346,89 @@ Index: iseq.c
 +		rb_hash_aset(hash, iseq_name, rb_ary_new3(1, iseq));
 +	}
 +    }
++    return rc;
 +}
 +
 +
  static VALUE
  rb_iseq_new_with_bopt_and_opt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
- 				VALUE parent, VALUE type, VALUE bopt,
-@@ -409,6 +500,7 @@
+-				VALUE parent, VALUE type, VALUE bopt,
+-				const rb_compile_option_t *option)
++			      VALUE parent, VALUE type, VALUE bopt,
++			      VALUE src,
++			      const rb_compile_option_t *option)
+ {
+     rb_iseq_t *iseq;
+     VALUE self = iseq_alloc(rb_cISeq);
++    int saving_iseq;
++     
+ 
+     GetISeqPtr(self, iseq);
+     iseq->self = self;
+ 
      prepare_iseq_build(iseq, name, filename, filepath, line_no, parent, type, bopt, option);
      rb_iseq_compile_node(self, node);
-     cleanup_iseq_build(iseq);
-+    update_file_iseq(filename, name, self);
+-    cleanup_iseq_build(iseq);
++    saving_iseq = update_file_iseq(filename, name, self);
++    cleanup_iseq_build(iseq, type, src, saving_iseq);
      return self;
  }
  
-@@ -653,9 +745,13 @@
+ VALUE
+ rb_iseq_new_with_opt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
+-		     VALUE parent, VALUE type,
++		     VALUE parent, VALUE type, VALUE src,
+ 		     const rb_compile_option_t *option)
+ {
+     /* TODO: argument check */
+     return rb_iseq_new_with_bopt_and_opt(node, name, filename, filepath, line_no, parent, type,
+-					   Qfalse, option);
++					 Qfalse, src, option);
+ }
+ 
+ VALUE
+@@ -428,7 +531,7 @@
+ {
+     /* TODO: argument check */
+     return rb_iseq_new_with_bopt_and_opt(node, name, filename, filepath, line_no, parent, type,
+-					   bopt, &COMPILE_OPTION_DEFAULT);
++					 bopt, Qnil, &COMPILE_OPTION_DEFAULT);
+ }
+ 
+ #define CHECK_ARRAY(v)   rb_convert_type(v, T_ARRAY, "Array", "to_ary")
+@@ -514,7 +617,7 @@
+ 
+     rb_iseq_build_from_ary(iseq, locals, args, exception, body);
+ 
+-    cleanup_iseq_build(iseq);
++    cleanup_iseq_build(iseq, iseq_type, Qnil, 0);
+     return iseqval;
+ }
+ 
+@@ -558,11 +661,11 @@
+     if (th->base_block && th->base_block->iseq) {
+ 	return rb_iseq_new_with_opt(node, th->base_block->iseq->name,
+ 				    file, filepath, line, th->base_block->iseq->self,
+-				    ISEQ_TYPE_EVAL, &option);
++				    ISEQ_TYPE_EVAL, src, &option);
+     }
+     else {
+ 	return rb_iseq_new_with_opt(node, rb_str_new2("<compiled>"), file, filepath, line, Qfalse,
+-				    ISEQ_TYPE_TOP, &option);
++				    ISEQ_TYPE_TOP, Qnil, &option);
+     }
+ }
+ 
+@@ -607,7 +710,7 @@
+     node = rb_parser_compile_file(parser, fname, f, NUM2INT(line));
+     make_compile_option(&option, opt);
+     return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), file, file, line, Qfalse,
+-				ISEQ_TYPE_TOP, &option);
++				ISEQ_TYPE_TOP, Qnil, &option);
+ }
+ 
+ static VALUE
+@@ -653,9 +756,13 @@
          return rb_sprintf("#<%s: uninitialized>", rb_obj_classname(self));
      }
  
@@ -327,7 +445,7 @@ Index: iseq.c
  }
  
  static
-@@ -725,6 +821,129 @@
+@@ -725,6 +832,129 @@
      return 0;
  }
  
@@ -457,7 +575,7 @@ Index: iseq.c
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -914,9 +1130,8 @@
+@@ -914,9 +1144,8 @@
  }
  
  VALUE
@@ -468,7 +586,7 @@ Index: iseq.c
      VALUE *iseq;
      VALUE str = rb_str_new(0, 0);
      VALUE child = rb_ary_new();
-@@ -1008,14 +1223,44 @@
+@@ -1008,14 +1237,44 @@
  	n += rb_iseq_disasm_insn(str, iseq, n, iseqdat, child);
      }
  
@@ -517,7 +635,7 @@ Index: iseq.c
  static VALUE
  iseq_s_disasm(VALUE klass, VALUE body)
  {
-@@ -1493,6 +1738,25 @@
+@@ -1493,6 +1752,25 @@
      return iseqval;
  }
  
@@ -543,7 +661,7 @@ Index: iseq.c
  void
  Init_ISeq(void)
  {
-@@ -1500,10 +1764,14 @@
+@@ -1500,10 +1778,14 @@
      rb_cISeq = rb_define_class_under(rb_cRubyVM, "InstructionSequence", rb_cObject);
      rb_define_alloc_func(rb_cISeq, iseq_alloc);
      rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
@@ -558,7 +676,7 @@ Index: iseq.c
  
      /* disable this feature because there is no verifier. */
      /* rb_define_singleton_method(rb_cISeq, "load", iseq_s_load, -1); */
-@@ -1516,5 +1784,7 @@
+@@ -1516,5 +1798,7 @@
      rb_define_singleton_method(rb_cISeq, "compile_option=", iseq_s_compile_option_set, 1);
      rb_define_singleton_method(rb_cISeq, "disasm", iseq_s_disasm, 1);
      rb_define_singleton_method(rb_cISeq, "disassemble", iseq_s_disasm, 1);
@@ -568,7 +686,7 @@ Index: iseq.c
  
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 29927)
+--- iseq.h	(revision 29960)
 +++ iseq.h	(working copy)
 @@ -101,4 +101,10 @@
  #define DEFINED_ZSUPER INT2FIX(9)
@@ -583,7 +701,7 @@ Index: iseq.h
  #endif /* RUBY_COMPILE_H */
 Index: load.c
 ===================================================================
---- load.c	(revision 29927)
+--- load.c	(revision 29960)
 +++ load.c	(working copy)
 @@ -293,11 +293,13 @@
      if (state == 0) {
@@ -600,9 +718,22 @@ Index: load.c
  	th->mild_compile_error--;
  	rb_iseq_eval(iseq);
      }
+Index: compile.c
+===================================================================
+--- compile.c	(revision 29960)
++++ compile.c	(working copy)
+@@ -921,7 +921,7 @@
+ 
+     debugs("[new_child_iseq]> ---------------------------------------\n");
+     ret = rb_iseq_new_with_opt(node, name, iseq_filename(iseq->self), iseq_filepath(iseq->self), INT2FIX(line_no),
+-			       parent, type, iseq->compile_data->option);
++			       parent, type, Qnil, iseq->compile_data->option);
+     debugs("[new_child_iseq]< ---------------------------------------\n");
+     iseq_add_mark_object(iseq, ret);
+     return ret;
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 29927)
+--- vm_eval.c	(revision 29960)
 +++ vm_eval.c	(working copy)
 @@ -68,22 +68,31 @@
        }
@@ -648,7 +779,7 @@ Index: vm_eval.c
  	}
 Index: proc.c
 ===================================================================
---- proc.c	(revision 29927)
+--- proc.c	(revision 29960)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -729,7 +860,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 29927)
+--- thread.c	(revision 29960)
 +++ thread.c	(working copy)
 @@ -336,6 +336,14 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -1046,9 +1177,9 @@ Index: thread.c
 -    int state, tracing;
 +    int state, tracing, cfp_tracing;
      volatile int raised;
-     volatile int outer_state;
      VALUE result = Qnil;
-@@ -4098,6 +4204,10 @@
+ 
+@@ -4097,6 +4203,10 @@
      }
      else {
  	th->tracing = 1;
@@ -1059,7 +1190,7 @@ Index: thread.c
      }
  
      raised = rb_threadptr_reset_raised(th);
-@@ -4115,6 +4225,8 @@
+@@ -4112,6 +4222,8 @@
      POP_TAG();
  
      th->tracing = tracing;
@@ -1068,7 +1199,7 @@ Index: thread.c
      if (state) {
  	JUMP_TAG(state);
      }
-@@ -4238,9 +4350,11 @@
+@@ -4234,9 +4346,11 @@
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -1085,7 +1216,7 @@ Index: thread.c
      {
 Index: common.mk
 ===================================================================
---- common.mk	(revision 29927)
+--- common.mk	(revision 29960)
 +++ common.mk	(working copy)
 @@ -30,6 +30,7 @@
  
@@ -1097,7 +1228,7 @@ Index: common.mk
  		complex.$(OBJEXT) \
 Index: eval.c
 ===================================================================
---- eval.c	(revision 29927)
+--- eval.c	(revision 29960)
 +++ eval.c	(working copy)
 @@ -34,7 +34,7 @@
  
@@ -1143,7 +1274,7 @@ Index: eval.c
      JUMP_TAG(TAG_RAISE);
 Index: error.c
 ===================================================================
---- error.c	(revision 29927)
+--- error.c	(revision 29960)
 +++ error.c	(working copy)
 @@ -233,7 +233,9 @@
  		"You may have encountered a bug in the Ruby interpreter"
@@ -1158,7 +1289,7 @@ Index: error.c
  
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 29927)
+--- vm_exec.h	(revision 29960)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
@@ -1226,7 +1357,7 @@ Index: vm_exec.h
  #define debugs printf
 Index: vm.c
 ===================================================================
---- vm.c	(revision 29927)
+--- vm.c	(revision 29960)
 +++ vm.c	(working copy)
 @@ -691,6 +691,7 @@
      if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
@@ -1236,7 +1367,7 @@ Index: vm.c
  
  	if (iseq->insn_info_table[0].position == pos) goto found;
  	for (i = 1; i < iseq->insn_info_size; i++) {
-@@ -1166,7 +1167,20 @@
+@@ -1165,7 +1166,20 @@
  	while (th->cfp->pc == 0 || th->cfp->iseq == 0) {
  	    if (UNLIKELY(VM_FRAME_TYPE(th->cfp) == VM_FRAME_MAGIC_CFUNC)) {
  		const rb_method_entry_t *me = th->cfp->me;
@@ -1258,7 +1389,7 @@ Index: vm.c
  	    }
  	    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
  	}
-@@ -1989,6 +2003,9 @@
+@@ -1988,6 +2002,9 @@
      return ary;
  }
  
@@ -1268,7 +1399,7 @@ Index: vm.c
  void
  Init_VM(void)
  {
-@@ -2001,6 +2018,21 @@
+@@ -2000,6 +2017,21 @@
      rb_undef_alloc_func(rb_cRubyVM);
      rb_undef_method(CLASS_OF(rb_cRubyVM), "new");
  
@@ -1292,7 +1423,7 @@ Index: vm.c
      RBASIC(fcore)->flags = T_ICLASS;
 Index: version.h
 ===================================================================
---- version.h	(revision 29927)
+--- version.h	(revision 29960)
 +++ version.h	(working copy)
 @@ -20,9 +20,9 @@
  #endif
@@ -1308,7 +1439,7 @@ Index: version.h
  #ifndef RUBY_REVISION
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 29927)
+--- vm_insnhelper.c	(revision 29960)
 +++ vm_insnhelper.c	(working copy)
 @@ -26,9 +26,12 @@
  	      const VALUE *pc, VALUE *sp, VALUE *lfp,
@@ -1323,15 +1454,15 @@ Index: vm_insnhelper.c
      if ((void *)(sp + local_size) >= (void *)cfp) {
  	rb_exc_raise(sysstack_error);
      }
-@@ -61,6 +64,7 @@
-     cfp->block_iseq = 0;
+@@ -60,6 +63,7 @@
+     cfp->dfp = sp;
      cfp->proc = 0;
      cfp->me = 0;
 +    cfp->tracing = tracing & ~VM_FRAME_TRACE_RETURN;
  
  #define COLLECT_PROFILE 0
  #if COLLECT_PROFILE
-@@ -392,11 +396,16 @@
+@@ -391,11 +395,16 @@
      const rb_method_definition_t *def = me->def;
      rb_control_frame_t *cfp;
  
@@ -1350,7 +1481,7 @@ Index: vm_insnhelper.c
      reg_cfp->sp -= num + 1;
  
      val = call_cfunc(def->body.cfunc.func, recv, (int)def->body.cfunc.argc, num, reg_cfp->sp + 1);
-@@ -405,10 +414,21 @@
+@@ -404,10 +413,21 @@
  	rb_bug("cfp consistency error - send");
      }
  
@@ -1374,7 +1505,7 @@ Index: vm_insnhelper.c
      return val;
  }
  
-@@ -478,6 +498,13 @@
+@@ -477,6 +497,13 @@
  		      iseq->iseq_encoded + opt_pc, sp, 0, 0);
  
  	cfp->sp = rsp - 1 /* recv */;
@@ -1390,7 +1521,7 @@ Index: vm_insnhelper.c
  	VALUE *p_rsp;
 Index: ruby.c
 ===================================================================
---- ruby.c	(revision 29927)
+--- ruby.c	(revision 29960)
 +++ ruby.c	(working copy)
 @@ -118,13 +118,11 @@
  static void forbid_setid(const char *, struct cmdline_options *);
@@ -1455,7 +1586,7 @@ Index: ruby.c
      dln_argv0 = origarg.argv[0];
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 29927)
+--- tool/instruction.rb	(revision 29960)
 +++ tool/instruction.rb	(working copy)
 @@ -854,6 +854,17 @@
        commit "INSN_ENTRY(#{insn.name}){"
@@ -1477,7 +1608,7 @@ Index: tool/instruction.rb
        make_header_operands   insn
 Index: tool/mkconfig.rb
 ===================================================================
---- tool/mkconfig.rb	(revision 29927)
+--- tool/mkconfig.rb	(revision 29960)
 +++ tool/mkconfig.rb	(working copy)
 @@ -141,6 +141,7 @@
  print "  DESTDIR = ", (drive ? "TOPDIR && TOPDIR[/\\A[a-z]:/i] || " : ""), "'' unless defined? DESTDIR\n"
@@ -1489,7 +1620,7 @@ Index: tool/mkconfig.rb
  IO.foreach(File.join(srcdir, "version.h")) do |l|
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 29927)
+--- test/ruby/test_settracefunc.rb	(revision 29960)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -23,8 +23,6 @@
       4: x = 1 + 1
@@ -1667,7 +1798,7 @@ Index: test/ruby/test_settracefunc.rb
  end
 Index: test/ruby/test_rubyoptions.rb
 ===================================================================
---- test/ruby/test_rubyoptions.rb	(revision 29927)
+--- test/ruby/test_rubyoptions.rb	(revision 29960)
 +++ test/ruby/test_rubyoptions.rb	(working copy)
 @@ -64,7 +64,7 @@
  
@@ -1705,7 +1836,7 @@ Index: test/ruby/test_rubyoptions.rb
        opts)
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 29314)
+--- template/insns_info.inc.tmpl	(revision 29960)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -42,38 +42,6 @@
  }

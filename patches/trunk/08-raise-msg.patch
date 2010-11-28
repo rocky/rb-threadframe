@@ -59,7 +59,7 @@ Index: thread.c
 +	    message as the trace-hook klass parameter. */ 
 +	 klass = p->klass;
 +    } else {
- 	rb_thread_method_id_and_class(GET_THREAD(), &id, &klass);
+ 	rb_thread_method_id_and_class(p->th, &id, &klass);
      }
      if (id == ID_ALLOCATOR)
 Index: test/ruby/test_settracefunc.rb

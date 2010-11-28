@@ -11,12 +11,40 @@ Similarly, if ISEQS__ is defined and is a hash, then every time a new
 instruction sequence is added, it is accessible from ISEQS__ using its
 iseq_name as a key.
 
+In this patch if ISEQS__ is set we don't discard the compile options.
+
 Index: iseq.c
 ===================================================================
 --- iseq.c	(revision 28783)
 +++ iseq.c	(working copy)
-@@ -429,6 +427,48 @@
- 				parent, ISEQ_TYPE_MAIN, &COMPILE_OPTION_DEFAULT);
+@@ -286,13 +335,17 @@
+ }
+ 
+ static VALUE
+-cleanup_iseq_build(rb_iseq_t *iseq)
++cleanup_iseq_build(rb_iseq_t *iseq, VALUE type, VALUE src, int saving_iseq)
+ {
+     struct iseq_compile_data *data = iseq->compile_data;
+     VALUE err = data->err_info;
+-    iseq->compile_data = 0;
+-    compile_data_free(data);
+-
++    if (0 == saving_iseq) {
++	iseq->compile_data = 0;
++	compile_data_free(data);
++    } else if (ISEQ_TYPE_EVAL == type) {
++	iseq->source = src;
++    }
++    
+     if (RTEST(err)) {
+ 	rb_funcall2(err, rb_intern("set_backtrace"), 1, &iseq->filename);
+ 	rb_exc_raise(err);
+@@ -397,34 +450,84 @@
+     rb_thread_t *th = GET_THREAD();
+     VALUE parent = th->base_block->iseq->self;
+     return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), filename, filepath, INT2FIX(0),
+-				parent, ISEQ_TYPE_MAIN, &COMPILE_OPTION_DEFAULT);
++				parent, ISEQ_TYPE_MAIN, Qnil, &COMPILE_OPTION_DEFAULT);
  }
  
 +/* A debugger or similar introspection tool needs to be able to find
@@ -32,12 +60,14 @@ Index: iseq.c
 + * new instruction sequence is added, it is accessible from ISEQS__
 + * using its iseq_name as a key.  
 + */
-+static void
++static int
 +update_file_iseq(VALUE filename, VALUE iseq_name, VALUE iseq)
 +{
 +    ID hash_id;
++    int rc = 0;
 +    CONST_ID(hash_id, "SCRIPT_ISEQS__");
 +    if (rb_const_defined_at(rb_cObject, hash_id)) {
++	rc = 1;
 +	VALUE hash = rb_const_get_at(rb_cObject, hash_id);
 +	if (TYPE(hash) == T_HASH) {
 +	    VALUE iseqs = rb_hash_aref(hash, filename);
@@ -49,6 +79,7 @@ Index: iseq.c
 +    }
 +    CONST_ID(hash_id, "ISEQS__");
 +    if (rb_const_defined_at(rb_cObject, hash_id)) {
++	rc = 1;
 +	VALUE hash = rb_const_get_at(rb_cObject, hash_id);
 +	if (TYPE(hash) == T_HASH) {
 +	    VALUE iseqs = rb_hash_aref(hash, iseq_name);
@@ -58,13 +89,47 @@ Index: iseq.c
 +		rb_hash_aset(hash, iseq_name, rb_ary_new3(1, iseq));
 +	}
 +    }
++    return rc;
 +}
 +
 +
  static VALUE
  rb_iseq_new_with_bopt_and_opt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
- 				VALUE parent, VALUE type, VALUE bopt,
-@@ -443,6 +483,7 @@
+-				VALUE parent, enum iseq_type type, VALUE bopt,
+-				const rb_compile_option_t *option)
++			      VALUE parent, enum iseq_type type, VALUE bopt,
++			      VALUE src,
++			      const rb_compile_option_t *option)
+ {
+     rb_iseq_t *iseq;
+     VALUE self = iseq_alloc(rb_cISeq);
++    int saving_iseq;
++     
+ 
+     GetISeqPtr(self, iseq);
+     iseq->self = self;
+ 
+     prepare_iseq_build(iseq, name, filename, filepath, line_no, parent, type, bopt, option);
+     rb_iseq_compile_node(self, node);
+-    cleanup_iseq_build(iseq);
++    saving_iseq = update_file_iseq(filename, name, self);
++    cleanup_iseq_build(iseq, type, src, saving_iseq);
+     return self;
+ }
+ 
+ VALUE
+ rb_iseq_new_with_opt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
+-		     VALUE parent, enum iseq_type type,
++		     VALUE parent, enum iseq_type type, VALUE src,
+ 		     const rb_compile_option_t *option)
+ {
+     /* TODO: argument check */
+     return rb_iseq_new_with_bopt_and_opt(node, name, filename, filepath, line_no, parent, type,
+-					   Qfalse, option);
++					 Qfalse, src, option);
+ }
+ 
+@@ -443,5 +483,6 @@
      prepare_iseq_build(iseq, name, filename, filepath, line_no, parent, type, bopt, option);
      rb_iseq_compile_node(self, node);
      cleanup_iseq_build(iseq);
