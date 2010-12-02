@@ -10,8 +10,6 @@ VALUE rb_cIseq = rb_define_class_under(rb_cRubyVM, "InstructionSequence",
 #endif
 
 #include "../include/vm_core_mini.h"   /* Pulls in ruby.h and node.h */
-#ifdef HAVE_COMPILE_OPTIONS
-#endif
 #include "iseq_mini.h"  /* Pulls in ruby.h */
 #include "../include/ruby19_externs.h"
 #include <string.h>       /* For strlen() */
@@ -22,7 +20,10 @@ struct iseq_insn_info_entry {
     unsigned short sp;
 };
 
-#ifdef HAVE_COMPILE_OPTIONS
+#define COMPILE_OPTS_BOOL_SET_HASH(FIELD) \
+    rb_hash_aset(hash_opts, rb_str_new2(#FIELD), \
+		 (compile_opts->FIELD) ? Qtrue : Qfalse)
+    
 /* 
  *  Document-method: RubyVM::InstructionSequence::compile_options
  *
@@ -43,13 +44,17 @@ iseq_compile_options(VALUE iseqval)
 	GetISeqPtr(iseqval, iseq);
 	if (!iseq->compile_data) return Qnil;
 	compile_opts = iseq->compile_data->option;
-	rb_hash_aset(hash_opts, rb_str_new2("inline_const_cache"), 
-		     (compile_opts->inline_const_cache) ? Qtrue : Qfalse);
+	COMPILE_OPTS_BOOL_SET_HASH(inline_const_cache);
+	COMPILE_OPTS_BOOL_SET_HASH(peephole_optimization);
+	COMPILE_OPTS_BOOL_SET_HASH(tailcall_optimization);
+	COMPILE_OPTS_BOOL_SET_HASH(specialized_instruction);
+	COMPILE_OPTS_BOOL_SET_HASH(operands_unification);
+	COMPILE_OPTS_BOOL_SET_HASH(stack_caching);
+	COMPILE_OPTS_BOOL_SET_HASH(trace_instruction);
+	COMPILE_OPTS_BOOL_SET_HASH(debug_level);
 	return hash_opts;
     }
-    
 }
-#endif
 
 /* 
  *  Document-method: RubyVM::InstructionSequence::encoded
@@ -410,9 +415,7 @@ Init_iseq_extra(void)
     rb_define_method(rb_cISeq, "arg_rest",         iseq_arg_rest, 0) ;
     rb_define_method(rb_cISeq, "arg_simple",       iseq_arg_simple, 0) ;
     rb_define_method(rb_cISeq, "argc",             iseq_argc, 0) ;
-#ifdef HAVE_COMPILE_OPTIONS
     rb_define_method(rb_cISeq, "compile_options",  iseq_compile_options, 0) ;
-#endif
     rb_define_method(rb_cISeq, "equal?",           iseq_equal, 1) ;
     rb_define_method(rb_cISeq, "encoded",          iseq_iseq_encoded, 0) ;
     rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
