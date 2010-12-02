@@ -189,12 +189,12 @@ Index: thread.c
   *     thr.set_trace_func(nil)     -> nil
   *
   *  Establishes _proc_ on _thr_ as the handler for tracing, or
-@@ -4011,16 +4028,24 @@
+@@ -4121,16 +4167,24 @@
   */
  
  static VALUE
 -thread_set_trace_func_m(VALUE obj, VALUE trace)
-+thread_set_trace_func_m(int argc, VALUE *argv, VALUE obj)   /* (VALUE obj, VALUE trace, events) */
++thread_set_trace_func_m(int argc, VALUE *argv, VALUE obj)
  {
 +    VALUE trace;
 +    VALUE event_maskval;
@@ -206,7 +206,7 @@ Index: thread.c
 +    }
 +
      GetThreadPtr(obj, th);
-     rb_threadptr_revmove_event_hook(th, call_trace_func);
+     rb_threadptr_remove_event_hook(th, call_trace_func);
  
      if (NIL_P(trace)) {
  	return Qnil;

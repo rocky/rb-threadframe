@@ -13,7 +13,6 @@ patchfile=${1:-'1.9.2'}
 case $patchfile in
     1.9.3 | head | trunk )
 	for file in \
-	    00-remove_gcc_visibility.patch  \
 	    00-extern-access.patch  \
 	    01-get-sourceline.patch \
 	    02-frame-trace.patch    \
