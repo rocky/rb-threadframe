@@ -1,3 +1,95 @@
+2010-12-02  rocky <rockyb@rubyforge.org>
+
+	I hate conflicted merges
+
+2010-12-02  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, patches/ruby-1.9.2-combined.patch,
+	test/unit/test-iseq-save.rb: Save compile options if ISEQ__ is set.
+	iseq#compile_options retrieves those options. Save instruction
+	sequence string in iseq#source if iseq#type is ISEQ_TYPE_EVAL or we
+	call InstructionSequenceCompile.
+
+2010-11-28  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, patches/patch-ruby.sh,
+	patches/ruby-1.9.2-combined.patch,
+	patches/trunk/00-remove_gcc_visibility.patch,
+	patches/trunk/04-iseq-access.patch,
+	patches/trunk/08-raise-msg.patch,
+	patches/trunk/09-trace_func.patch, test/unit/test-iseq-save.rb: We
+	now save compiler options. And set source for all EVAL_TYPEs.
+
+2010-11-25  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch,
+	patches/trunk/00-eval-source-save.patch,
+	patches/trunk/07-brkpt.patch: Add patches to 1.9.2 and ruby_head to
+	save eval string for eval'd instruction sequence. This patch is
+	modeled off of Rubinius' Rubinius::StaticScope#eval_source. Thanks
+	Evan!
+
+2010-11-13  rocky <rockyb@rubyforge.org>
+
+	* .gemspec, lib/iseq_extra.rb, test/unit/test-lib-iseq.rb: Have to
+	back off from ambitiousness which we can find lines starting with
+	iseqs. Sigh. .gemspec try for a patched-only 1.9.2.
+
+2010-11-12  rocky <rockyb@rubyforge.org>
+
+	* lib/iseq_extra.rb, test/unit/test-lib-iseq.rb: Add routines for
+	finding instruction sequences and offsets. In particular
+	iseq#lines() iseq#find_iseq_with_line(),
+	iseq#locate_line_with_children()
+
+2010-11-11  rocky <rockyb@rubyforge.org>
+
+	* .gemspec: I think this allows a modified 1.9.2ish Ruby but not
+	1.9.3 or 1.9.1.
+
+2010-11-11  rocky <rockyb@rubyforge.org>
+
+	* Makefile, ext/thread_frame.c: Shoulda bumped version a while ago.
+	Fix "make".
+
+2010-11-11  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch: Patch got a little mangled.
+
+2010-11-11  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch,
+	patches/trunk/00-OS_ARGV_and_OS_STARTUP_DIR.patch: Better
+	RubyVM::OS_ARGV and RubyVM::OS_STARTUP_DIR patch which passes Ruby
+	regression tests.
+
+2010-11-11  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch: ruby_getcwd -> my_getcwd which
+	may be more consistent with Ruby conventions. Dunno.
+
+2010-11-11  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch: Add RubyVM::OS_ARGV and
+	RubyVM::OS_STARTUP_DIR to allow Ruby programs to reliably restart
+	themselves via exec().
+
+2010-11-07  rocky <rockyb@rubyforge.org>
+
+	Merge branch 'master' of github.com:rocky/rb-threadframe
+
+2010-11-07  rocky <rockyb@rubyforge.org>
+
+	* script/rvm-install-tf: rvm has changed. $rvm_repo_path seems not
+	to be set any more.
+
+2010-10-27  rocky <rockyb@rubyforge.org>
+
+	* ChangeLog, NEWS, Rakefile, ext/thread_frame.c: Get ready for
+	release.  threadframe.c: bump version for release Rakefile: in
+	better sync with rb-trepanning and rbcdio ChangeLog, NEWS: what's
+	been happenin'
+
 2010-10-04  rocky <rockyb@rubyforge.org>
 
 	* .gemspec, Makefile, ext/iseq_extra.c, include/vm_core_mini.h,

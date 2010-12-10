@@ -1,5 +1,17 @@
-October 27 2010 (0.33)
-- Revise rvm install script to be more roboust
+December 10, 2010 (0.34)  Giant Madagascar Day Release
+
+  - 1.9.2 patches: 
+   * Save source string eval types
+   * Add RubyVM::OS_ARGV and RubyVM::OS_STARTUP_DIR to allow Ruby
+     programs to reliably restart themselves via exec().
+   * Save instruction sequence compile options 
+
+  - Add routines for finding instruction sequences and offsets:
+      iseq#lines() iseq#find_iseq_with_line(), and 
+      seq#locate_line_with_children() 
+
+October 27, 2010 (0.33)
+- Revise rvm install script to be more rooust
 - Change bug report location so we don't spam Ruby's redmine 
 - Add RubyVM::InstructionSequence#parent and #local_iseq fields
 
