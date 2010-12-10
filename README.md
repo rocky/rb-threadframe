@@ -1,6 +1,7 @@
 # rb-threadframe
 
-rb-threadframe gives introspection access for frames of a thread.
+rb-threadframe is a set of patches to Ruby 1.9.2 and a C extension
+that gives introspection access for method call frames.
 
 ## Requirements
 
