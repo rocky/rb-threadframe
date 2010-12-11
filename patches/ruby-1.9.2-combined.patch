@@ -1906,7 +1906,7 @@ Index: brkpt.c
 +#include "vm_core.h"
 +#include "iseq.h"
 +
-+VALUE rb_cISeq;
++extern VALUE rb_cISeq;
 +
 +/* 
 + *  call-seq:
