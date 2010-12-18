@@ -88,20 +88,17 @@ class RubyVM::InstructionSequence
   def locate_line_with_children(line)
     iseq = self
     offset = iseq.locate_line(line)
-    p ['++++1', offset, iseq]
     return iseq, offset if offset
     
     # Didn't find line in this iseq, so check if a contained
     # InstructionSequence encompasses the line searched for
     until offset
-      child_iseq = iseq
+      current_iseq = iseq
       iseq = iseq.parent
       unless iseq
-        # child_iseq is the top-most scope. Search down from here.
-        top_iseq = child_iseq
+        # current_iseq is the top-most scope. Search down from here.
         top_iseq.child_iseqs.each do |child_iseq|
-          p ['++++2', offset, child_iseq, child_iseq.parent]
-          next if child_iseq.equal? top_iseq
+          next if child_iseq.equal? current_iseq
           if res = child_iseq.locate_line_with_children(line)
             return res
           end
