@@ -52,6 +52,8 @@ iseq_compile_options(VALUE iseqval)
 	COMPILE_OPTS_BOOL_SET_HASH(stack_caching);
 	COMPILE_OPTS_BOOL_SET_HASH(trace_instruction);
 	COMPILE_OPTS_BOOL_SET_HASH(debug_level);
+	COMPILE_OPTS_BOOL_SET_HASH(save_tree_node);
+	COMPILE_OPTS_BOOL_SET_HASH(save_compile_opts);
 	return hash_opts;
     }
 }
