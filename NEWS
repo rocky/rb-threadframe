@@ -1,3 +1,10 @@
+December 25, 2010 (0.35)
+  - 1.9.2 patches:
+   * Add new compile-option flags: save_tree_node and save_compile_opts
+   * Start saving parse tree node. (More cases need to be done.)
+ 
+  - Remove some Ruby warning messages
+
 December 10, 2010 (0.34)  Giant Madagascar Day Release
 
   - 1.9.2 patches: 

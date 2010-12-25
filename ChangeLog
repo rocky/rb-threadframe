@@ -1,3 +1,47 @@
+2010-12-24  rocky <rockyb@rubyforge.org>
+
+	* include/vm_core_mini.h, patches/ruby-1.9.2-combined.patch: Add new
+	node and source fields to iseq structure.  Update for SVN 330344.
+
+2010-12-24  rocky <rockyb@rubyforge.org>
+
+	Merge branch 'master' of github.com:rocky/rb-threadframe
+
+2010-12-24  rocky <rockyb@rubyforge.org>
+
+	* ext/iseq_extra.c, include/vm_core_mini.h,
+	patches/ruby-1.9.2-combined.patch: ruby-1.9.2-combined.patch: Add
+	options to save compile options and tree nodes. Update SVN revision
+	number. iseq_extra.c, vm_core_mini.h: access to new options  Update
+	SVN revision numbe
+
+2010-12-18  rocky <rockyb@rubyforge.org>
+
+	* lib/iseq_extra.rb: Remove shadowed local variable
+
+2010-12-11  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch: brkpt.c: extern rb_cISeq since
+	it's defined in iseq.c.
+
+2010-12-10  rocky <rockyb@rubyforge.org>
+
+	Merge branch 'master' of github.com:rocky/rb-threadframe
+
+2010-12-10  rocky <rockyb@rubyforge.org>
+
+	* ChangeLog, NEWS, ext/thread_frame.c: Giant Madagascar Day release.
+
+
+2010-12-07  rocky <rockyb@rubyforge.org>
+
+	* README.md: Small tweak on top-level description.
+
+2010-12-06  rocky <rockyb@rubyforge.org>
+
+	* ext/extconf.rb: Small tweaks on how extension customization works.
+
+
 2010-12-02  rocky <rockyb@rubyforge.org>
 
 	I hate conflicted merges
