@@ -82,9 +82,9 @@ typedef struct rb_compile_option_struct {
     int instructions_unification;
     int stack_caching;
     int trace_instruction;
-    int debug_level;
     int save_tree_node;
     int save_compile_opts;
+    int debug_level;
 } rb_compile_option_t;
 
 /* Instruction sequence */
