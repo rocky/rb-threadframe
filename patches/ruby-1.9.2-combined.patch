@@ -1,6 +1,6 @@
 Index: method.h
 ===================================================================
---- method.h	(revision 30081)
+--- method.h	(revision 30344)
 +++ method.h	(working copy)
 @@ -46,7 +46,11 @@
  
@@ -17,7 +17,7 @@ Index: method.h
  typedef struct rb_method_attr_struct {
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 30081)
+--- include/ruby/ruby.h	(revision 30344)
 +++ include/ruby/ruby.h	(working copy)
 @@ -1352,7 +1352,9 @@
  #define RUBY_EVENT_C_CALL    0x0020
@@ -45,7 +45,7 @@ Index: include/ruby/ruby.h
  { /* satisfy cc-mode */
 Index: insns.def
 ===================================================================
---- insns.def	(revision 30081)
+--- insns.def	(revision 30344)
 +++ insns.def	(working copy)
 @@ -15,7 +15,7 @@
  
@@ -58,7 +58,7 @@ Index: insns.def
      (return value)
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 30081)
+--- vm_core.h	(revision 30344)
 +++ vm_core.h	(working copy)
 @@ -34,7 +34,7 @@
  #ifndef ENABLE_VM_OBJSPACE
@@ -207,7 +207,7 @@ Index: vm_core.h
  
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 30081)
+--- iseq.c	(revision 30344)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -741,7 +741,7 @@ Index: iseq.c
  
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 30081)
+--- iseq.h	(revision 30344)
 +++ iseq.h	(working copy)
 @@ -86,7 +86,7 @@
      int flip_cnt;
@@ -765,7 +765,7 @@ Index: iseq.h
  #endif /* RUBY_COMPILE_H */
 Index: load.c
 ===================================================================
---- load.c	(revision 30081)
+--- load.c	(revision 30344)
 +++ load.c	(working copy)
 @@ -293,11 +293,13 @@
      if (state == 0) {
@@ -784,7 +784,7 @@ Index: load.c
      }
 Index: compile.c
 ===================================================================
---- compile.c	(revision 30081)
+--- compile.c	(revision 30344)
 +++ compile.c	(working copy)
 @@ -921,7 +921,7 @@
  
@@ -797,7 +797,7 @@ Index: compile.c
      return ret;
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 30081)
+--- vm_eval.c	(revision 30344)
 +++ vm_eval.c	(working copy)
 @@ -68,22 +68,31 @@
        }
@@ -833,7 +833,7 @@ Index: vm_eval.c
  	break;
        }
        case VM_METHOD_TYPE_ATTRSET: {
-@@ -1010,6 +1019,7 @@
+@@ -1019,6 +1028,7 @@
  
  	/* save new env */
  	GetISeqPtr(iseqval, iseq);
@@ -843,7 +843,7 @@ Index: vm_eval.c
  	}
 Index: proc.c
 ===================================================================
---- proc.c	(revision 30081)
+--- proc.c	(revision 30344)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -924,7 +924,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 30081)
+--- thread.c	(revision 30344)
 +++ thread.c	(working copy)
 @@ -336,6 +336,14 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -1241,9 +1241,9 @@ Index: thread.c
 -    int state, tracing;
 +    int state, tracing, cfp_tracing;
      volatile int raised;
+     volatile int outer_state;
      VALUE result = Qnil;
- 
-@@ -4097,6 +4203,10 @@
+@@ -4098,6 +4204,10 @@
      }
      else {
  	th->tracing = 1;
@@ -1254,7 +1254,7 @@ Index: thread.c
      }
  
      raised = rb_threadptr_reset_raised(th);
-@@ -4112,6 +4222,8 @@
+@@ -4115,6 +4225,8 @@
      POP_TAG();
  
      th->tracing = tracing;
@@ -1263,7 +1263,7 @@ Index: thread.c
      if (state) {
  	JUMP_TAG(state);
      }
-@@ -4234,9 +4346,11 @@
+@@ -4238,9 +4350,11 @@
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -1280,7 +1280,7 @@ Index: thread.c
      {
 Index: common.mk
 ===================================================================
---- common.mk	(revision 30081)
+--- common.mk	(revision 30344)
 +++ common.mk	(working copy)
 @@ -30,6 +30,7 @@
  
@@ -1292,7 +1292,7 @@ Index: common.mk
  		complex.$(OBJEXT) \
 Index: eval.c
 ===================================================================
---- eval.c	(revision 30081)
+--- eval.c	(revision 30344)
 +++ eval.c	(working copy)
 @@ -34,7 +34,7 @@
  
@@ -1338,7 +1338,7 @@ Index: eval.c
      JUMP_TAG(TAG_RAISE);
 Index: error.c
 ===================================================================
---- error.c	(revision 30081)
+--- error.c	(revision 30344)
 +++ error.c	(working copy)
 @@ -233,7 +233,9 @@
  		"You may have encountered a bug in the Ruby interpreter"
@@ -1353,7 +1353,7 @@ Index: error.c
  
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 30081)
+--- vm_exec.h	(revision 30344)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,40 @@
  typedef rb_num_t GENTRY;
@@ -1421,7 +1421,7 @@ Index: vm_exec.h
  #define debugs printf
 Index: vm_opts.h
 ===================================================================
---- vm_opts.h	(revision 30081)
+--- vm_opts.h	(revision 30344)
 +++ vm_opts.h	(working copy)
 @@ -23,6 +23,8 @@
  #define OPT_PEEPHOLE_OPTIMIZATION    1
@@ -1434,9 +1434,9 @@ Index: vm_opts.h
  /* Build Options.
 Index: vm.c
 ===================================================================
---- vm.c	(revision 30081)
+--- vm.c	(revision 30344)
 +++ vm.c	(working copy)
-@@ -691,6 +691,7 @@
+@@ -692,6 +692,7 @@
      if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
  	rb_num_t i;
  	size_t pos = cfp->pc - cfp->iseq->iseq_encoded;
@@ -1444,7 +1444,7 @@ Index: vm.c
  
  	if (iseq->insn_info_table[0].position == pos) goto found;
  	for (i = 1; i < iseq->insn_info_size; i++) {
-@@ -1165,7 +1166,20 @@
+@@ -1167,7 +1168,20 @@
  	while (th->cfp->pc == 0 || th->cfp->iseq == 0) {
  	    if (UNLIKELY(VM_FRAME_TYPE(th->cfp) == VM_FRAME_MAGIC_CFUNC)) {
  		const rb_method_entry_t *me = th->cfp->me;
@@ -1466,7 +1466,7 @@ Index: vm.c
  	    }
  	    th->cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(th->cfp);
  	}
-@@ -1988,6 +2002,9 @@
+@@ -1991,6 +2005,9 @@
      return ary;
  }
  
@@ -1476,7 +1476,7 @@ Index: vm.c
  void
  Init_VM(void)
  {
-@@ -2000,6 +2017,21 @@
+@@ -2003,6 +2020,21 @@
      rb_undef_alloc_func(rb_cRubyVM);
      rb_undef_method(CLASS_OF(rb_cRubyVM), "new");
  
@@ -1500,7 +1500,7 @@ Index: vm.c
      RBASIC(fcore)->flags = T_ICLASS;
 Index: version.h
 ===================================================================
---- version.h	(revision 30081)
+--- version.h	(revision 30344)
 +++ version.h	(working copy)
 @@ -20,9 +20,9 @@
  #endif
@@ -1516,7 +1516,7 @@ Index: version.h
  #ifndef RUBY_REVISION
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 30081)
+--- vm_insnhelper.c	(revision 30344)
 +++ vm_insnhelper.c	(working copy)
 @@ -26,9 +26,12 @@
  	      const VALUE *pc, VALUE *sp, VALUE *lfp,
@@ -1531,15 +1531,15 @@ Index: vm_insnhelper.c
      if ((void *)(sp + local_size) >= (void *)cfp) {
  	rb_exc_raise(sysstack_error);
      }
-@@ -60,6 +63,7 @@
-     cfp->dfp = sp;
+@@ -61,6 +64,7 @@
+     cfp->block_iseq = 0;
      cfp->proc = 0;
      cfp->me = 0;
 +    cfp->tracing = tracing & ~VM_FRAME_TRACE_RETURN;
  
  #define COLLECT_PROFILE 0
  #if COLLECT_PROFILE
-@@ -391,11 +395,16 @@
+@@ -392,11 +396,16 @@
      const rb_method_definition_t *def = me->def;
      rb_control_frame_t *cfp;
  
@@ -1558,7 +1558,7 @@ Index: vm_insnhelper.c
      reg_cfp->sp -= num + 1;
  
      val = call_cfunc(def->body.cfunc.func, recv, (int)def->body.cfunc.argc, num, reg_cfp->sp + 1);
-@@ -404,10 +413,21 @@
+@@ -405,10 +414,21 @@
  	rb_bug("cfp consistency error - send");
      }
  
@@ -1582,7 +1582,7 @@ Index: vm_insnhelper.c
      return val;
  }
  
-@@ -477,6 +497,13 @@
+@@ -478,6 +498,13 @@
  		      iseq->iseq_encoded + opt_pc, sp, 0, 0);
  
  	cfp->sp = rsp - 1 /* recv */;
@@ -1598,7 +1598,7 @@ Index: vm_insnhelper.c
  	VALUE *p_rsp;
 Index: ruby.c
 ===================================================================
---- ruby.c	(revision 30081)
+--- ruby.c	(revision 30344)
 +++ ruby.c	(working copy)
 @@ -118,13 +118,11 @@
  static void forbid_setid(const char *, struct cmdline_options *);
@@ -1617,7 +1617,7 @@ Index: ruby.c
  
  static void
  usage(const char *name)
-@@ -1737,8 +1735,8 @@
+@@ -1738,8 +1736,8 @@
      setproctitle("%.*s", (int)i, s);
  #else
  
@@ -1628,7 +1628,7 @@ Index: ruby.c
      }
  
      memcpy(origarg.argv[0], s, i);
-@@ -1748,8 +1746,8 @@
+@@ -1749,8 +1747,8 @@
  	char *t = origarg.argv[0] + i;
  	*t = '\0';
  
@@ -1639,7 +1639,7 @@ Index: ruby.c
  	}
  	for (j = 1; j < origarg.argc; j++) {
  	    origarg.argv[j] = t;
-@@ -1876,8 +1874,20 @@
+@@ -1877,8 +1875,20 @@
  #endif
      origarg.argc = *argc;
      origarg.argv = *argv;
@@ -1663,7 +1663,7 @@ Index: ruby.c
      dln_argv0 = origarg.argv[0];
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 30081)
+--- tool/instruction.rb	(revision 30344)
 +++ tool/instruction.rb	(working copy)
 @@ -854,6 +854,17 @@
        commit "INSN_ENTRY(#{insn.name}){"
@@ -1685,7 +1685,7 @@ Index: tool/instruction.rb
        make_header_operands   insn
 Index: tool/mkconfig.rb
 ===================================================================
---- tool/mkconfig.rb	(revision 30081)
+--- tool/mkconfig.rb	(revision 30344)
 +++ tool/mkconfig.rb	(working copy)
 @@ -141,6 +141,7 @@
  print "  DESTDIR = ", (drive ? "TOPDIR && TOPDIR[/\\A[a-z]:/i] || " : ""), "'' unless defined? DESTDIR\n"
@@ -1697,7 +1697,7 @@ Index: tool/mkconfig.rb
  IO.foreach(File.join(srcdir, "version.h")) do |l|
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 30081)
+--- test/ruby/test_settracefunc.rb	(revision 30344)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -23,8 +23,6 @@
       4: x = 1 + 1
@@ -1875,7 +1875,7 @@ Index: test/ruby/test_settracefunc.rb
  end
 Index: test/ruby/test_rubyoptions.rb
 ===================================================================
---- test/ruby/test_rubyoptions.rb	(revision 30081)
+--- test/ruby/test_rubyoptions.rb	(revision 30344)
 +++ test/ruby/test_rubyoptions.rb	(working copy)
 @@ -64,7 +64,7 @@
  
@@ -1895,7 +1895,7 @@ Index: test/ruby/test_rubyoptions.rb
        assert_equal RUBY_DESCRIPTION, r.join.chomp
        assert_equal([], e)
      end
-@@ -392,11 +392,12 @@
+@@ -398,11 +398,12 @@
        )?
        \[NOTE\]\n
        You\smay\shave\sencountered\sa\sbug\sin\sthe\sRuby\sinterpreter\sor\sextension\slibraries.\n
@@ -1913,7 +1913,7 @@ Index: test/ruby/test_rubyoptions.rb
        opts)
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 30081)
+--- template/insns_info.inc.tmpl	(revision 30344)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -42,38 +42,6 @@
  }

@@ -186,6 +186,16 @@ typedef struct rb_iseq_struct {
     struct iseq_compile_data *compile_data;
     /* Used to set a breakpoint at a VM instruction */
     unsigned char *breakpoints; 
+
+    /* If this instruction sequence came from eval, the string of the
+       source as a String. */
+    VALUE source;
+
+    /* If we are saving tree nodes (a compile option), then tree_node
+       is the internal parse tree node representation for this
+       instruction sequence.
+    */
+    NODE *tree_node;
 } rb_iseq_t;
 
 enum ruby_special_exceptions {
