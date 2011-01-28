@@ -94,13 +94,13 @@ typedef struct rb_iseq_struct {
     /***************/
 
     VALUE type;          /* instruction sequence type */
-    VALUE name;          /* String: iseq name */
+    VALUE name;	         /* String: iseq name */
     VALUE filename;      /* file information where this sequence from */
     VALUE filepath;      /* real file path or nil */
     VALUE *iseq;         /* iseq (insn number and operands) */
     VALUE *iseq_encoded; /* encoded iseq */
     unsigned long iseq_size;
-    VALUE mark_ary;     /* Array: includes operands which should be GC marked */
+    VALUE mark_ary;	/* Array: includes operands which should be GC marked */
     VALUE coverage;     /* coverage array */
     unsigned short line_no;
 
@@ -108,7 +108,7 @@ typedef struct rb_iseq_struct {
     struct iseq_insn_info_entry *insn_info_table;
     size_t insn_info_size;
 
-    ID *local_table;            /* must free */
+    ID *local_table;		/* must free */
     int local_table_size;
 
     /* method, class frame: sizeof(vars) + 1, block frame: sizeof(vars) */
@@ -165,7 +165,7 @@ typedef struct rb_iseq_struct {
     /****************/
 
     VALUE self;
-    VALUE orig;                 /* non-NULL if its data have origin */
+    VALUE orig;			/* non-NULL if its data have origin */
 
     /* block inlining */
     /*
@@ -189,7 +189,7 @@ typedef struct rb_iseq_struct {
 
     /* If this instruction sequence came from eval, the string of the
        source as a String. */
-    VALUE source;
+    VALUE eval_source;
 
     /* If we are saving tree nodes (a compile option), then tree_node
        is the internal parse tree node representation for this
@@ -234,8 +234,8 @@ typedef struct rb_vm_struct {
 
     /* signal */
     struct {
-        VALUE cmd;
-        int safe;
+	VALUE cmd;
+	int safe;
     } trap_list[RUBY_NSIG];
 
     /* hook */
@@ -308,8 +308,8 @@ typedef struct rb_thread_struct
     rb_event_flag_t event_flags;
     int tracing;  /* 0 if not tracing. If less than 0, skip that many
                      C call/return pairs */
+
     int exec_event_tracing;  /* 0 if not in rb_threadptr_evec_event_hooks. */
-    int trace_skip_insn_count; /* # of VM instructions to skip */
 
     /* misc */
     int method_missing_reason;

@@ -1,18 +1,63 @@
 /* 
- * Copyright (C) 2010 Rocky Bernstein
+ * Copyright (C) 2010, 2011 Rocky Bernstein
  *
  *  Access to Ruby's rb_control_frame_t and methods for working with that.
  *  Things like getting a binding for a control frame.
  */
 
 /* What release we got? */
-#define THREADFRAME_VERSION "0.36"
+#define THREADFRAME_VERSION "0.37.dev"
 
 #include <string.h>
 #include "../include/vm_core_mini.h"   /* Pulls in ruby.h and node.h */
 #include "proc_extra.h"
 #include "iseq_extra.h"
 #include "thread_extra.h"
+
+/* for GC debug */
+
+#ifndef RUBY_MARK_FREE_DEBUG
+#define RUBY_MARK_FREE_DEBUG 0
+#endif
+
+#if RUBY_MARK_FREE_DEBUG
+extern int ruby_gc_debug_indent;
+
+static void
+rb_gc_debug_indent(void)
+{
+    printf("%*s", ruby_gc_debug_indent, "");
+}
+
+static void
+rb_gc_debug_body(const char *mode, const char *msg, int st, void *ptr)
+{
+    if (st == 0) {
+	ruby_gc_debug_indent--;
+    }
+    rb_gc_debug_indent();
+    printf("%s: %s %s (%p)\n", mode, st ? "->" : "<-", msg, ptr);
+
+    if (st) {
+	ruby_gc_debug_indent++;
+    }
+
+    fflush(stdout);
+}
+
+#define RUBY_MARK_ENTER(msg) rb_gc_debug_body("mark", msg, 1, ptr)
+#define RUBY_MARK_LEAVE(msg) rb_gc_debug_body("mark", msg, 0, ptr)
+#define RUBY_FREE_ENTER(msg) rb_gc_debug_body("free", msg, 1, ptr)
+#define RUBY_FREE_LEAVE(msg) rb_gc_debug_body("free", msg, 0, ptr)
+#define RUBY_GC_INFO         rb_gc_debug_indent(); printf
+
+#else
+#define RUBY_MARK_ENTER(msg)
+#define RUBY_MARK_LEAVE(msg)
+#define RUBY_FREE_ENTER(msg)
+#define RUBY_FREE_LEAVE(msg)
+#define RUBY_GC_INFO if(0)printf
+#endif
 
 /* Frames can't be detached from the control frame they live in.
    So we create a structure to contain the pair. 
@@ -45,20 +90,47 @@ static int   thread_frame_stack_size_internal(rb_control_frame_t *cfp,
 static VALUE thread_frame_type(VALUE klass);
 
 
+extern void iseq_mark(void *ptr); /* in iseq.c */
+
+/* 
+  FIXME: I've never seen the following routine get called.
+  Why? 
+ */
+static void
+thread_frame_mark(void *ptr)
+{
+    RUBY_MARK_ENTER("thread_frame");
+    if (ptr) {
+	thread_frame_t *tf = ptr;
+	if (tf && tf->cfp && RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
+	    iseq_mark(tf->cfp->iseq);
+	}
+    }
+}
+
+/* Just to have a handle  on the free routine... */
+static inline void
+tf_free(void *ptr) 
+{
+    xfree(ptr);
+}
+
+
 /* 
    Allocate a RubyVM::ThreadFrame used by new. Less common than
-   thread_frame_t_alloc().
+   thread_frame_t_alloc(). The caller is responsible for filling in
+   the C struct data. Below we wrap NULL.
  */
 static VALUE
 thread_frame_alloc(VALUE klass)
 {
-    return Data_Wrap_Struct(klass, NULL, xfree, 0);
+    return Data_Wrap_Struct(klass, thread_frame_mark, tf_free, NULL);
 }
 
 /* 
    Allocate a RubyVM::ThreadFrame and set its threadframe structure.
    This is the more common allocate routine since one normally doesn't
-   create a threadframe without <i>first</i> having seomthing to put in it.
+   create a threadframe without <i>first</i> having something to put in it.
  */
 static thread_frame_t *
 thread_frame_t_alloc(VALUE tfval)
@@ -69,6 +141,13 @@ thread_frame_t_alloc(VALUE tfval)
     return tf;
 }
 
+/* 
+   Check to see if tf is valid. +true+ is returned if we can't prove
+   the frame is invalide. +nil+ or +false+ is returned if something is not
+   right. In those cases where we don't know that we have a valid frame,
+   we also NULL out the cfp if that hasn't been done already. This will
+   keep garbage collection from marking bad data.
+ */
 static VALUE
 thread_frame_invalid_internal(thread_frame_t *tf)
 {
@@ -77,16 +156,24 @@ thread_frame_invalid_internal(thread_frame_t *tf)
     /* All valid frame types have 0x1 set so we will use this.
        Warning: this is an undocumented assumption which may someday
        be wrong. */
-    if ((tf->cfp->flag & 0x1) == 0) return Qtrue;
-
-    if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, tf->cfp))
+    if (!tf->cfp) return Qtrue;
+    if ((tf->cfp->flag & 0x1) == 0) {
+	tf->cfp = NULL;
 	return Qtrue;
+    }
+
+    if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, tf->cfp)) {
+	tf->cfp = NULL;
+	return Qtrue;
+    }
     if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
 	cmp = (0 == memcmp(tf->signature1, &(tf->cfp->iseq), 
 			   sizeof(tf->signature1)) &&
 	       0 == memcmp(tf->signature2, &(tf->cfp->proc), 
 			   sizeof(tf->signature2)));
-	return cmp ? Qfalse : Qtrue;
+	if (cmp) return Qfalse;
+	tf->cfp = NULL;
+	return Qtrue;
     } else {
 	/* FIXME: figure out what to do here. Probably more work is
 	 * needed in thread_frame_prev_internal.
@@ -134,7 +221,7 @@ thread_frame_threadframe(VALUE thval)
     GET_THREAD_PTR;
     memset(tf, 0, sizeof(thread_frame_t));
     SAVE_FRAME(tf, th) ;
-    return Data_Wrap_Struct(rb_cThreadFrame, NULL, xfree, tf);
+    return Data_Wrap_Struct(rb_cThreadFrame, thread_frame_mark, tf_free, tf);
 }
 
 #define THREAD_FRAME_SETUP \
@@ -714,7 +801,7 @@ thread_frame_s_current(VALUE klass)
 {
     thread_frame_t *tf = thread_frame_t_alloc(klass);
     SAVE_FRAME(tf, ruby_current_thread) ;
-    return Data_Wrap_Struct(klass, NULL, xfree, tf);
+    return Data_Wrap_Struct(klass, thread_frame_mark, tf_free, tf);
 }
 
 /*
