@@ -201,6 +201,7 @@ thread_frame_invalid_internal(thread_frame_t *tf)
 #define SAVE_FRAME(TF, TH)						\
     tf->th = TH;							\
     tf->cfp = thread_control_frame(tf->th);				\
+    tf->cfp->iseq->in_use = 1;						\
     COPY_SIGNATURE(tf, tf->cfp);					\
 
 #define GET_THREAD_PTR \

@@ -196,6 +196,10 @@ typedef struct rb_iseq_struct {
        instruction sequence.
     */
     NODE *tree_node;
+    int in_use;  /* 1 if instruction sequence is in use such as via
+		    thread_frame access or is stored in ISEQS__ or
+		    SCRIPT_ISEQS.
+		  */
 } rb_iseq_t;
 
 enum ruby_special_exceptions {
