@@ -108,13 +108,17 @@ thread_frame_mark(void *ptr)
     }
 }
 
-/* Just to have a handle  on the free routine... */
-static inline void
+static void
 tf_free(void *ptr) 
 {
-    xfree(ptr);
+    thread_frame_t *tf;
+    if (ptr) {
+	tf = ptr;
+	if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) 
+	    tf->cfp->iseq->in_use--;
+	xfree(ptr);
+    }
 }
-
 
 /* 
    Allocate a RubyVM::ThreadFrame used by new. Less common than
@@ -201,7 +205,7 @@ thread_frame_invalid_internal(thread_frame_t *tf)
 #define SAVE_FRAME(TF, TH)						\
     tf->th = TH;							\
     tf->cfp = thread_control_frame(tf->th);				\
-    tf->cfp->iseq->in_use = 1;						\
+    tf->cfp->iseq->in_use++;						\
     COPY_SIGNATURE(tf, tf->cfp);					\
 
 #define GET_THREAD_PTR \
