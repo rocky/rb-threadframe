@@ -1,4 +1,9 @@
-December 25, 2010 (0.35)
+Feb 1, 2011 (0.37)
+ - 1.9.2 patches:
+   * Mark VM Instruction sequences for no garbage collection if they are
+     referred to by a ThreadFrame Object or are in ISEQS__ or ISEQ_SCRIPTS__
+
+December 25, 2010 (0.35, 0.36)
   - 1.9.2 patches:
    * Add new compile-option flags: save_tree_node and save_compile_opts
    * Start saving parse tree node. (More cases need to be done.)
