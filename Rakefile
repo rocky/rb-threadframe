@@ -73,7 +73,7 @@ Rake::TestTask.new(:'test:unit') do |t|
   t.libs << './ext'
   t.test_files = FileList['test/unit/**/*.rb']
   # t.pattern = 'test/**/*test-*.rb' # instead of above
-  t.verbose = true
+  t.options = '--verbose' if $VERBOSE
 end
 task :'test:unit' => [:ext]
 
