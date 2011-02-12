@@ -70,6 +70,78 @@ method_iseq(VALUE self)
     return rb_iseq;
 }
 
+static void null_gc_proc(void *ptr) { }
+
+static size_t null_gc_memsize(const void *ptr) { }
+
+
+static const rb_data_type_t method_data_type = {
+    "method",
+    null_gc_proc,
+    null_gc_proc,
+    null_gc_memsize,
+};
+
+static inline rb_method_definition_t *
+method_get_def(VALUE method)
+{
+    /* FIXME: use
+       struct METHOD *data;
+       TypedData_Get_Struct(method, struct METHOD, &method_data_type, data);
+    */
+    struct METHOD *data = (struct METHOD *)DATA_PTR(method);
+    return data->me.def;
+}
+
+/* 
+ *  call-seq:
+ *  Method#type -> String
+ * 
+ *  Returns the Method object.
+ */
+VALUE
+method_type(VALUE self)
+{
+    rb_method_definition_t *def = method_get_def(self);
+    const char *type_str;
+    switch (def->type) {
+      case VM_METHOD_TYPE_ISEQ: 
+	type_str = "instruction sequence";
+	break;
+      case VM_METHOD_TYPE_CFUNC: 
+	type_str = "C function";
+	break;
+      case VM_METHOD_TYPE_ATTRSET:
+	type_str = "attrset";
+	break;
+      case VM_METHOD_TYPE_IVAR:
+	type_str = "ivar";
+	break;
+      case VM_METHOD_TYPE_BMETHOD:
+	type_str = "bmethod";
+	break;
+      case VM_METHOD_TYPE_ZSUPER:
+	type_str = "zsuper";
+	break;
+      case VM_METHOD_TYPE_UNDEF:
+	type_str = "undefined";
+	break;
+      case VM_METHOD_TYPE_NOTIMPLEMENTED:
+	type_str = "not implemented";
+	break;
+      case VM_METHOD_TYPE_OPTIMIZED: /* Kernel#send, Proc#call, etc */
+	type_str = "optimized";
+	break;
+      case VM_METHOD_TYPE_MISSING: /* wrapper for method_missing(id) */
+	type_str = "type missing";
+	break;
+      default:
+	type_str = "unknown";
+	break;
+    }
+    return rb_str_new2(type_str);
+}
+
 /* 
  *  call-seq:
  *  Method#alias_count -> Fixnum
@@ -102,7 +174,7 @@ Init_proc_extra(void)
     rb_define_method(rb_cProc,   "iseq",  proc_iseq, 0);
 
     /* Additions to Method */
-    rb_define_method(rb_cMethod, "iseq",  method_iseq, 0);
+    rb_define_method(rb_cMethod, "type",         method_type, 0);
     rb_define_method(rb_cMethod, "alias_count",  method_alias_count, 0);
     rb_define_method(rb_cMethod, "original_id",  method_original_id, 0);
 }

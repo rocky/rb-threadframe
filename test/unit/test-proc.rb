@@ -19,5 +19,7 @@ class TestProcAndMethod < Test::Unit::TestCase
     assert_equal(3, m.alias_count)
     assert_equal(4, self.method(:two).alias_count)
     assert_equal(:test_method_extra, self.method(:two).original_id)
+    assert_equal("instruction sequence", method(:test_method_extra).type)
+    assert_equal("C function", File.method(:basename).type)
   end
 end
