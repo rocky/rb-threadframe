@@ -174,7 +174,8 @@ Init_proc_extra(void)
     rb_define_method(rb_cProc,   "iseq",  proc_iseq, 0);
 
     /* Additions to Method */
-    rb_define_method(rb_cMethod, "type",         method_type, 0);
     rb_define_method(rb_cMethod, "alias_count",  method_alias_count, 0);
+    rb_define_method(rb_cMethod, "iseq",         method_iseq, 0);
     rb_define_method(rb_cMethod, "original_id",  method_original_id, 0);
+    rb_define_method(rb_cMethod, "type",         method_type, 0);
 }
