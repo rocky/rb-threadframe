@@ -45,10 +45,13 @@ class TestSetTraceFunc < Test::Unit::TestCase
      5: set_trace_func(nil)
     EOF
 
-    expected = [[4, 'line',     __method__, self.class],
+    expected = [
+                [4, 'line',     __method__, self.class],
+                [4, 'send',     __method__, self.class],
                 [4, "c-call",   :+,         Fixnum],
                 [4, "c-return", :+,         Fixnum],
                 [5, "line",     __method__, self.class],
+                [5, "send",     __method__, self.class],
                 [5, "c-call",   :set_trace_func, Kernel]]
     checkit(@events, expected)
   end
@@ -65,17 +68,25 @@ class TestSetTraceFunc < Test::Unit::TestCase
      8: set_trace_func(nil)
     EOF
 
-    expected = [[4, 'line',     __method__,    self.class],
-                [4, 'c-call',   :method_added, Module],
-                [4, 'c-return', :method_added, Module],
-                [7, 'line',     __method__,    self.class],
-                [4, 'call',     :add,          self.class],
-                [5, 'line',     :add,          self.class],
-                [5, 'c-call',   :+,            Fixnum],
-                [5, 'c-return', :+,            Fixnum],
-                [6, 'return',   :add,          self.class],
-                [8, 'line',      __method__,   self.class],
-                [8, 'c-call',   :set_trace_func, Kernel]]
+    expected = 
+      [
+       [4, 'line',     __method__,    self.class],
+       [4, 'send',     __method__,    self.class],
+       [4, 'c-call',   :method_added, Module],
+       [4, 'c-return', :method_added, Module],
+       [7, 'line',     __method__,    self.class],
+       [7, 'send',     __method__,    self.class],
+       [4, 'call',     :add,          self.class],
+       [5, 'line',     :add,          self.class],
+       [5, 'send',     :add,          self.class],
+       [5, 'c-call',   :+,            Fixnum],
+       [5, 'c-return', :+,            Fixnum],
+       [6, 'return',   :add,          self.class],
+       [6, 'leave',    :add,          self.class],
+       [8, 'line',      __method__,   self.class],
+       [8, 'send',      __method__,   self.class],
+       [8, 'c-call',   :set_trace_func, Kernel]
+      ]
     checkit(@events, expected)
   end
 
@@ -96,17 +107,23 @@ class TestSetTraceFunc < Test::Unit::TestCase
                 [4, 'c-return', :inherited,   Class],
                 [4, 'class',    nil,           nil],
                 [5, 'line',     nil,           nil],
+                [5, 'send',     nil,           nil],
                 [5, 'c-call',   :method_added, Module],
                 [5, 'c-return', :method_added, Module],
                 [7, 'end',      nil,           nil],
+                [7, 'leave',    nil,           nil],
                 [8, 'line',     __method__,    self.class],
+                [8, 'send',     __method__,    self.class],
                 [8, 'c-call',   :new,          Class],
                 [8, 'c-call',   :initialize,   BasicObject],
                 [8, 'c-return', :initialize,   BasicObject],
                 [8, 'c-return', :new,          Class],
+                [8, 'send',     __method__,          Class],
                 [5, 'call',     :bar,          Foo],
                 [6, 'return',   :bar,          Foo],
+                [6, 'leave',    :bar,          Foo],
                 [9, 'line',     __method__,    self.class],
+                [9, 'send',     __method__,    self.class],
                 [9, 'c-call',   :clear_trace_func, Kernel]]
     checkit(@events, expected)
   end
@@ -124,19 +141,27 @@ class TestSetTraceFunc < Test::Unit::TestCase
      9: foo(false)
     10: set_trace_func(nil)
     EOF
-    expected = [[ 4, 'line',     __method__,   self.class],
-                [ 4, 'c-call',   :method_added, Module],
-                [ 4, 'c-return', :method_added, Module],
-                [ 8, 'line',     __method__,   self.class],
-                [ 4, 'call',     :foo,         self.class],
-                [ 5, 'line',     :foo,         self.class],
-                [ 5, 'return',   :foo,         self.class],
-                [ 9, 'line',     :test_return, self.class],
-                [ 4, 'call',     :foo,         self.class],
-                [ 5, 'line',     :foo,         self.class],
-                [ 7, 'return',   :foo,         self.class],
-                [10, 'line',     :test_return, self.class],
-                [10, 'c-call',   :set_trace_func, Kernel]]
+    expected = 
+      [
+       [ 4, 'line',     __method__,   self.class],
+       [ 4, 'send',     __method__,   self.class],
+       [ 4, 'c-call',   :method_added, Module],
+       [ 4, 'c-return', :method_added, Module],
+       [ 8, 'line',     __method__,   self.class],
+       [ 8, 'send',     __method__,   self.class],
+       [ 4, 'call',     :foo,         self.class],
+       [ 5, 'line',     :foo,         self.class],
+       [ 5, 'return',   :foo,         self.class],
+       [ 5, 'leave',    :foo,         self.class],
+       [ 9, 'line',     :test_return, self.class],
+       [ 9, 'send',     :test_return, self.class],
+       [ 4, 'call',     :foo,         self.class],
+       [ 5, 'line',     :foo,         self.class],
+       [ 7, 'return',   :foo,         self.class],
+       [10, 'line',     :test_return, self.class],
+       [10, 'leave',    :test_return, self.class],
+       [10, 'send',     :test_return, self.class],
+       [10, 'c-call',   :set_trace_func, Kernel]]
     checkit(@events, expected)
   end
 
@@ -153,16 +178,22 @@ class TestSetTraceFunc < Test::Unit::TestCase
      9: set_trace_func(nil)
     EOF
 
-    expected = [[4, 'line',     __method__, self.class],
-                [4, 'c-call',   :method_added, Module],
-                [4, 'c-return', :method_added, Module],
-                [8, 'line',     __method__, self.class],
-                [4, 'call',     :foo, self.class],
-                [5, 'line',     :foo, self.class],
-                [6, 'line',     :foo, self.class],
-                [7, 'return',   :foo, self.class],
-                [9, 'line',     :test_return2, self.class],
-                [9, 'c-call',   :set_trace_func, Kernel]]
+    expected = 
+      [
+       [4, 'line',     __method__, self.class],
+       [4, 'send',     __method__, self.class],
+       [4, 'c-call',   :method_added, Module],
+       [4, 'c-return', :method_added, Module],
+       [8, 'line',     __method__, self.class],
+       [8, 'send',     __method__, self.class],
+       [4, 'call',     :foo, self.class],
+       [5, 'line',     :foo, self.class],
+       [6, 'line',     :foo, self.class],
+       [7, 'return',   :foo, self.class],
+       [7, 'leave',    :foo, self.class],
+       [9, 'line',     :test_return2, self.class],
+       [9, 'send',     :test_return2, self.class],
+       [9, 'c-call',   :set_trace_func, Kernel]]
     @events.each_with_index{|e, i|
       assert_equal(e, @events[i], showit(@events, expected))}
     assert_equal(expected.size, @events.size, showit(@events, expected))
@@ -181,23 +212,30 @@ class TestSetTraceFunc < Test::Unit::TestCase
      8: set_trace_func(nil)
     EOF
     
-    expected = [[4, 'line',     __method__,     self.class],
-                [5, 'line',     __method__,     self.class],
-                [5, 'c-call',   :raise,         Kernel],
-                [5, 'c-call',   :exception,     Exception],
-                [5, 'c-call',   :initialize,    Exception],
-                [5, 'c-return', :initialize,    Exception],
-                [5, 'c-return', :exception,     Exception],
-                [5, 'c-call',   :backtrace,     Exception],
-                [5, 'c-return', :backtrace,     Exception],
-                [5, 'c-call',   :set_backtrace, Exception],
-                [5, 'c-return', :set_backtrace, Exception],
-                [5, 'raise',    :test_raise,    $e], 
-                [5, 'c-return', :raise,         Kernel],
-                [6, 'c-call',   :===,           Module],
-                [6, 'c-return', :===,           Module],
-                [8, 'line',     __method__,     self.class],
-                [8, 'c-call',   :set_trace_func, Kernel]]
+    expected = 
+      [
+       [4, 'line',     __method__,     self.class],
+       [5, 'line',     __method__,     self.class],
+       [5, 'send',     __method__,     Kernel],
+       [5, 'c-call',   :raise,         Kernel],
+       [5, 'c-call',   :exception,     Exception],
+       [5, 'c-call',   :initialize,    Exception],
+       [5, 'c-return', :initialize,    Exception],
+       [5, 'c-return', :exception,     Exception],
+       [5, 'c-call',   :backtrace,     Exception],
+       [5, 'c-return', :backtrace,     Exception],
+       [5, 'c-call',   :set_backtrace, Exception],
+       [5, 'c-return', :set_backtrace, Exception],
+       [5, 'raise',    :test_raise,    $e], 
+       [5, 'c-return', :raise,         Kernel],
+       [5, 'send',     __method__,     Kernel],
+       [6, 'c-call',   :===,           Module],
+       [6, 'c-return', :===,           Module],
+       [7, 'leave',    __method__,     Module],
+       [8, 'line',     __method__,     self.class],
+       [8, 'send',     __method__,     self.class],
+       [8, 'c-call',   :set_trace_func, Kernel]
+      ]
     checkit(events, expected)
   end
 
@@ -211,13 +249,17 @@ class TestSetTraceFunc < Test::Unit::TestCase
      8: set_trace_func(nil)
     EOF
 
-    expected = [[4, 'line',     __method__, self.class],
+    expected = [
+                [4, 'line',     __method__, self.class],
+                [4, 'send',     __method__, self.class],
                 [4, 'c-call',   :any?,      Enumerable],
                 [4, 'c-call',   :each,      Array],
                 [4, 'line',     __method__, self.class],
+                [4, 'leave',    __method__, self.class],
                 [4, 'c-return', :each,      Array],
                 [4, 'c-return', :any?,      Enumerable],
                 [5, 'line',     __method__, self.class],
+                [5, 'send',     __method__, self.class],
                 [5, 'c-call',   :set_trace_func, Kernel]]
     checkit(events, expected)
   end
@@ -258,7 +300,9 @@ class TestSetTraceFunc < Test::Unit::TestCase
 
     expected = [[1, 'c-return', :set_trace_func, Thread, :set],
                 [2, 'line',     __method__, self.class, :set],
-                [2, 'c-call',   :add_trace_func, Thread, :set]]
+                [2, 'send',     :test_thread_trace, TestSetTraceFunc, :set],
+                [2, 'c-call',   :add_trace_func, Thread, :set],
+               ]
     expected.each do |e|
       assert_equal(e, events[:set].shift, showit(events, expected))
     end
@@ -269,21 +313,29 @@ class TestSetTraceFunc < Test::Unit::TestCase
      [3, 'c-return', :inherited, Class],
      [3, 'class',    nil, nil],
      [4, 'line',     nil, nil],
+     [4, 'send',     nil, nil],
      [4, 'c-call',   :method_added, Module],
      [4, 'c-return', :method_added, Module],
      [7, 'end',      nil, nil],
+     [7, 'leave',    nil, nil],
      [8, 'line',     __method__, self.class],
+     [8, 'send',     __method__, self.class],
      [8, 'c-call',   :new, Class],
      [8, 'c-call',   :initialize, BasicObject],
      [8, 'c-return', :initialize, BasicObject],
      [8, 'c-return', :new, Class],
+     [8, 'send',     :test_thread_trace, TestSetTraceFunc],
      [4, 'call',     :foo, ThreadTraceInnerClass],
      [5, 'line',     :foo, ThreadTraceInnerClass],
+     [5, 'send',     :foo, ThreadTraceInnerClass],
      [5, 'c-call',   :+, Fixnum],
      [5, 'c-return', :+, Fixnum],
      [6, 'return',   :foo, ThreadTraceInnerClass],
+     [6, 'leave',    :foo, ThreadTraceInnerClass],
      [9, 'line',     __method__, self.class],
-     [9, 'c-call',   :set_trace_func, Thread]].each do |e|
+     [9, 'send',     __method__, self.class],
+     [9, 'c-call',   :set_trace_func, Thread]
+    ].each do |e|
       [:set, :add].each do |type|
         assert_equal(e + [type], events[type].shift)
       end

@@ -49,9 +49,10 @@ extern rb_iseq_t *rb_method_get_iseq(VALUE method);
 
 #if 0  /* The following is to fake out rdoc, until I find a better fix. */
 /* 
- *  Additions to the RubyVM::Method class
+ *  Additions to the RubyVM::Method and RubyVM::UnboundMethod class
  */
 VALUE rb_cIseq = rb_define_class("Method", ...)
+VALUE rb_cIseq = rb_define_class("UnboundMethod", ...)
 #endif
 /* 
  *  call-seq:
@@ -178,4 +179,8 @@ Init_proc_extra(void)
     rb_define_method(rb_cMethod, "iseq",         method_iseq, 0);
     rb_define_method(rb_cMethod, "original_id",  method_original_id, 0);
     rb_define_method(rb_cMethod, "type",         method_type, 0);
+
+    rb_define_method(rb_cUnboundMethod, "alias_count",  method_alias_count, 0);
+    rb_define_method(rb_cUnboundMethod, "original_id",  method_original_id, 0);
+    rb_define_method(rb_cUnboundMethod, "type",         method_type, 0);
 }

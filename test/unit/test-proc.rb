@@ -21,5 +21,7 @@ class TestProcAndMethod < Test::Unit::TestCase
     assert_equal(:test_method_extra, self.method(:two).original_id)
     assert_equal("instruction sequence", method(:test_method_extra).type)
     assert_equal("C function", File.method(:basename).type)
+    # Array.map is an unbound method
+    assert_equal("C function", Array.instance_method(:map).type)
   end
 end

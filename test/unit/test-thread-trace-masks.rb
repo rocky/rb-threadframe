@@ -4,12 +4,14 @@ require_relative '../../ext/thread_frame'
 
 class TestTracingMasks < Test::Unit::TestCase
   @@EVENT2MASK = {
-    'line'     => 0x01,
-    'call'     => 0x08,
-    'return'   => 0x10,
-    'c-call'   => 0x20,
-    'c-return' => 0x40,
-    'raise'    => 0x80,
+    'line'     => 0x0001,
+    'call'     => 0x0008,
+    'return'   => 0x0010,
+    'c-call'   => 0x0020,
+    'c-return' => 0x0040,
+    'raise'    => 0x0080,
+    'send'     => 0x0400,
+    'leave'    => 0x0800,
   }
 
   def something_to_test(n)

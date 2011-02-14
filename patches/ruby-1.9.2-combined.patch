@@ -1,6 +1,6 @@
 Index: method.h
 ===================================================================
---- method.h	(revision 30710)
+--- method.h	(revision 30865)
 +++ method.h	(working copy)
 @@ -46,7 +46,11 @@
  
@@ -17,20 +17,23 @@ Index: method.h
  typedef struct rb_method_attr_struct {
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 30710)
+--- include/ruby/ruby.h	(revision 30865)
 +++ include/ruby/ruby.h	(working copy)
-@@ -1352,7 +1352,9 @@
+@@ -1352,7 +1352,12 @@
  #define RUBY_EVENT_C_CALL    0x0020
  #define RUBY_EVENT_C_RETURN  0x0040
  #define RUBY_EVENT_RAISE     0x0080
 -#define RUBY_EVENT_ALL       0xffff
 +#define RUBY_EVENT_INSN      0x0100
 +#define RUBY_EVENT_BRKPT     0x0200
++#define RUBY_EVENT_SEND      0x0400
++#define RUBY_EVENT_LEAVE     0x0800
++#define RUBY_EVENT_YIELD     0x1000
 +#define RUBY_EVENT_ALL       (0xffff & ~RUBY_EVENT_INSN)
  #define RUBY_EVENT_VM       0x10000
  #define RUBY_EVENT_SWITCH   0x20000
  #define RUBY_EVENT_COVERAGE 0x40000
-@@ -1433,6 +1435,12 @@
+@@ -1433,6 +1438,12 @@
  #define close ruby_close
  #endif
  
@@ -45,7 +48,7 @@ Index: include/ruby/ruby.h
  { /* satisfy cc-mode */
 Index: insns.def
 ===================================================================
---- insns.def	(revision 30710)
+--- insns.def	(revision 30865)
 +++ insns.def	(working copy)
 @@ -15,7 +15,7 @@
  
@@ -58,7 +61,7 @@ Index: insns.def
      (return value)
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 30710)
+--- vm_core.h	(revision 30865)
 +++ vm_core.h	(working copy)
 @@ -34,7 +34,7 @@
  #ifndef ENABLE_VM_OBJSPACE
@@ -211,7 +214,7 @@ Index: vm_core.h
  
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 30710)
+--- iseq.c	(revision 30865)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -830,7 +833,7 @@ Index: iseq.c
  
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 30710)
+--- iseq.h	(revision 30865)
 +++ iseq.h	(working copy)
 @@ -86,7 +86,7 @@
      int flip_cnt;
@@ -854,7 +857,7 @@ Index: iseq.h
  #endif /* RUBY_COMPILE_H */
 Index: load.c
 ===================================================================
---- load.c	(revision 30710)
+--- load.c	(revision 30865)
 +++ load.c	(working copy)
 @@ -293,11 +293,13 @@
      if (state == 0) {
@@ -873,7 +876,7 @@ Index: load.c
      }
 Index: compile.c
 ===================================================================
---- compile.c	(revision 30710)
+--- compile.c	(revision 30865)
 +++ compile.c	(working copy)
 @@ -921,7 +921,7 @@
  
@@ -886,7 +889,7 @@ Index: compile.c
      return ret;
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 30710)
+--- vm_eval.c	(revision 30865)
 +++ vm_eval.c	(working copy)
 @@ -68,22 +68,31 @@
        }
@@ -932,7 +935,7 @@ Index: vm_eval.c
  	}
 Index: proc.c
 ===================================================================
---- proc.c	(revision 30710)
+--- proc.c	(revision 30865)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -1013,7 +1016,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 30710)
+--- thread.c	(revision 30865)
 +++ thread.c	(working copy)
 @@ -336,6 +336,14 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -1285,12 +1288,18 @@ Index: thread.c
        case RUBY_EVENT_CALL:
  	return "call";
        case RUBY_EVENT_RETURN:
-@@ -4015,6 +4105,14 @@
+@@ -4015,6 +4105,20 @@
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
 +      case RUBY_EVENT_INSN:
 +        return "vm-insn";
++      case RUBY_EVENT_SEND:
++        return "send";
++      case RUBY_EVENT_LEAVE:
++        return "leave";
++      case RUBY_EVENT_YIELD:
++        return "yield";
 +      case RUBY_EVENT_SWITCH:
 +        return "switch";
 +      case RUBY_EVENT_COVERAGE:
@@ -1300,7 +1309,7 @@ Index: thread.c
        default:
  	return "unknown";
      }
-@@ -4043,11 +4141,19 @@
+@@ -4043,11 +4147,19 @@
      VALUE klass = 0;
  
      if (p->event == RUBY_EVENT_C_CALL ||
@@ -1323,7 +1332,7 @@ Index: thread.c
  	rb_thread_method_id_and_class(GET_THREAD(), &id, &klass);
      }
      if (id == ID_ALLOCATOR)
-@@ -4088,7 +4194,7 @@
+@@ -4088,7 +4200,7 @@
  ruby_suppress_tracing(VALUE (*func)(VALUE, int), VALUE arg, int always)
  {
      rb_thread_t *th = GET_THREAD();
@@ -1332,7 +1341,7 @@ Index: thread.c
      volatile int raised;
      volatile int outer_state;
      VALUE result = Qnil;
-@@ -4098,6 +4204,10 @@
+@@ -4098,6 +4210,10 @@
      }
      else {
  	th->tracing = 1;
@@ -1343,7 +1352,7 @@ Index: thread.c
      }
  
      raised = rb_threadptr_reset_raised(th);
-@@ -4115,6 +4225,8 @@
+@@ -4115,6 +4231,8 @@
      POP_TAG();
  
      th->tracing = tracing;
@@ -1352,7 +1361,7 @@ Index: thread.c
      if (state) {
  	JUMP_TAG(state);
      }
-@@ -4238,9 +4350,11 @@
+@@ -4238,9 +4356,11 @@
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -1369,7 +1378,7 @@ Index: thread.c
      {
 Index: common.mk
 ===================================================================
---- common.mk	(revision 30710)
+--- common.mk	(revision 30865)
 +++ common.mk	(working copy)
 @@ -30,6 +30,7 @@
  
@@ -1381,7 +1390,7 @@ Index: common.mk
  		complex.$(OBJEXT) \
 Index: eval.c
 ===================================================================
---- eval.c	(revision 30710)
+--- eval.c	(revision 30865)
 +++ eval.c	(working copy)
 @@ -34,7 +34,7 @@
  
@@ -1427,7 +1436,7 @@ Index: eval.c
      JUMP_TAG(TAG_RAISE);
 Index: error.c
 ===================================================================
---- error.c	(revision 30710)
+--- error.c	(revision 30865)
 +++ error.c	(working copy)
 @@ -233,7 +233,9 @@
  		"You may have encountered a bug in the Ruby interpreter"
@@ -1442,9 +1451,9 @@ Index: error.c
  
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 30710)
+--- vm_exec.h	(revision 30865)
 +++ vm_exec.h	(working copy)
-@@ -18,6 +18,40 @@
+@@ -18,6 +18,52 @@
  typedef rb_num_t GENTRY;
  typedef rb_iseq_t *ISEQ;
  
@@ -1482,10 +1491,22 @@ Index: vm_exec.h
 +  EXEC_EVENT_HOOK(th, RUBY_EVENT_INSN, GET_SELF(), 0, 0); \
 +} while (0)
 +
++#define TRACE_SEND(insn) do { \
++  EXEC_EVENT_HOOK(th, RUBY_EVENT_SEND, GET_SELF(), 0, 0); \
++} while (0)
++
++#define TRACE_LEAVE(insn) do { \
++  EXEC_EVENT_HOOK(th, RUBY_EVENT_LEAVE, GET_SELF(), 0, 0); \
++} while (0)
++
++#define TRACE_YIELD(insn) do { \
++  EXEC_EVENT_HOOK(th, RUBY_EVENT_YIELD, GET_SELF(), 0, 0); \
++} while (0)
++
  #ifdef  COLLECT_USAGE_ANALYSIS
  #define USAGE_ANALYSIS_INSN(insn)           vm_analysis_insn(insn)
  #define USAGE_ANALYSIS_OPERAND(insn, n, op) vm_analysis_operand(insn, n, (VALUE)op)
-@@ -28,12 +62,17 @@
+@@ -28,12 +74,17 @@
  #define USAGE_ANALYSIS_REGISTER(reg, s)		/* none */
  #endif
  
@@ -1510,7 +1531,7 @@ Index: vm_exec.h
  #define debugs printf
 Index: vm_opts.h
 ===================================================================
---- vm_opts.h	(revision 30710)
+--- vm_opts.h	(revision 30865)
 +++ vm_opts.h	(working copy)
 @@ -23,6 +23,8 @@
  #define OPT_PEEPHOLE_OPTIMIZATION    1
@@ -1523,7 +1544,7 @@ Index: vm_opts.h
  /* Build Options.
 Index: vm.c
 ===================================================================
---- vm.c	(revision 30710)
+--- vm.c	(revision 30865)
 +++ vm.c	(working copy)
 @@ -692,6 +692,7 @@
      if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
@@ -1589,7 +1610,7 @@ Index: vm.c
      RBASIC(fcore)->flags = T_ICLASS;
 Index: version.h
 ===================================================================
---- version.h	(revision 30710)
+--- version.h	(revision 30865)
 +++ version.h	(working copy)
 @@ -20,9 +20,9 @@
  #endif
@@ -1605,7 +1626,7 @@ Index: version.h
  #ifndef RUBY_REVISION
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 30710)
+--- vm_insnhelper.c	(revision 30865)
 +++ vm_insnhelper.c	(working copy)
 @@ -26,9 +26,12 @@
  	      const VALUE *pc, VALUE *sp, VALUE *lfp,
@@ -1687,7 +1708,7 @@ Index: vm_insnhelper.c
  	VALUE *p_rsp;
 Index: ruby.c
 ===================================================================
---- ruby.c	(revision 30710)
+--- ruby.c	(revision 30865)
 +++ ruby.c	(working copy)
 @@ -118,13 +118,11 @@
  static void forbid_setid(const char *, struct cmdline_options *);
@@ -1752,21 +1773,20 @@ Index: ruby.c
      dln_argv0 = origarg.argv[0];
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 30710)
+--- tool/instruction.rb	(revision 30865)
 +++ tool/instruction.rb	(working copy)
-@@ -854,6 +854,17 @@
+@@ -854,6 +854,16 @@
        commit "INSN_ENTRY(#{insn.name}){"
        make_header_prepare_stack insn
        commit "{"
-+      # rocky: for reasons that I don't understand, calling the
-+      # instruction trace hook in a "leave" instruction causes a
-+      # SEGV via an illegal access csuch as via vm.c line 1144: 
-+      #    ep = ... cfp->iseq ...  
-+      # 
-+      # Since we can handle this event via RUBY_EVENT_END I don't
-+      # think there is any loss in functionality.
-+      # Not sure if "send" should be included.
-+      unless %w(leave send).member?(insn.name)
++      case insn.name
++      when 'leave'
++        commit "  TRACE_LEAVE(#{insn.name});"
++      when 'send'
++        commit "  TRACE_SEND(#{insn.name});"
++      when 'invokeblock'
++        commit "  TRACE_YIELD(#{insn.name});"
++      else
 +        commit "  TRACE_INSN(#{insn.name});"
 +      end
        make_header_stack_val  insn
@@ -1774,7 +1794,7 @@ Index: tool/instruction.rb
        make_header_operands   insn
 Index: tool/mkconfig.rb
 ===================================================================
---- tool/mkconfig.rb	(revision 30710)
+--- tool/mkconfig.rb	(revision 30865)
 +++ tool/mkconfig.rb	(working copy)
 @@ -141,6 +141,7 @@
  print "  DESTDIR = ", (drive ? "TOPDIR && TOPDIR[/\\A[a-z]:/i] || " : ""), "'' unless defined? DESTDIR\n"
@@ -1786,9 +1806,9 @@ Index: tool/mkconfig.rb
  IO.foreach(File.join(srcdir, "version.h")) do |l|
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 30710)
+--- test/ruby/test_settracefunc.rb	(revision 30865)
 +++ test/ruby/test_settracefunc.rb	(working copy)
-@@ -23,8 +23,6 @@
+@@ -23,16 +23,18 @@
       4: x = 1 + 1
       5: set_trace_func(nil)
      EOF
@@ -1796,8 +1816,20 @@ Index: test/ruby/test_settracefunc.rb
 -                 events.shift)
      assert_equal(["line", 4, __method__, self.class],
                   events.shift)
++    assert_equal(["send", 4, :test_c_call, TestSetTraceFunc],
++                 events.shift)
      assert_equal(["c-call", 4, :+, Fixnum],
-@@ -50,8 +48,6 @@
+                  events.shift)
+     assert_equal(["c-return", 4, :+, Fixnum],
+                  events.shift)
+     assert_equal(["line", 5, __method__, self.class],
+                  events.shift)
++    assert_equal(["send", 5, :test_c_call, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["c-call", 5, :set_trace_func, Kernel],
+                  events.shift)
+     assert_equal([], events)
+@@ -50,28 +52,36 @@
       7: x = add(1, 1)
       8: set_trace_func(nil)
      EOF
@@ -1805,8 +1837,38 @@ Index: test/ruby/test_settracefunc.rb
 -                 events.shift)
      assert_equal(["line", 4, __method__, self.class],
                   events.shift)
++    assert_equal(["send", 4, :test_call, TestSetTraceFunc],
++                 events.shift)
      assert_equal(["c-call", 4, :method_added, Module],
-@@ -88,10 +84,8 @@
+                  events.shift)
+     assert_equal(["c-return", 4, :method_added, Module],
+                  events.shift)
+     assert_equal(["line", 7, __method__, self.class],
+                  events.shift)
++    assert_equal(["send", 7, :test_call, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["call", 4, :add, self.class],
+                  events.shift)
+     assert_equal(["line", 5, :add, self.class],
+                  events.shift)
++    assert_equal(["send", 5, :add, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["c-call", 5, :+, Fixnum],
+                  events.shift)
+     assert_equal(["c-return", 5, :+, Fixnum],
+                  events.shift)
+     assert_equal(["return", 6, :add, self.class],
+                  events.shift)
++    assert_equal(["leave", 6, :add, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["line", 8, __method__, self.class],
+                  events.shift)
++    assert_equal(["send", 8, :test_call, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["c-call", 8, :set_trace_func, Kernel],
+                  events.shift)
+     assert_equal([], events)
+@@ -88,10 +98,8 @@
       6:   end
       7: end
       8: x = Foo.new.bar
@@ -1818,16 +1880,49 @@ Index: test/ruby/test_settracefunc.rb
      assert_equal(["line", 4, __method__, self.class],
                   events.shift)
      assert_equal(["c-call", 4, :inherited, Class],
-@@ -124,7 +118,7 @@
+@@ -102,14 +110,20 @@
                   events.shift)
+     assert_equal(["line", 5, nil, nil],
+                  events.shift)
++    assert_equal(["send", 5, nil, nil],
++                 events.shift)
+     assert_equal(["c-call", 5, :method_added, Module],
+                  events.shift)
+     assert_equal(["c-return", 5, :method_added, Module],
+                  events.shift)
+     assert_equal(["end", 7, nil, nil],
+                  events.shift)
++    assert_equal(["leave", 7, nil, nil],
++                 events.shift)
+     assert_equal(["line", 8, __method__, self.class],
+                  events.shift)
++    assert_equal(["send", 8, :test_class, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["c-call", 8, :new, Class],
+                  events.shift)
+     assert_equal(["c-call", 8, :initialize, BasicObject],
+@@ -118,21 +132,27 @@
+                  events.shift)
+     assert_equal(["c-return", 8, :new, Class],
+                  events.shift)
++    assert_equal(["send", 8, :test_class, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["call", 5, :bar, Foo],
+                  events.shift)
+     assert_equal(["return", 6, :bar, Foo],
+                  events.shift)
++    assert_equal(["leave", 6, :bar, TestSetTraceFunc::Foo],
++                 events.shift)
      assert_equal(["line", 9, __method__, self.class],
                   events.shift)
 -    assert_equal(["c-call", 9, :set_trace_func, Kernel],
-+    assert_equal(["c-call", 9, :clear_trace_func, Kernel],
++    assert_equal(["send", 9, :test_class, TestSetTraceFunc],
                   events.shift)
++    assert_equal(["c-call", 9, :clear_trace_func, Kernel],
++                 events.shift)
      assert_equal([], events)
    end
-@@ -132,7 +126,7 @@
+ 
    def test_return # [ruby-dev:38701]
      events = []
      eval <<-EOF.gsub(/^.*?: /, "")
@@ -1836,7 +1931,7 @@ Index: test/ruby/test_settracefunc.rb
       2:   events << [event, lineno, mid, klass]
       3: })
       4: def foo(a)
-@@ -143,8 +137,6 @@
+@@ -143,32 +163,42 @@
       9: foo(false)
      10: set_trace_func(nil)
      EOF
@@ -1844,8 +1939,44 @@ Index: test/ruby/test_settracefunc.rb
 -                 events.shift)
      assert_equal(["line", 4, __method__, self.class],
                   events.shift)
++    assert_equal(["send", 4, :test_return, TestSetTraceFunc],
++                 events.shift)
      assert_equal(["c-call", 4, :method_added, Module],
-@@ -187,8 +179,6 @@
+                  events.shift)
+     assert_equal(["c-return", 4, :method_added, Module],
+                  events.shift)
+     assert_equal(["line", 8, __method__, self.class],
+                  events.shift)
++    assert_equal(["send", 8, :test_return, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["call", 4, :foo, self.class],
+                  events.shift)
+     assert_equal(["line", 5, :foo, self.class],
+                  events.shift)
+     assert_equal(["return", 5, :foo, self.class],
+                  events.shift)
++    assert_equal(["leave", 5, :foo, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["line", 9, :test_return, self.class],
+                  events.shift)
++    assert_equal(["send", 9, :test_return, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["call", 4, :foo, self.class],
+                  events.shift)
+     assert_equal(["line", 5, :foo, self.class],
+                  events.shift)
+     assert_equal(["return", 7, :foo, self.class],
+                  events.shift)
++    assert_equal(["leave", 7, :foo, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["line", 10, :test_return, self.class],
+                  events.shift)
++    assert_equal(["send", 10, :test_return, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["c-call", 10, :set_trace_func, Kernel],
+                  events.shift)
+     assert_equal([], events)
+@@ -187,16 +217,18 @@
       8: foo
       9: set_trace_func(nil)
      EOF
@@ -1853,8 +1984,33 @@ Index: test/ruby/test_settracefunc.rb
 -                 events.shift)
      assert_equal(["line", 4, __method__, self.class],
                   events.shift)
++    assert_equal(["send", 4, :test_return2, TestSetTraceFunc],
++                 events.shift)
      assert_equal(["c-call", 4, :method_added, Module],
-@@ -220,12 +210,10 @@
+                  events.shift)
+     assert_equal(["c-return", 4, :method_added, Module],
+                  events.shift)
+     assert_equal(["line", 8, __method__, self.class],
+                  events.shift)
++    assert_equal(["send", 8, :test_return2, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["call", 4, :foo, self.class],
+                  events.shift)
+     assert_equal(["line", 5, :foo, self.class],
+@@ -205,8 +237,12 @@
+                  events.shift)
+     assert_equal(["return", 7, :foo, self.class],
+                  events.shift)
++    assert_equal(["leave", 7, :foo, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["line", 9, :test_return2, self.class],
+                  events.shift)
++    assert_equal(["send", 9, :test_return2, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["c-call", 9, :set_trace_func, Kernel],
+                  events.shift)
+     assert_equal([], events)
+@@ -220,16 +256,16 @@
       3: })
       4: begin
       5:   raise TypeError, "error"
@@ -1868,7 +2024,13 @@ Index: test/ruby/test_settracefunc.rb
      assert_equal(["line", 4, __method__, self.class],
                   events.shift)
      assert_equal(["line", 5, __method__, self.class],
-@@ -248,7 +236,7 @@
+                  events.shift)
++    assert_equal(["send", 5, :test_raise, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["c-call", 5, :raise, Kernel],
+                  events.shift)
+     assert_equal(["c-call", 5, :exception, Exception],
+@@ -248,21 +284,36 @@
                   events.shift)
      assert_equal(["c-return", 5, :set_backtrace, Exception],
                   events.shift)
@@ -1877,7 +2039,20 @@ Index: test/ruby/test_settracefunc.rb
                   events.shift)
      assert_equal(["c-return", 5, :raise, Kernel],
                   events.shift)
-@@ -263,6 +251,15 @@
++    assert_equal(["send", 6, :test_raise, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["c-call", 6, :===, Module],
+                  events.shift)
+     assert_equal(["c-return", 6, :===, Module],
+                  events.shift)
++    assert_equal(["leave", 7, :test_raise, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["line", 8, __method__, self.class],
+                  events.shift)
++    assert_equal(["send", 8, :test_raise, TestSetTraceFunc],
++                 events.shift)
+     assert_equal(["c-call", 8, :set_trace_func, Kernel],
+                  events.shift)
      assert_equal([], events)
    end
  
@@ -1893,7 +2068,7 @@ Index: test/ruby/test_settracefunc.rb
    def test_break # [ruby-core:27606] [Bug #2610]
      events = []
      eval <<-EOF.gsub(/^.*?: /, "")
-@@ -273,17 +270,15 @@
+@@ -273,17 +324,15 @@
       8: set_trace_func(nil)
      EOF
  
@@ -1920,7 +2095,7 @@ Index: test/ruby/test_settracefunc.rb
    end
  
    def test_invalid_proc
-@@ -320,10 +315,11 @@
+@@ -320,10 +369,12 @@
      end
      th.join
  
@@ -1930,13 +2105,46 @@ Index: test/ruby/test_settracefunc.rb
 -      assert_equal(e, events[:set].shift)
 +    expected = [["c-return", 1, :set_trace_func, Thread, :set],
 +                ["line", 2, __method__, self.class, :set],
++                ["send", 2, :test_thread_trace, TestSetTraceFunc, :set],
 +                ["c-call", 2, :add_trace_func, Thread, :set]]
 +    expected.each do |e|
 +      assert_equal(e, events[:set].shift, showit(events, expected))
      end
  
      [["c-return", 2, :add_trace_func, Thread],
-@@ -354,4 +350,25 @@
+@@ -332,21 +383,29 @@
+      ["c-return", 3, :inherited, Class],
+      ["class", 3, nil, nil],
+      ["line", 4, nil, nil],
++     ["send", 4, nil, nil],
+      ["c-call", 4, :method_added, Module],
+      ["c-return", 4, :method_added, Module],
+      ["end", 7, nil, nil],
+-     ["line", 8, __method__, self.class],
++     ["leave", 7, nil, nil],
++     ["line", 8, __method__, TestSetTraceFunc],
++     ["send", 8, :test_thread_trace, TestSetTraceFunc],
+      ["c-call", 8, :new, Class],
+      ["c-call", 8, :initialize, BasicObject],
+      ["c-return", 8, :initialize, BasicObject],
+      ["c-return", 8, :new, Class],
++     ["send", 8, :test_thread_trace, TestSetTraceFunc],
+      ["call", 4, :foo, ThreadTraceInnerClass],
+      ["line", 5, :foo, ThreadTraceInnerClass],
++     ["send", 5, :foo, ThreadTraceInnerClass],
+      ["c-call", 5, :+, Fixnum],
+      ["c-return", 5, :+, Fixnum],
+      ["return", 6, :foo, ThreadTraceInnerClass],
++     ["leave", 6, :foo, ThreadTraceInnerClass],
+      ["line", 9, __method__, self.class],
+-     ["c-call", 9, :set_trace_func, Thread]].each do |e|
++     ["send", 9, __method__, self.class],
++     ["c-call", 9, :set_trace_func, Thread]
++    ].each do |e|
+       [:set, :add].each do |type|
+         assert_equal(e + [type], events[type].shift)
+       end
+@@ -354,4 +413,25 @@
      assert_equal([], events[:set])
      assert_equal([], events[:add])
    end
@@ -1964,7 +2172,7 @@ Index: test/ruby/test_settracefunc.rb
  end
 Index: test/ruby/test_rubyoptions.rb
 ===================================================================
---- test/ruby/test_rubyoptions.rb	(revision 30710)
+--- test/ruby/test_rubyoptions.rb	(revision 30865)
 +++ test/ruby/test_rubyoptions.rb	(working copy)
 @@ -64,7 +64,7 @@
  
@@ -2002,7 +2210,7 @@ Index: test/ruby/test_rubyoptions.rb
        opts)
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 30710)
+--- template/insns_info.inc.tmpl	(revision 30865)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -42,38 +42,6 @@
  }
