@@ -114,7 +114,11 @@ tf_free(void *ptr)
     thread_frame_t *tf;
     if (ptr) {
 	tf = ptr;
-	if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) 
+	/* All valid frame types have 0x1 set so we will use this.
+	   Warning: this is an undocumented assumption which may someday
+	   be wrong. */
+	if (tf->cfp && ((tf->cfp->flag & 0x1) == 0) && 
+	    RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) 
 	    tf->cfp->iseq->in_use--;
 	xfree(ptr);
     }
@@ -812,44 +816,89 @@ thread_frame_s_current(VALUE klass)
 /*
  *  call-seq:
  *     RubyVM::ThreadFrame::prev(thread)     -> threadframe_object
- *     RubyVM::ThreadFrame::prev(thread, n)   -> threadframe_object
+ *     RubyVM::ThreadFrame::prev(thread, n)  -> threadframe_object
+ *     RubyVM::ThreadFrame::prev             -> threadframe_object
+ *     RubyVM::ThreadFrame::prev(n)          -> threadframe_object
  *
- *  Returns a RubyVM::ThreadFrame for the frame prior to the
- *  Thread object passed or nil if there is none. The default value for n
- *  is 1. 0 just returns the object passed.
- *  Negative counts or counts exceeding the stack will return nil.
+ *  In the first form, we return a RubyVM::ThreadFrame prior to the
+ *  Thread object passed. That is we go back one frame from the
+ *  current frfame.
+ *
+ *  In the second form we try to go back that many thread frames. 
+ *
+ *  In the the third form, the current thread is assumed, and like the
+ *  first form we go back one frame.
+ * 
+ *  The fourth form, like the third form, we assume the current
+ *  thread.  And like the first form we go back we try to back a
+ *  FixNum number of entries.
+ *
+ *  When count +n+ is given 1 is synonymous with the previous frame
+ *  and 0 is invalid. If the +n+ is negative, we count from the bottom
+ *  of the frame stack.
+ *
+ *  In all cases we return a RubyVM::ThreadFrame or nil if we can't 
+ *  go back (or forward for a negative +n+) that many frames. 
+ *
  */
 static VALUE
 thread_frame_s_prev(int argc, VALUE *argv, VALUE klass)
 {
-    VALUE thval;
-    VALUE nv;
-    int n;
-  
-    rb_scan_args(argc, argv, "11", &thval, &nv);
+    VALUE first_val;
+    VALUE second_val;
+    VALUE thval = Qnil;
+    int   prev_count = 0;
+    rb_thread_t *th = NULL;
 
-    if (Qfalse == rb_obj_is_kind_of(thval, rb_cThread))
-	rb_raise(rb_eTypeError, 
-		 "ThreadFrame object needed for first argument");
-
-    GET_THREAD_PTR ;
+    /* Such complicated options processing. But we do want this
+       routine to be convenient. */
+    rb_scan_args(argc, argv, "02", &first_val, &second_val);
+    switch (argc) {
+      case 0:
+	th = ruby_current_thread;
+	prev_count = 1;
+	break;
+      case 1:
+	if (FIXNUM_P(first_val)) {
+	    prev_count = FIX2INT(first_val);
+	    th = ruby_current_thread;
+	} else 
+	    if (Qtrue == rb_obj_is_kind_of(first_val, rb_cThread)) {
+		GetThreadPtr(first_val, th);
+	    } else {
+		rb_raise(rb_eTypeError, 
+			 "FixNum or ThreadFrame object expected for first argument");
+	    }
+	break;
+      case 2: 
+	if (Qtrue == rb_obj_is_kind_of(first_val, rb_cThread)) {
+	    GetThreadPtr(first_val, th);
+	} else {
+	    rb_raise(rb_eTypeError, 
+		     "ThreadFrame object expected for first argument");
+	}
+	if (FIXNUM_P(second_val)) {
+	    prev_count = FIX2INT(second_val);
+	} else 
+	    rb_raise(rb_eTypeError, 
+		     "FixNum previous count expected for second argument");
+	break;
+      default:
+	rb_raise(rb_eArgError, "wrong number of arguments (%d for 1..2)", argc);
+    }
     
-    if (Qnil == nv)
-	n = 1;
-    else if (!FIXNUM_P(nv)) {
-	rb_raise(rb_eTypeError, "Fixnum needed for second argument");
-    } else
-	n = FIX2INT(nv);
-
-    if (n == 0) { 
-	return thread_frame_s_current(klass);
-    } else if (n < 0) {
-      int stack_size = thread_frame_stack_size_internal(th->cfp, th);
-      if (-n > stack_size) return Qnil;
-      n = stack_size + n;
+    if (0 == prev_count) {
+	rb_raise(rb_eArgError, 
+		 "previous count can not be 0. Use current instead of prev");
     }
 
-    return thread_frame_prev_internal(th->cfp, th, n);
+    if (0 > prev_count) {
+      int stack_size = thread_frame_stack_size_internal(th->cfp, th);
+      if (-prev_count > stack_size) return Qnil;
+      prev_count = stack_size + prev_count;
+    }
+
+    return thread_frame_prev_internal(th->cfp, th, prev_count);
 }
 
 /*

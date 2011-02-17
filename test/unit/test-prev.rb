@@ -21,8 +21,8 @@ class TestThread < Test::Unit::TestCase
 
   def test_prev
 
-    assert RubyVM::ThreadFrame::prev(Thread::current, 0)
-    assert(RubyVM::ThreadFrame::prev(Thread::current, 2),
+    assert RubyVM::ThreadFrame::prev
+    assert(RubyVM::ThreadFrame::prev(2),
            'There should be at least two prior frames')
 
     top_frame = RubyVM::ThreadFrame::prev(Thread::current, -1)
@@ -32,7 +32,7 @@ class TestThread < Test::Unit::TestCase
 
     assert_equal(nil, RubyVM::ThreadFrame::prev(Thread::current, 1000))
 
-    tf = RubyVM::ThreadFrame::current.prev
+    tf = RubyVM::ThreadFrame.prev
 
     assert tf.prev(2)
     assert_equal(tf,  tf.prev(0), 
