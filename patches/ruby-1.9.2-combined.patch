@@ -1,6 +1,6 @@
 Index: method.h
 ===================================================================
---- method.h	(revision 30865)
+--- method.h	(revision 30872)
 +++ method.h	(working copy)
 @@ -46,7 +46,11 @@
  
@@ -17,7 +17,7 @@ Index: method.h
  typedef struct rb_method_attr_struct {
 Index: include/ruby/ruby.h
 ===================================================================
---- include/ruby/ruby.h	(revision 30865)
+--- include/ruby/ruby.h	(revision 30872)
 +++ include/ruby/ruby.h	(working copy)
 @@ -1352,7 +1352,12 @@
  #define RUBY_EVENT_C_CALL    0x0020
@@ -48,7 +48,7 @@ Index: include/ruby/ruby.h
  { /* satisfy cc-mode */
 Index: insns.def
 ===================================================================
---- insns.def	(revision 30865)
+--- insns.def	(revision 30872)
 +++ insns.def	(working copy)
 @@ -15,7 +15,7 @@
  
@@ -61,7 +61,7 @@ Index: insns.def
      (return value)
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 30865)
+--- vm_core.h	(revision 30872)
 +++ vm_core.h	(working copy)
 @@ -34,7 +34,7 @@
  #ifndef ENABLE_VM_OBJSPACE
@@ -214,7 +214,7 @@ Index: vm_core.h
  
 Index: iseq.c
 ===================================================================
---- iseq.c	(revision 30865)
+--- iseq.c	(revision 30872)
 +++ iseq.c	(working copy)
 @@ -23,6 +23,38 @@
  
@@ -833,7 +833,7 @@ Index: iseq.c
  
 Index: iseq.h
 ===================================================================
---- iseq.h	(revision 30865)
+--- iseq.h	(revision 30872)
 +++ iseq.h	(working copy)
 @@ -86,7 +86,7 @@
      int flip_cnt;
@@ -857,7 +857,7 @@ Index: iseq.h
  #endif /* RUBY_COMPILE_H */
 Index: load.c
 ===================================================================
---- load.c	(revision 30865)
+--- load.c	(revision 30872)
 +++ load.c	(working copy)
 @@ -293,11 +293,13 @@
      if (state == 0) {
@@ -876,7 +876,7 @@ Index: load.c
      }
 Index: compile.c
 ===================================================================
---- compile.c	(revision 30865)
+--- compile.c	(revision 30872)
 +++ compile.c	(working copy)
 @@ -921,7 +921,7 @@
  
@@ -889,7 +889,7 @@ Index: compile.c
      return ret;
 Index: vm_eval.c
 ===================================================================
---- vm_eval.c	(revision 30865)
+--- vm_eval.c	(revision 30872)
 +++ vm_eval.c	(working copy)
 @@ -68,22 +68,31 @@
        }
@@ -935,7 +935,7 @@ Index: vm_eval.c
  	}
 Index: proc.c
 ===================================================================
---- proc.c	(revision 30865)
+--- proc.c	(revision 30872)
 +++ proc.c	(working copy)
 @@ -27,7 +27,7 @@
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -1016,7 +1016,7 @@ Index: proc.c
      struct METHOD *data;
 Index: thread.c
 ===================================================================
---- thread.c	(revision 30865)
+--- thread.c	(revision 30872)
 +++ thread.c	(working copy)
 @@ -336,6 +336,14 @@
  static void rb_mutex_unlock_all(mutex_t *mutex, rb_thread_t *th);
@@ -1378,7 +1378,7 @@ Index: thread.c
      {
 Index: common.mk
 ===================================================================
---- common.mk	(revision 30865)
+--- common.mk	(revision 30872)
 +++ common.mk	(working copy)
 @@ -30,6 +30,7 @@
  
@@ -1390,7 +1390,7 @@ Index: common.mk
  		complex.$(OBJEXT) \
 Index: eval.c
 ===================================================================
---- eval.c	(revision 30865)
+--- eval.c	(revision 30872)
 +++ eval.c	(working copy)
 @@ -34,7 +34,7 @@
  
@@ -1436,7 +1436,7 @@ Index: eval.c
      JUMP_TAG(TAG_RAISE);
 Index: error.c
 ===================================================================
---- error.c	(revision 30865)
+--- error.c	(revision 30872)
 +++ error.c	(working copy)
 @@ -233,7 +233,9 @@
  		"You may have encountered a bug in the Ruby interpreter"
@@ -1451,7 +1451,7 @@ Index: error.c
  
 Index: vm_exec.h
 ===================================================================
---- vm_exec.h	(revision 30865)
+--- vm_exec.h	(revision 30872)
 +++ vm_exec.h	(working copy)
 @@ -18,6 +18,52 @@
  typedef rb_num_t GENTRY;
@@ -1531,7 +1531,7 @@ Index: vm_exec.h
  #define debugs printf
 Index: vm_opts.h
 ===================================================================
---- vm_opts.h	(revision 30865)
+--- vm_opts.h	(revision 30872)
 +++ vm_opts.h	(working copy)
 @@ -23,6 +23,8 @@
  #define OPT_PEEPHOLE_OPTIMIZATION    1
@@ -1544,7 +1544,7 @@ Index: vm_opts.h
  /* Build Options.
 Index: vm.c
 ===================================================================
---- vm.c	(revision 30865)
+--- vm.c	(revision 30872)
 +++ vm.c	(working copy)
 @@ -692,6 +692,7 @@
      if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
@@ -1610,7 +1610,7 @@ Index: vm.c
      RBASIC(fcore)->flags = T_ICLASS;
 Index: version.h
 ===================================================================
---- version.h	(revision 30865)
+--- version.h	(revision 30872)
 +++ version.h	(working copy)
 @@ -20,9 +20,9 @@
  #endif
@@ -1626,7 +1626,7 @@ Index: version.h
  #ifndef RUBY_REVISION
 Index: vm_insnhelper.c
 ===================================================================
---- vm_insnhelper.c	(revision 30865)
+--- vm_insnhelper.c	(revision 30872)
 +++ vm_insnhelper.c	(working copy)
 @@ -26,9 +26,12 @@
  	      const VALUE *pc, VALUE *sp, VALUE *lfp,
@@ -1708,7 +1708,7 @@ Index: vm_insnhelper.c
  	VALUE *p_rsp;
 Index: ruby.c
 ===================================================================
---- ruby.c	(revision 30865)
+--- ruby.c	(revision 30872)
 +++ ruby.c	(working copy)
 @@ -118,13 +118,11 @@
  static void forbid_setid(const char *, struct cmdline_options *);
@@ -1773,7 +1773,7 @@ Index: ruby.c
      dln_argv0 = origarg.argv[0];
 Index: tool/instruction.rb
 ===================================================================
---- tool/instruction.rb	(revision 30865)
+--- tool/instruction.rb	(revision 30872)
 +++ tool/instruction.rb	(working copy)
 @@ -854,6 +854,16 @@
        commit "INSN_ENTRY(#{insn.name}){"
@@ -1794,7 +1794,7 @@ Index: tool/instruction.rb
        make_header_operands   insn
 Index: tool/mkconfig.rb
 ===================================================================
---- tool/mkconfig.rb	(revision 30865)
+--- tool/mkconfig.rb	(revision 30872)
 +++ tool/mkconfig.rb	(working copy)
 @@ -141,6 +141,7 @@
  print "  DESTDIR = ", (drive ? "TOPDIR && TOPDIR[/\\A[a-z]:/i] || " : ""), "'' unless defined? DESTDIR\n"
@@ -1806,7 +1806,7 @@ Index: tool/mkconfig.rb
  IO.foreach(File.join(srcdir, "version.h")) do |l|
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
---- test/ruby/test_settracefunc.rb	(revision 30865)
+--- test/ruby/test_settracefunc.rb	(revision 30872)
 +++ test/ruby/test_settracefunc.rb	(working copy)
 @@ -23,16 +23,18 @@
       4: x = 1 + 1
@@ -2172,7 +2172,7 @@ Index: test/ruby/test_settracefunc.rb
  end
 Index: test/ruby/test_rubyoptions.rb
 ===================================================================
---- test/ruby/test_rubyoptions.rb	(revision 30865)
+--- test/ruby/test_rubyoptions.rb	(revision 30872)
 +++ test/ruby/test_rubyoptions.rb	(working copy)
 @@ -64,7 +64,7 @@
  
@@ -2210,7 +2210,7 @@ Index: test/ruby/test_rubyoptions.rb
        opts)
 Index: template/insns_info.inc.tmpl
 ===================================================================
---- template/insns_info.inc.tmpl	(revision 30865)
+--- template/insns_info.inc.tmpl	(revision 30872)
 +++ template/insns_info.inc.tmpl	(working copy)
 @@ -42,38 +42,6 @@
  }
@@ -2628,10 +2628,9 @@ Index: test/ruby/test_iseq.rb
 +    end
 +  end
 +end
-Index: test/ruby/test_tracefunc_adds.rb
---- test/ruby/test_tracefunc_adds.rb	(revision 28642)
+--- test/ruby/test_tracefunc_adds.rb	(revision 28647)
 +++ test/ruby/test_tracefunc_adds.rb	(working copy)
-@@ -0,0 +1,145 @@
+@@ -0,0 +0,151 @@
 +require 'test/unit'
 +
 +# tests set_trace_func with event bitmasks, clear_trace_func, 
@@ -2694,16 +2693,22 @@ Index: test/ruby/test_tracefunc_adds.rb
 +      [['line', 5, :test_eventmask, self.class],
 +       ['class', 5, nil, nil],
 +       ['end', 5, nil, nil],
++       ["leave", 5, nil, nil],
 +       ['line', 6, :test_eventmask, self.class],
++       ["send", 6, :test_eventmask, TestSetTraceFuncAdds],
 +       ['call', 1, :five, self.class],
 +       ['line', 1, :five, self.class],
 +       ['return', 1, :five, self.class],
++       ["leave", 1, :five, TestSetTraceFuncAdds],
++       ["send", 6, :test_eventmask, TestSetTraceFuncAdds],
 +       ['c-call', 6, :any?, Enumerable],
 +       ['c-call', 6, :each, Array],
 +       ['line', 6, :test_eventmask, self.class],
++       ["leave", 6, :test_eventmask, TestSetTraceFuncAdds],
 +       ['c-return', 6, :each, Array],
 +       ['c-return', 6, :any?, Enumerable],
 +       ['line', 7, :test_eventmask, self.class],
++       ["send", 7, :test_eventmask, TestSetTraceFuncAdds],
 +       ['c-call', 7, :clear_trace_func, Kernel]]
 +
 +    [[], nil, 
