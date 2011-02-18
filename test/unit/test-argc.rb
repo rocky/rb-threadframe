@@ -23,7 +23,7 @@ class TestARGC < Test::Unit::TestCase
     all_events = []
     eval <<-EOF.gsub(/^.*?: /, "")
      1: set_trace_func(Proc.new { |event, file, lineno, mid, binding, klass|
-     2:   tf = RubyVM::ThreadFrame.current.prev(1)
+     2:   tf = RubyVM::ThreadFrame.prev
      3:   all_events << [tf.argc, tf.arity, tf.type, mid]
      4:   if :basename == mid 
      5:     events << [tf.argc, tf.arity, tf.type, mid]

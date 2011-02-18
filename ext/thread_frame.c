@@ -856,15 +856,17 @@ thread_frame_s_prev(int argc, VALUE *argv, VALUE klass)
     switch (argc) {
       case 0:
 	th = ruby_current_thread;
-	prev_count = 1;
+	prev_count = 2;
 	break;
       case 1:
 	if (FIXNUM_P(first_val)) {
 	    prev_count = FIX2INT(first_val);
+	    if (prev_count > 0) prev_count++ ;
 	    th = ruby_current_thread;
 	} else 
 	    if (Qtrue == rb_obj_is_kind_of(first_val, rb_cThread)) {
 		GetThreadPtr(first_val, th);
+		prev_count = 1;
 	    } else {
 		rb_raise(rb_eTypeError, 
 			 "FixNum or ThreadFrame object expected for first argument");

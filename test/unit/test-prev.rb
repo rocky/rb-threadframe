@@ -21,12 +21,20 @@ class TestThread < Test::Unit::TestCase
 
   def test_prev
 
-    assert RubyVM::ThreadFrame::prev
+    assert RubyVM::ThreadFrame::prev(Thread::current, 1),
+                                     'should allow 2-arg prev'
+    assert RubyVM::ThreadFrame::prev(Thread::current),
+                                     'should allow 1-arg thread prev'
     assert(RubyVM::ThreadFrame::prev(2),
-           'There should be at least two prior frames')
+           'There should be at least two prior frames in single Fixnum prev')
 
     top_frame = RubyVM::ThreadFrame::prev(Thread::current, -1)
-    assert(top_frame, 'Should give back the top frame')
+    assert(top_frame, 'Should give back the top frame for two arg and -1')
+    assert_equal('TOP', top_frame.type,
+                 'The type of the top frame should be "TOP"')
+
+    top_frame = RubyVM::ThreadFrame::prev(-1)
+    assert(top_frame, 'Should give back the top frame for one arg and -1')
     assert_equal('TOP', top_frame.type,
                  'The type of the top frame should be "TOP"')
 
@@ -42,6 +50,9 @@ class TestThread < Test::Unit::TestCase
 
     assert_raises TypeError do
       tf.prev('a')
+    end
+    assert_raises ArgumentError do
+      tf.prev(RubyVM::ThreadFrame::current, 1, 'bad_arg')
     end
     assert_raises TypeError do
       RubyVM::ThreadFrame::prev([1])
