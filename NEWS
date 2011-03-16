@@ -1,3 +1,8 @@
+March 15, 2011 (0.38) Ron Frankel Release
+ - Add RubyVM::ThreadFrame.prev (same as RubyVM::ThreadFrame.current.prev)
+ - Allow access to a C method type
+ - Method extensions now included on UnboundMethods as well
+
 Feb 1, 2011 (0.37)
  - 1.9.2 patches:
    * Mark VM Instruction sequences for no garbage collection if they are
