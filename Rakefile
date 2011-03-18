@@ -4,13 +4,14 @@ require 'rubygems'
 require 'fileutils'
 
 ROOT_DIR = File.dirname(__FILE__)
+Gemspec_filename='rb-threadframe.gemspec'
 
 require 'rbconfig'
 RUBY_PATH = File.join(RbConfig::CONFIG['bindir'],  
                       RbConfig::CONFIG['RUBY_INSTALL_NAME'])
 
 def gemspec
-  @gemspec ||= eval(File.read('.gemspec'), binding, '.gemspec')
+  @gemspec ||= eval(File.read(Gemspec_filename), binding, Gemspec_filename)
 end
 
 require 'rake/gempackagetask'
@@ -18,7 +19,7 @@ desc "Build the gem"
 task :package=>:gem
 task :gem=>:gemspec do
   Dir.chdir(ROOT_DIR) do
-    sh "gem build .gemspec"
+    sh "gem build #{Gemspec_filename}"
     FileUtils.mkdir_p 'pkg'
     FileUtils.mv("#{gemspec.file_name}", "pkg/")
   end
@@ -50,19 +51,20 @@ task :clean do
   end
 end
 
-def run_standalone_ruby_file(directory)
-  puts ('*' * 10) + ' ' + directory + ' ' + ('*' * 10)
+def run_standalone_ruby_file(directory, opts={})
+  puts(('*' * 10) + ' ' + directory + ' ' + ('*' * 10))
   Dir.chdir(directory) do
     Dir.glob('*.rb').each do |ruby_file|
-      puts ('-' * 20) + ' ' + ruby_file + ' ' + ('-' * 20)
+      puts(('-' * 20) + ' ' + ruby_file + ' ' + ('-' * 20))
       system(RUBY_PATH, ruby_file)
+      break if $?.exitstatus != 0 && !opts[:continue]
     end
   end
 end
 
-desc "Create a GNU-style ChangeLog via git2cl"
+desc 'Create a GNU-style ChangeLog via git2cl'
 task :ChangeLog do
-  system("git log --pretty --numstat --summary | git2cl > ChangeLog")
+  system('git log --pretty --numstat --summary | git2cl > ChangeLog')
 end
 
 task :default => [:test]
@@ -109,8 +111,8 @@ end
 
 # ---------  RDoc Documentation ------
 require 'rake/rdoctask'
-desc 'Generate rdoc documentation'
-Rake::RDocTask.new('rdoc') do |rdoc|
+desc "Generate rdoc documentation"
+Rake::RDocTask.new("rdoc") do |rdoc|
   rdoc.rdoc_dir = 'doc'
   rdoc.title    = 'rb-threadframe'
   # Make the readme file the start page for the generated html
@@ -128,3 +130,10 @@ end
 task :clobber_rdoc do
   FileUtils.rm_rf File.join(ROOT_DIR, 'doc')
 end
+
+task :rm_patch_residue do
+  FileUtils.rm_rf FileList['**/*.{rej,orig}'].to_a
+end
+
+desc "Remove built files"
+task :clean => [:clobber_package, :clobber_rdoc, :rm_patch_residue]
