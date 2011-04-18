@@ -339,10 +339,8 @@ thread_frame_sp_size_internal(thread_frame_t *tf)
     if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, prev_cfp))
 	return Qnil;
     ret_val = tf->cfp->sp - prev_cfp->sp - 1;
-    /* FIXME: Why For C Functions we tack on 3? Possibly we're doing
-       the previous frame and possibly that's where the action is that
-       we should be looking at.? */
-    if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) ret_val += 3;
+    /* FIXME: Why For C Functions we tack on 2 for this RubyVM::ENV? */
+    if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) ret_val += 2;
     return ret_val;
 }
 
