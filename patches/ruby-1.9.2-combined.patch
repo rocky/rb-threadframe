@@ -2630,9 +2630,11 @@ Index: test/ruby/test_iseq.rb
 +    end
 +  end
 +end
+Index: test/ruby/test_tracefunc_adds.rb
+===================================================================
 --- test/ruby/test_tracefunc_adds.rb	(revision 28647)
 +++ test/ruby/test_tracefunc_adds.rb	(working copy)
-@@ -0,0 +0,151 @@
+@@ -0,0 +1,151 @@
 +require 'test/unit'
 +
 +# tests set_trace_func with event bitmasks, clear_trace_func, 
