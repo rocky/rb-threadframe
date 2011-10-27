@@ -1,3 +1,41 @@
+2011-10-04  rocky <rockyb@rubyforge.org>
+
+	* README.md, patches/patch-ruby.sh: A stray 'a' was inserted
+
+2011-09-28  rocky <rockyb@rubyforge.org>
+
+	Merge branch 'master' of github.com:rocky/rb-threadframe
+
+2011-09-28  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch: Revise patches for revision
+	33354. issue #4.
+
+2011-06-18  rocky <rockyb@rubyforge.org>
+
+	* script/rvm-install-tf: Looks like rvm doesn't use repos directory
+	any more.
+
+2011-04-29  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch: Correct patch file.
+
+2011-04-18  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, patches/ruby-1.9.2-combined.patch: pass/save
+	return value in one more C_RETURN hook. Remove a little of the
+	bogosity in pushing other frames, but more work is needed.
+
+2011-03-18  rocky <rockyb@rubyforge.org>
+
+	* .gemspec, Rakefile, ext/thread_frame.c, rb-threadframe.gemspec: 
+	.gemspec -> rb-threadframe.gemspec. Rakefile looks more like my
+	other Rakefiles, e.g. rb-trepanning
+
+2011-03-15  rocky <rockyb@rubyforge.org>
+
+	* ChangeLog, NEWS, ext/thread_frame.c: Get ready for release
+
 2011-02-17  rocky <rockyb@rubyforge.org>
 
 	* ext/thread_frame.c: Clarification of why prev defaults to 2 in

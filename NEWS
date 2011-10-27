@@ -1,3 +1,7 @@
+Oct 27, 2011 (0.39)
+- Revise patch for 1.9.2 revision 33354
+- save return value in one more C_RETURN hook 
+
 March 15, 2011 (0.38) Ron Frankel Release
  - Add RubyVM::ThreadFrame.prev (same as RubyVM::ThreadFrame.current.prev)
  - Allow access to a C method type
