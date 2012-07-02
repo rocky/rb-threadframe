@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2010, 2011 Rocky Bernstein
+ * Copyright (C) 2010-2012 Rocky Bernstein
  *
  *  Access to Ruby's rb_control_frame_t and methods for working with that.
  *  Things like getting a binding for a control frame.
@@ -1090,7 +1090,7 @@ void
 Init_thread_frame(void)
 {
     /* Additions to RubyVM */
-    rb_cThreadFrame = rb_define_class_under(rb_cRubyVM, "ThreadFrame", 
+    rb_cThreadFrame = rb_define_class_under(rb_cRubyVM, "Frame", 
 					    rb_cObject);
     rb_define_method(rb_cThread, "threadframe", thread_frame_threadframe, 0);
 

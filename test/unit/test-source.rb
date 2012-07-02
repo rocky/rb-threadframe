@@ -21,7 +21,7 @@ class TestSource < Test::Unit::TestCase
     assert_equal('string',  iseq.source_container[0])
     # puts iseq.source_container[1]
 
-    eval_str = '  RubyVM::ThreadFrame.current.source_container # test'
+    eval_str = '  RubyVM::Frame.current.source_container # test'
     tuple = eval(eval_str)
     assert_equal('string',  tuple[0])
     assert_equal(eval_str,  tuple[1])
@@ -29,7 +29,7 @@ class TestSource < Test::Unit::TestCase
   end
 
   def test_basic
-    tf = RubyVM::ThreadFrame::current
+    tf = RubyVM::Frame::current
     # Is this too specific to test/unit.rb implementation details? 
     tup = tf.source_container
     tup[1] = File.basename(tup[1])
@@ -39,7 +39,7 @@ class TestSource < Test::Unit::TestCase
     # 1.times creates a C frame.
     1.times do 
       expect_line = __LINE__ - 1
-      tf = RubyVM::ThreadFrame::current
+      tf = RubyVM::Frame::current
       tup = tf.source_container
       tup[1] = File.basename(tup[1])
       assert_equal(['file',  File.basename(__FILE__)], tup)
@@ -54,7 +54,7 @@ class TestSource < Test::Unit::TestCase
     # 1.upto also creates a C frame.
     1.upto(1) do 
       expect_line = __LINE__ - 1
-      tf = RubyVM::ThreadFrame::current
+      tf = RubyVM::Frame::current
       assert_equal('BLOCK', tf.type)
       tup = tf.source_container
       tup[1] = File.basename(tup[1])
@@ -68,7 +68,7 @@ class TestSource < Test::Unit::TestCase
     end
 
     x  = lambda do |expect_line| 
-      tf = RubyVM::ThreadFrame::current
+      tf = RubyVM::Frame::current
       assert_equal('LAMBDA', tf.type)
       tup = tf.source_container
       tup[1] = File.basename(tup[1])
@@ -83,7 +83,7 @@ class TestSource < Test::Unit::TestCase
     x.call(__LINE__)
 
     x  = Proc.new do |expect_line|
-      tf = RubyVM::ThreadFrame::current
+      tf = RubyVM::Frame::current
       tup = tf.source_container
       tup[1] = File.basename(tup[1])
       assert_equal(['file',  File.basename(__FILE__)], tup)

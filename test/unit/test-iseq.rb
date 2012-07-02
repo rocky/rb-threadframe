@@ -5,7 +5,7 @@ class TestISeq < Test::Unit::TestCase
 
   class C
     def initialize(test_obj, optional=true)
-      iseq = RubyVM::ThreadFrame::current.iseq
+      iseq = RubyVM::Frame::current.iseq
       test_obj.assert_equal('test_obj', iseq.local_name(0))
       test_obj.assert_equal(1, iseq.arity)
       test_obj.assert_equal(-1, iseq.arg_block)
@@ -15,7 +15,7 @@ class TestISeq < Test::Unit::TestCase
   
   def test_fields
     start_lineno = __LINE__ - 1;
-    iseq = RubyVM::ThreadFrame::current.iseq
+    iseq = RubyVM::Frame::current.iseq
     assert iseq
     assert_equal('test_fields', iseq.name)
     ## FIXME: Why does this fail? 
@@ -26,7 +26,7 @@ class TestISeq < Test::Unit::TestCase
     assert_equal(0, iseq.arg_opts)
     assert_equal(4, iseq.local_table_size)
     x  = lambda do |x,y| 
-      iseq = RubyVM::ThreadFrame::current.iseq
+      iseq = RubyVM::Frame::current.iseq
       assert iseq
       assert_equal(2, iseq.arity)
       assert_equal(-1, iseq.arg_block)
@@ -45,7 +45,7 @@ class TestISeq < Test::Unit::TestCase
     x.call(1,2)
 
     x  = Proc.new do |a|
-      iseq = RubyVM::ThreadFrame::current.iseq
+      iseq = RubyVM::Frame::current.iseq
       assert iseq
       assert_equal(1, iseq.arity)
       assert_equal(-1, iseq.arg_block)
@@ -70,8 +70,8 @@ class TestISeq < Test::Unit::TestCase
   end
 
   def test_iseq_equal
-    tf = RubyVM::ThreadFrame.current
-    tf2 = RubyVM::ThreadFrame.current
+    tf = RubyVM::Frame.current
+    tf2 = RubyVM::Frame.current
     while !tf.iseq do
       tf = tf.prev
       tf2 = tf2.prev
@@ -90,7 +90,7 @@ class TestISeq < Test::Unit::TestCase
   # FIXME: killcache interface will probably change. Try make less sensitive
   # to compile sequence
   def test_iseq_killcache
-    iseq = RubyVM::ThreadFrame.current.iseq
+    iseq = RubyVM::Frame.current.iseq
     count = iseq.killcache
     if 0 != count
       assert_equal(0, iseq.killcache, 
@@ -100,7 +100,7 @@ class TestISeq < Test::Unit::TestCase
 
   def test_offsetlines
     start     = __LINE__ - 1
-    tf        = RubyVM::ThreadFrame::current
+    tf        = RubyVM::Frame::current
     iseq      = tf.iseq
     offlines  = iseq.offsetlines
     pc        = tf.pc_offset

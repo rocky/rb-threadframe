@@ -3,7 +3,7 @@ require_relative '../../ext/thread_frame'
 
 class TestThread < Test::Unit::TestCase
   def test_stack_size_with_prev
-    tf = RubyVM::ThreadFrame.new(Thread::current)
+    tf = RubyVM::Frame.new(Thread::current)
 
     # valid prev counts are -stack_size .. stack_size-1
     n = tf.stack_size
@@ -21,26 +21,26 @@ class TestThread < Test::Unit::TestCase
 
   def test_prev
 
-    assert RubyVM::ThreadFrame::prev(Thread::current, 1),
+    assert RubyVM::Frame::prev(Thread::current, 1),
                                      'should allow 2-arg prev'
-    assert RubyVM::ThreadFrame::prev(Thread::current),
+    assert RubyVM::Frame::prev(Thread::current),
                                      'should allow 1-arg thread prev'
-    assert(RubyVM::ThreadFrame::prev(2),
+    assert(RubyVM::Frame::prev(2),
            'There should be at least two prior frames in single Fixnum prev')
 
-    top_frame = RubyVM::ThreadFrame::prev(Thread::current, -1)
+    top_frame = RubyVM::Frame::prev(Thread::current, -1)
     assert(top_frame, 'Should give back the top frame for two arg and -1')
     assert_equal('TOP', top_frame.type,
                  'The type of the top frame should be "TOP"')
 
-    top_frame = RubyVM::ThreadFrame::prev(-1)
+    top_frame = RubyVM::Frame::prev(-1)
     assert(top_frame, 'Should give back the top frame for one arg and -1')
     assert_equal('TOP', top_frame.type,
                  'The type of the top frame should be "TOP"')
 
-    assert_equal(nil, RubyVM::ThreadFrame::prev(Thread::current, 1000))
+    assert_equal(nil, RubyVM::Frame::prev(Thread::current, 1000))
 
-    tf = RubyVM::ThreadFrame.prev
+    tf = RubyVM::Frame.prev
 
     assert tf.prev(2)
     assert_equal(tf,  tf.prev(0), 
@@ -52,13 +52,13 @@ class TestThread < Test::Unit::TestCase
       tf.prev('a')
     end
     assert_raises ArgumentError do
-      tf.prev(RubyVM::ThreadFrame::current, 1, 'bad_arg')
+      tf.prev(RubyVM::Frame::current, 1, 'bad_arg')
     end
     assert_raises TypeError do
-      RubyVM::ThreadFrame::prev([1])
+      RubyVM::Frame::prev([1])
     end
     assert_raises TypeError do
-      RubyVM::ThreadFrame::prev(RubyVM::ThreadFrame::current, [1])
+      RubyVM::Frame::prev(RubyVM::Frame::current, [1])
     end
 
   end
