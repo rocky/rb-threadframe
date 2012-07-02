@@ -5,6 +5,6 @@ that gives introspection access for method call frames.
 
 ## Requirements
 
-A patched version of Ruby 1.9.2 is needed.
+A patched version of YARV Ruby 1.9.2 (and not any other version Ruby) of is needed.
 
 See the [wiki](http://github.com/rocky/rb-threadframe/wiki) for more information.
