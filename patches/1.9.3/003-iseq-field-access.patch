@@ -26,7 +26,7 @@ index 588e386..7a4b89a 100644
 + * call-seq:
 + *     RubyVM::InstructionSequence#offsetlines -> Hash[Fixnum] -> [Fixnum]
 + * 
-+ * Returns an hash. The keys in the hash form the VM offsets of the
++ * Returns a hash. The keys in the hash form the VM offsets of the
 + * instructions.  The value of the hash for a given offset is a list
 + * of line numbers associated with that offset.
 + */
