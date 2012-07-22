@@ -7,7 +7,7 @@ require_relative '../../ext/thread_frame'
 class TestSpSize < Test::Unit::TestCase
 
   def sizes
-    tf = RubyVM::ThreadFrame::current
+    tf = RubyVM::Frame::current
     ary = []
     0.upto(2) do |i|
       ary << tf.sp_size
@@ -37,7 +37,7 @@ class TestSpSize < Test::Unit::TestCase
     assert_equal(f1_s[1..-1], f2_s[1..-1])
 
     assert_raises ArgumentError do 
-      tf = RubyVM::ThreadFrame.current
+      tf = RubyVM::Frame.current
       tf.sp_set(tf.sp_size, "Should not be able to set this.")
     end
   end

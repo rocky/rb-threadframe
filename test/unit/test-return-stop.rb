@@ -9,7 +9,7 @@ class TestReturnStop < Test::Unit::TestCase
   def setup
     @tuples = []
     @p = Proc.new { |event, file, lineno, mid, binding, klass|
-      # RubyVM::ThreadFrame.current.trace_off = true
+      # RubyVM::Frame.current.trace_off = true
       @tuples << [event, lineno, mid, klass]
       # p [event, lineno, mid, klass]
     }
@@ -20,7 +20,7 @@ class TestReturnStop < Test::Unit::TestCase
   def five; 5 end
 
   def recurse(a, trace_off)
-    tf = RubyVM::ThreadFrame::current
+    tf = RubyVM::Frame::current
     if a==1
       assert_equal false, tf.return_stop?
       tf.return_stop=trace_off

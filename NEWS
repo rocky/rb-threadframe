@@ -1,3 +1,8 @@
+(0.40) 
+ - RubyVM::ThreadFrame is now RubyVM::Frame. RubyVM::ThreadFrame is still 
+   there for compatibility
+-  Some small administrative and bug fixes
+
 Oct 27, 2011 (0.39)
 - Revise patch for 1.9.2 revision 33354
 - save return value in one more C_RETURN hook 

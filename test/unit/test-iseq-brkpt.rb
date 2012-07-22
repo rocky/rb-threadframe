@@ -4,7 +4,7 @@ require_relative '../../ext/thread_frame'
 class TestISeqBrkpt < Test::Unit::TestCase
 
   def test_iseq_brkpt
-    iseq = RubyVM::ThreadFrame.current.iseq
+    iseq = RubyVM::Frame.current.iseq
     assert iseq
     assert_equal(nil, iseq.brkpts)
     assert_equal(true, iseq.brkpt_alloc)
@@ -48,7 +48,7 @@ class TestISeqBrkpt < Test::Unit::TestCase
                     })
 
     $saw_brkpt = false
-    tf = RubyVM::ThreadFrame.current
+    tf = RubyVM::Frame.current
     tf.iseq.offsetlines.keys.each do |offset|
       tf.iseq.brkpt_set(offset)
     end

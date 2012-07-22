@@ -3,15 +3,15 @@ require_relative '../../ext/thread_frame'
 
 class TestThread < Test::Unit::TestCase
   def test_basic
-    assert_equal(RubyVM::ThreadFrame.new(Thread::current).thread, 
-                 RubyVM::ThreadFrame::current.thread)
-    assert_equal(RubyVM::ThreadFrame.new(Thread::current).thread, 
+    assert_equal(RubyVM::Frame.new(Thread::current).thread, 
+                 RubyVM::Frame::current.thread)
+    assert_equal(RubyVM::Frame.new(Thread::current).thread, 
                  Thread::current)
     assert_equal(Thread::current.threadframe.thread, Thread::current)
   end
 
   def test_pc_offset
-    tf = RubyVM::ThreadFrame::current
+    tf = RubyVM::Frame::current
     offset_1 = tf.pc_offset
     assert_equal(true, offset_1 > 0,
                  "Expecting a positive integer pc offset, got %s" % offset_1)
@@ -24,7 +24,7 @@ class TestThread < Test::Unit::TestCase
   end
 
   def test_sp
-    tf = RubyVM::ThreadFrame::current.prev
+    tf = RubyVM::Frame::current.prev
     assert tf.sp(1)
     tf.sp_set(1, 5)
     assert_equal(5, tf.sp(1),
@@ -38,7 +38,7 @@ class TestThread < Test::Unit::TestCase
     assert_equal(['CFUNC',  cfunc_filebase], [type, File.basename(loc, '.rb')],
                  'CFUNCs should get their file location from frame.prev*')
     cont = 'file'
-    eval '1.times{cont = RubyVM::ThreadFrame.current.source_container[0]}'
+    eval '1.times{cont = RubyVM::Frame.current.source_container[0]}'
     assert_equal('string',  cont, 
                  'source container[0] of an eval(...) should be "string"')
   end
@@ -52,7 +52,7 @@ class TestThread < Test::Unit::TestCase
     # and that probably can't happen at PC 0.
     def bug_when_zero_pc
       @not_first = true
-      tf = RubyVM::ThreadFrame::current.prev
+      tf = RubyVM::Frame::current.prev
       pc_save = tf.pc_offset
       tf.pc_offset = 0
       loc = tf.source_location
@@ -81,7 +81,7 @@ class TestThread < Test::Unit::TestCase
   end    
     
   def test_fields(notused=nil)
-    tf = RubyVM::ThreadFrame::current
+    tf = RubyVM::Frame::current
     pc1 = tf.pc_offset
     assert(pc1 > 0, 'Should be able to get a valid PC offset')
     # pc_offset is dynamic - it changes constantly
@@ -107,7 +107,7 @@ class TestThread < Test::Unit::TestCase
 
     # 1.times creates a C frame.
     1.times do 
-      tf = RubyVM::ThreadFrame::current
+      tf = RubyVM::Frame::current
       tup = tf.source_container
       tup[1] = File.basename(tup[1])
       assert_equal(['file', 'test-thread.rb'], tup)
@@ -124,14 +124,14 @@ class TestThread < Test::Unit::TestCase
 
     # 1.upto also creates a C frame.
     1.upto(1) do 
-      tf = RubyVM::ThreadFrame::current.prev
+      tf = RubyVM::Frame::current.prev
       assert_equal('CFUNC', tf.type)
       assert_equal(1, tf.arity, 'C arity should work nowadays' )
       assert_equal(1, tf.argc)
     end
 
     x  = lambda do |x,y| 
-      frame = RubyVM::ThreadFrame::current
+      frame = RubyVM::Frame::current
       assert_equal('block in test_fields', frame.method)
       assert_equal('LAMBDA', frame.type)
       assert_equal(x, tf.self)
@@ -141,7 +141,7 @@ class TestThread < Test::Unit::TestCase
     x.call(x,2)
 
     x  = Proc.new do |x, y|
-      frame = RubyVM::ThreadFrame::current
+      frame = RubyVM::Frame::current
       assert_equal('block in test_fields', frame.method)
       assert_equal(x, tf.self)
     assert_equal('BLOCK', frame.type)
@@ -151,8 +151,8 @@ class TestThread < Test::Unit::TestCase
   end
 
   def test_threadframe_equal
-    tf = RubyVM::ThreadFrame.current
-    tf2 = RubyVM::ThreadFrame.current
+    tf = RubyVM::Frame.current
+    tf2 = RubyVM::Frame.current
     assert_equal(true,  tf.equal?(tf))
     assert_equal(true,  tf.equal?(tf2))
     tf2 = tf2.prev 

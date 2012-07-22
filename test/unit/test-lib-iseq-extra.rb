@@ -4,7 +4,7 @@ require_relative '../../lib/iseq_extra'
 class TestLibISeqExtra < Test::Unit::TestCase
 
   def test_basic
-    tf = RubyVM::ThreadFrame.current
+    tf = RubyVM::Frame.current
     iseq = tf.iseq
     # See that we get the same line numbers
     assert_equal(iseq.offsetlines.values.flatten.uniq.sort, 
@@ -55,9 +55,9 @@ class TestLibISeqExtra < Test::Unit::TestCase
   end
 
   def test_iseq_parent
-    parent_iseq = RubyVM::ThreadFrame::current.iseq
+    parent_iseq = RubyVM::Frame::current.iseq
     1.times do 
-      tf = RubyVM::ThreadFrame::current
+      tf = RubyVM::Frame::current
       assert_equal(true, tf.iseq.parent.equal?(parent_iseq))
     end
   end
