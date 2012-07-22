@@ -1,0 +1,183 @@
+diff --git a/iseq.c b/iseq.c
+index 588e386..7a4b89a 100644
+--- a/iseq.c
++++ b/iseq.c
+@@ -1505,12 +1505,147 @@ rb_iseq_build_for_ruby2cext(
+     return iseqval;
+ }
+ 
++/* 
++ * call-seq:
++ *     RubyVM::InstructionSequence#name -> String
++ * 
++ *  Returns the name if the instruction sequence.
++ */
++VALUE
++iseq_name(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    GetISeqPtr(iseqval, iseq);
++    return(iseq->name);
++}
++
++/* 
++ * call-seq:
++ *     RubyVM::InstructionSequence#offsetlines -> Hash[Fixnum] -> [Fixnum]
++ * 
++ * Returns an hash. The keys in the hash form the VM offsets of the
++ * instructions.  The value of the hash for a given offset is a list
++ * of line numbers associated with that offset.
++ */
++VALUE iseq_offsetlines(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    VALUE offsetlines = rb_hash_new();
++    unsigned long i, size;
++    struct iseq_insn_info_entry *table;
++   
++    GetISeqPtr(iseqval, iseq);
++    
++    size = iseq->insn_info_size;
++    table = iseq->insn_info_table;
++
++    for (i = 0; i < size; i++) {
++	VALUE ary = rb_ary_new2(1);
++	rb_ary_push(ary, INT2FIX(table[i].line_no));
++	rb_hash_aset(offsetlines, INT2FIX(table[i].position), ary);
++    }
++    return offsetlines;
++}
++
++/* 
++ * call-seq:
++ *     RubyVM::InstructionSequence#offset2lines(offset) -> [Fixnum]
++ * 
++ * Returns an Array or nil. If offset is found then return the list of
++ * lines associated with that offset. If the offset isn't found return nil.
++ */
++VALUE iseq_offset2lines(VALUE iseqval, VALUE offsetval)
++{
++    rb_iseq_t *iseq;
++   
++    GetISeqPtr(iseqval, iseq);
++    
++    if (FIXNUM_P(offsetval)) {
++	unsigned long i, size;
++	int offset = FIX2INT(offsetval);
++	struct iseq_insn_info_entry *table;
++
++	size = iseq->insn_info_size;
++	table = iseq->insn_info_table;
++
++	for (i = 0; i < size; i++) {
++	    if (table[i].position == offset) {
++		VALUE ary = rb_ary_new2(1);
++		rb_ary_push(ary, INT2FIX(table[i].line_no));
++		return ary;
++	    }
++	}
++    }
++    return Qnil;
++}
++
++#define ISEQ_FIELD_METHOD(FIELD)		\
++static VALUE					\
++iseq_##FIELD(VALUE iseqval)			\
++{						\
++  rb_iseq_t *iseq;				\
++  if (Qnil == iseqval) return Qnil;		\
++  GetISeqPtr(iseqval, iseq);			\
++  return iseq->FIELD;				\
++}
++
++ISEQ_FIELD_METHOD(orig) ;
++ISEQ_FIELD_METHOD(self) ;
++ISEQ_FIELD_METHOD(type) ;
++
++#define ISEQ_INT_FIELD_METHOD(FIELD)		\
++extern VALUE					\
++iseq_##FIELD(VALUE iseqval)			\
++{						\
++  rb_iseq_t *iseq;				\
++  GetISeqPtr(iseqval, iseq);			\
++  return INT2FIX(iseq->FIELD);			\
++}
++
++ISEQ_INT_FIELD_METHOD(arg_block) ;
++ISEQ_INT_FIELD_METHOD(arg_opts) ;
++ISEQ_INT_FIELD_METHOD(arg_post_len) ;
++ISEQ_INT_FIELD_METHOD(arg_rest) ;
++ISEQ_INT_FIELD_METHOD(arg_simple) ;
++ISEQ_INT_FIELD_METHOD(argc) ;
++ISEQ_INT_FIELD_METHOD(iseq_size) ;
++ISEQ_INT_FIELD_METHOD(klass) ;
++ISEQ_INT_FIELD_METHOD(line_no) ;
++ISEQ_INT_FIELD_METHOD(local_size) ;
++ISEQ_INT_FIELD_METHOD(local_table_size) ;
++
+ void
+ Init_ISeq(void)
+ {
+     /* declare ::RubyVM::InstructionSequence */
+     rb_cISeq = rb_define_class_under(rb_cRubyVM, "InstructionSequence", rb_cObject);
+     rb_define_alloc_func(rb_cISeq, iseq_alloc);
++    rb_define_method(rb_cISeq, "arg_block",        iseq_arg_block, 0) ;
++    rb_define_method(rb_cISeq, "arg_opts",         iseq_arg_opts, 0) ;
++    rb_define_method(rb_cISeq, "arg_post_len",     iseq_arg_post_len, 0) ;
++    rb_define_method(rb_cISeq, "arg_rest",         iseq_arg_rest, 0) ;
++    rb_define_method(rb_cISeq, "arg_simple",       iseq_arg_simple, 0) ;
++    rb_define_method(rb_cISeq, "argc",             iseq_argc, 0) ;
++#ifdef FINISHED
++    rb_define_method(rb_cISeq, "compile_options",  iseq_compile_options, 0) ;
++    rb_define_method(rb_cISeq, "equal?",           iseq_equal, 1) ;
++    rb_define_method(rb_cISeq, "line_range",       iseq_line_range, 0) ;
++    rb_define_method(rb_cISeq, "local_iseq",       iseq_local_iseq, 0) ;
++    rb_define_method(rb_cISeq, "local_name",       iseq_local_name, 1) ;
++    rb_define_method(rb_cISeq, "parent",           iseq_parent, 0) ;
++#endif
++    rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
++    rb_define_method(rb_cISeq, "klass",            iseq_klass, 0) ;
++    rb_define_method(rb_cISeq, "lineno",           iseq_line_no, 0) ;
++    rb_define_method(rb_cISeq, "local_size",       iseq_local_size, 0) ;
++    rb_define_method(rb_cISeq, "local_table_size", iseq_local_table_size, 0) ;
++    rb_define_method(rb_cISeq, "name",             iseq_name, 0) ;
++    rb_define_method(rb_cISeq, "offset2lines",     iseq_offset2lines, 1) ;
++    rb_define_method(rb_cISeq, "offsetlines",      iseq_offsetlines, 0) ;
++    rb_define_method(rb_cISeq, "orig",             iseq_orig, 0) ;
++    rb_define_method(rb_cISeq, "self",             iseq_self, 0) ;
++    rb_define_method(rb_cISeq, "type",             iseq_type, 0) ;
++    rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
+     rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
+     rb_define_method(rb_cISeq, "disasm", rb_iseq_disasm, 0);
+     rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
+diff --git a/test/debugger-ext/test_iseq.rb b/test/debugger-ext/test_iseq.rb
+new file mode 100644
+index 0000000..10cd913
+--- /dev/null
++++ b/test/debugger-ext/test_iseq.rb
+@@ -0,0 +1,25 @@
++require 'test/unit'
++class TestISeqSource < Test::Unit::TestCase
++  def test_source
++    iseq = RubyVM::InstructionSequence.new("x=1")
++    assert_equal  2, iseq.local_size
++    assert_equal  0, iseq.argc
++    assert_equal -1, iseq.arg_rest
++    assert_equal  0, iseq.arg_post_len
++    assert_equal -1, iseq.arg_block
++    assert_equal  1, iseq.arg_simple
++    assert_equal  1, iseq.local_table_size
++    assert_operator 0, :<=, iseq.iseq_size
++    assert_equal [1], iseq.offset2lines(0)
++    assert iseq.offsetlines.is_a?(Hash)
++    assert iseq.offsetlines.values.all?{|x| x == [1]}
++    assert iseq.disasm.is_a?(String)
++    assert_equal 1, iseq.eval
++    assert iseq.self.kind_of?(RubyVM::InstructionSequence)
++    # puts iseq.disasm
++    # puts iseq.name
++    # puts iseq.type
++    # puts iseq.klass
++    # puts iseq.lineno
++  end
++end

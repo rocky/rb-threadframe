@@ -4,8 +4,6 @@ from eval, the string of the source as a String.
 Also adds script that helps me run unit tests easier. Probably not
 needed if I understood the Ruby testing system better.
 
-The source unit test needs fixing.
-
 diff --git a/iseq.c b/iseq.c
 index 28cc1e5..588e386 100644
 --- a/iseq.c
@@ -64,21 +62,6 @@ index 65bec06..6957aa2 100644
  	if (bind && iseq->local_table_size > 0) {
  	    bind->env = rb_vm_make_env_object(th, th->cfp);
  	}
-diff --git a/test/debugger-ext/test_iseq_source.rb b/test/debugger-ext/test_iseq_source.rb
-new file mode 100644
-index 0000000..d8d4650
---- /dev/null
-+++ b/test/debugger-ext/test_iseq_source.rb
-@@ -0,0 +1,9 @@
-+require 'test/unit'
-+class TestISeqSource < Test::Unit::TestCase
-+  def test_source
-+    iseq = RubyVM::InstructionSequence.new("eval 'x=1'")
-+    puts iseq.disasm
-+    puts iseq.source
-+    assert_equal true, true
-+  end
-+end
 diff --git a/test/debugger-ext/testit.sh b/test/debugger-ext/testit.sh
 new file mode 100755
 index 0000000..3f1a94e
