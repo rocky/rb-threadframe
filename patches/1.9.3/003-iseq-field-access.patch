@@ -1,3 +1,5 @@
+Access to more of the iseq fields: argc, arg_rest, arg_block, offsetlines, offset2line, local_size, local_table_size, iseq_size, arg_simple
+
 diff --git a/iseq.c b/iseq.c
 index 588e386..7a4b89a 100644
 --- a/iseq.c

@@ -12,27 +12,17 @@ fi
 patchfile=${1:-'1.9.2'}
 case $patchfile in
     1.9.3 | head | trunk )
-	echo "patching 1.9.3 is not supported yet".
-	# for file in \
-	#     00-extern-access.patch  \
-	#     01-get-sourceline.patch \
-	#     02-frame-trace.patch    \
-	#     03-disasm-insns.patch   \
-	#     04-iseq-access.patch    \
-	#     05-iseq-create.patch    \
-	#     06-C-argc.patch         \
-	#     07-brkpt.patch          \
-	#     08-raise-msg.patch      \
-	#     09-trace_func.patch     \
-	#     10-iseq-top-name.patch  \
-	#     11-binding-arity.patch  \
-	#     12-insn-step.patch      \
-	#     13-hook-error-recover.patch
-	# do 
-	#     patch_file=${dirname}/trunk/$file
-	#     echo -- Applying patches in $patch_file ... | tee -a patches_applied.log
-	#     patch -p0 < $patch_file
-	# done
+	for file in \
+	    000-testit.patch \
+	    002-iseq-eval-source-save.patch \
+	    003-iseq-field-access.patch \
+	    004-iseq-SCRIPT_ISEQS__.patch \
+	    005-iseq-top-name.patch 
+	do 
+	    patch_file=${dirname}/1.9.3/$file
+	    echo -- Applying patches in $patch_file ... | tee -a patches_applied.log
+	    patch -p1 < $patch_file
+	done
 	;;
     combined ) 
 	file=ruby-trunk-combined.patch

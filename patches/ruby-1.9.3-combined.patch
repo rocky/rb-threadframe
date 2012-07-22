@@ -1,0 +1,538 @@
+diff --git a/compile.c b/compile.c
+index fb51053..8f7bc75 100644
+--- a/compile.c
++++ b/compile.c
+@@ -960,7 +960,7 @@ new_child_iseq(rb_iseq_t *iseq, NODE *node,
+ 
+     debugs("[new_child_iseq]> ---------------------------------------\n");
+     ret = rb_iseq_new_with_opt(node, name, iseq_filename(iseq->self), iseq_filepath(iseq->self), INT2FIX(line_no),
+-			       parent, type, iseq->compile_data->option);
++			       parent, type, Qnil, iseq->compile_data->option);
+     debugs("[new_child_iseq]< ---------------------------------------\n");
+     iseq_add_mark_object(iseq, ret);
+     return ret;
+diff --git a/iseq.c b/iseq.c
+index 28cc1e5..15e32e7 100644
+--- a/iseq.c
++++ b/iseq.c
+@@ -282,13 +282,17 @@ prepare_iseq_build(rb_iseq_t *iseq,
+ }
+ 
+ static VALUE
+-cleanup_iseq_build(rb_iseq_t *iseq)
++cleanup_iseq_build(rb_iseq_t *iseq, VALUE type, VALUE src, int saving_iseq)
+ {
+     struct iseq_compile_data *data = iseq->compile_data;
+     VALUE err = data->err_info;
+-    iseq->compile_data = 0;
+-    compile_data_free(data);
+-
++    if (0 == saving_iseq) {
++	iseq->compile_data = 0;
++	compile_data_free(data);
++    } else if (ISEQ_TYPE_EVAL == type) {
++	iseq->source = src;
++    }
++    
+     if (RTEST(err)) {
+ 	rb_funcall2(err, rb_intern("set_backtrace"), 1, &iseq->filename);
+ 	rb_exc_raise(err);
+@@ -376,14 +380,14 @@ VALUE
+ rb_iseq_new(NODE *node, VALUE name, VALUE filename, VALUE filepath,
+ 	    VALUE parent, enum iseq_type type)
+ {
+-    return rb_iseq_new_with_opt(node, name, filename, filepath, INT2FIX(0), parent, type,
++    return rb_iseq_new_with_opt(node, name, filename, filepath, INT2FIX(0), parent, type, Qnil,
+ 				&COMPILE_OPTION_DEFAULT);
+ }
+ 
+ VALUE
+ rb_iseq_new_top(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE parent)
+ {
+-    return rb_iseq_new_with_opt(node, name, filename, filepath, INT2FIX(0), parent, ISEQ_TYPE_TOP,
++    return rb_iseq_new_with_opt(node, name, filename, filepath, INT2FIX(0), parent, ISEQ_TYPE_TOP, Qnil,
+ 				&COMPILE_OPTION_DEFAULT);
+ }
+ 
+@@ -393,34 +397,83 @@ rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath)
+     rb_thread_t *th = GET_THREAD();
+     VALUE parent = th->base_block->iseq->self;
+     return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), filename, filepath, INT2FIX(0),
+-				parent, ISEQ_TYPE_MAIN, &COMPILE_OPTION_DEFAULT);
++				parent, ISEQ_TYPE_MAIN, Qnil, 
++				&COMPILE_OPTION_DEFAULT);
++}
++
++/* A debugger or similar introspection tool needs to be able to find
++ * all instruction sequences and access them. We facilitate this by
++ * adding the following behavior, analogous to SCRIPT_LINES__ for
++ * capturing source-code lines.
++ * 
++ * If SCRIPT_ISEQS__ is defined and is a hash, then every time a new
++ * instruction sequence is added, it is accessible from SCRIPT_ISEQS__
++ * using the "filename" as a key.
++ * 
++ * Similarly, if ISEQS__ is defined and is a hash, then every time a
++ * new instruction sequence is added, it is accessible from ISEQS__
++ * using its iseq_name as a key.  
++ */
++static int
++update_file_iseq(VALUE filename, VALUE iseq_name, VALUE iseq)
++{
++    ID hash_id;
++    int rc = 0;
++    CONST_ID(hash_id, "SCRIPT_ISEQS__");
++    if (rb_const_defined_at(rb_cObject, hash_id)) {
++	VALUE hash = rb_const_get_at(rb_cObject, hash_id);
++	rc = 1;
++	if (TYPE(hash) == T_HASH) {
++	    VALUE iseqs = rb_hash_aref(hash, filename);
++	    if (TYPE(iseqs) == T_ARRAY)
++		rb_ary_push(iseqs, iseq);
++	    else
++		rb_hash_aset(hash, filename, rb_ary_new3(1, iseq));
++	}
++    }
++    CONST_ID(hash_id, "ISEQS__");
++    if (rb_const_defined_at(rb_cObject, hash_id)) {
++	VALUE hash = rb_const_get_at(rb_cObject, hash_id);
++	rc = 1;
++	if (TYPE(hash) == T_HASH) {
++	    VALUE iseqs = rb_hash_aref(hash, iseq_name);
++	    if (TYPE(iseqs) == T_ARRAY)
++		rb_ary_push(iseqs, iseq);
++	    else
++		rb_hash_aset(hash, iseq_name, rb_ary_new3(1, iseq));
++	}
++    }
++    return rc;
+ }
+ 
+ static VALUE
+ rb_iseq_new_with_bopt_and_opt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
+-				VALUE parent, enum iseq_type type, VALUE bopt,
+-				const rb_compile_option_t *option)
++			      VALUE parent, enum iseq_type type, VALUE bopt,
++			      VALUE src,
++			      const rb_compile_option_t *option)
+ {
+     rb_iseq_t *iseq;
+     VALUE self = iseq_alloc(rb_cISeq);
++    int saving_iseq;
+ 
+     GetISeqPtr(self, iseq);
+     iseq->self = self;
+ 
+     prepare_iseq_build(iseq, name, filename, filepath, line_no, parent, type, bopt, option);
+     rb_iseq_compile_node(self, node);
+-    cleanup_iseq_build(iseq);
++    saving_iseq = update_file_iseq(filename, name, self);
++    cleanup_iseq_build(iseq, type, src, saving_iseq);
+     return self;
+ }
+ 
+ VALUE
+ rb_iseq_new_with_opt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
+-		     VALUE parent, enum iseq_type type,
++		     VALUE parent, enum iseq_type type, VALUE src,
+ 		     const rb_compile_option_t *option)
+ {
+     /* TODO: argument check */
+     return rb_iseq_new_with_bopt_and_opt(node, name, filename, filepath, line_no, parent, type,
+-					   Qfalse, option);
++					 Qfalse, src, option);
+ }
+ 
+ VALUE
+@@ -429,7 +482,7 @@ rb_iseq_new_with_bopt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VA
+ {
+     /* TODO: argument check */
+     return rb_iseq_new_with_bopt_and_opt(node, name, filename, filepath, line_no, parent, type,
+-					   bopt, &COMPILE_OPTION_DEFAULT);
++					 bopt, Qnil, &COMPILE_OPTION_DEFAULT);
+ }
+ 
+ #define CHECK_ARRAY(v)   rb_convert_type((v), T_ARRAY, "Array", "to_ary")
+@@ -450,6 +503,7 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
+     rb_iseq_t *iseq;
+     rb_compile_option_t option;
+     int i = 0;
++    int saving_iseq = 0;
+ 
+     /* [magic, major_version, minor_version, format_type, misc,
+      *  name, filename, line_no,
+@@ -514,8 +568,9 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
+ 		       parent, (enum iseq_type)iseq_type, 0, &option);
+ 
+     rb_iseq_build_from_ary(iseq, locals, args, exception, body);
++    saving_iseq = update_file_iseq(filename, name, self);
+ 
+-    cleanup_iseq_build(iseq);
++    cleanup_iseq_build(iseq, (enum iseq_type)iseq_type, body, saving_iseq);
+     return iseqval;
+ }
+ 
+@@ -559,11 +614,11 @@ rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, V
+     if (th->base_block && th->base_block->iseq) {
+ 	return rb_iseq_new_with_opt(node, th->base_block->iseq->name,
+ 				    file, filepath, line, th->base_block->iseq->self,
+-				    ISEQ_TYPE_EVAL, &option);
++				    ISEQ_TYPE_EVAL, Qnil, &option);
+     }
+     else {
+ 	return rb_iseq_new_with_opt(node, rb_str_new2("<compiled>"), file, filepath, line, Qfalse,
+-				    ISEQ_TYPE_TOP, &option);
++				    ISEQ_TYPE_TOP, Qnil, &option);
+     }
+ }
+ 
+@@ -609,7 +664,7 @@ iseq_s_compile_file(int argc, VALUE *argv, VALUE self)
+     make_compile_option(&option, opt);
+     return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), file,
+ 				rb_realpath_internal(Qnil, file, 1), line, Qfalse,
+-				ISEQ_TYPE_TOP, &option);
++				ISEQ_TYPE_TOP, Qnil, &option);
+ }
+ 
+ static VALUE
+@@ -655,9 +710,13 @@ iseq_inspect(VALUE self)
+         return rb_sprintf("#<%s: uninitialized>", rb_obj_classname(self));
+     }
+ 
+-    return rb_sprintf("<%s:%s@%s>",
+-                      rb_obj_classname(self),
+-		      RSTRING_PTR(iseq->name), RSTRING_PTR(iseq->filename));
++    if (ISEQ_TYPE_TOP == iseq->type)
++	return rb_sprintf("<%s:%s>",
++			  rb_obj_classname(self), RSTRING_PTR(iseq->name));
++    else
++	return rb_sprintf("<%s:%s@%s>",
++			  rb_obj_classname(self),
++			  RSTRING_PTR(iseq->name), RSTRING_PTR(iseq->filename));
+ }
+ 
+ static
+@@ -727,6 +786,18 @@ find_prev_line_no(rb_iseq_t *iseqdat, unsigned long pos)
+     return 0;
+ }
+ 
++/**
++ * Return String used in the creation of this instruction sequence. If none
++ * recorded, 0 (or false) is returned.
++ */
++VALUE
++rb_iseq_source(VALUE self)
++{
++    rb_iseq_t *iseq = iseq_check(self);
++    rb_secure(1);
++    return iseq->source;
++}
++
+ static VALUE
+ insn_operand_intern(rb_iseq_t *iseq,
+ 		    VALUE insn, int op_no, VALUE op,
+@@ -1493,17 +1564,153 @@ rb_iseq_build_for_ruby2cext(
+     return iseqval;
+ }
+ 
++/* 
++ * call-seq:
++ *     RubyVM::InstructionSequence#name -> String
++ * 
++ *  Returns the name if the instruction sequence.
++ */
++VALUE
++iseq_name(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    GetISeqPtr(iseqval, iseq);
++    return(iseq->name);
++}
++
++/* 
++ * call-seq:
++ *     RubyVM::InstructionSequence#offsetlines -> Hash[Fixnum] -> [Fixnum]
++ * 
++ * Returns an hash. The keys in the hash form the VM offsets of the
++ * instructions.  The value of the hash for a given offset is a list
++ * of line numbers associated with that offset.
++ */
++VALUE iseq_offsetlines(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    VALUE offsetlines = rb_hash_new();
++    unsigned long i, size;
++    struct iseq_insn_info_entry *table;
++   
++    GetISeqPtr(iseqval, iseq);
++    
++    size = iseq->insn_info_size;
++    table = iseq->insn_info_table;
++
++    for (i = 0; i < size; i++) {
++	VALUE ary = rb_ary_new2(1);
++	rb_ary_push(ary, INT2FIX(table[i].line_no));
++	rb_hash_aset(offsetlines, INT2FIX(table[i].position), ary);
++    }
++    return offsetlines;
++}
++
++/* 
++ * call-seq:
++ *     RubyVM::InstructionSequence#offset2lines(offset) -> [Fixnum]
++ * 
++ * Returns an Array or nil. If offset is found then return the list of
++ * lines associated with that offset. If the offset isn't found return nil.
++ */
++VALUE iseq_offset2lines(VALUE iseqval, VALUE offsetval)
++{
++    rb_iseq_t *iseq;
++   
++    GetISeqPtr(iseqval, iseq);
++    
++    if (FIXNUM_P(offsetval)) {
++	unsigned long i, size;
++	int offset = FIX2INT(offsetval);
++	struct iseq_insn_info_entry *table;
++
++	size = iseq->insn_info_size;
++	table = iseq->insn_info_table;
++
++	for (i = 0; i < size; i++) {
++	    if (table[i].position == offset) {
++		VALUE ary = rb_ary_new2(1);
++		rb_ary_push(ary, INT2FIX(table[i].line_no));
++		return ary;
++	    }
++	}
++    }
++    return Qnil;
++}
++
++#define ISEQ_FIELD_METHOD(FIELD)		\
++static VALUE					\
++iseq_##FIELD(VALUE iseqval)			\
++{						\
++  rb_iseq_t *iseq;				\
++  if (Qnil == iseqval) return Qnil;		\
++  GetISeqPtr(iseqval, iseq);			\
++  return iseq->FIELD;				\
++}
++
++ISEQ_FIELD_METHOD(orig) ;
++ISEQ_FIELD_METHOD(self) ;
++ISEQ_FIELD_METHOD(type) ;
++
++#define ISEQ_INT_FIELD_METHOD(FIELD)		\
++extern VALUE					\
++iseq_##FIELD(VALUE iseqval)			\
++{						\
++  rb_iseq_t *iseq;				\
++  GetISeqPtr(iseqval, iseq);			\
++  return INT2FIX(iseq->FIELD);			\
++}
++
++ISEQ_INT_FIELD_METHOD(arg_block) ;
++ISEQ_INT_FIELD_METHOD(arg_opts) ;
++ISEQ_INT_FIELD_METHOD(arg_post_len) ;
++ISEQ_INT_FIELD_METHOD(arg_rest) ;
++ISEQ_INT_FIELD_METHOD(arg_simple) ;
++ISEQ_INT_FIELD_METHOD(argc) ;
++ISEQ_INT_FIELD_METHOD(iseq_size) ;
++ISEQ_INT_FIELD_METHOD(klass) ;
++ISEQ_INT_FIELD_METHOD(line_no) ;
++ISEQ_INT_FIELD_METHOD(local_size) ;
++ISEQ_INT_FIELD_METHOD(local_table_size) ;
++
+ void
+ Init_ISeq(void)
+ {
+     /* declare ::RubyVM::InstructionSequence */
+     rb_cISeq = rb_define_class_under(rb_cRubyVM, "InstructionSequence", rb_cObject);
+     rb_define_alloc_func(rb_cISeq, iseq_alloc);
++    rb_define_method(rb_cISeq, "arg_block",        iseq_arg_block, 0) ;
++    rb_define_method(rb_cISeq, "arg_opts",         iseq_arg_opts, 0) ;
++    rb_define_method(rb_cISeq, "arg_post_len",     iseq_arg_post_len, 0) ;
++    rb_define_method(rb_cISeq, "arg_rest",         iseq_arg_rest, 0) ;
++    rb_define_method(rb_cISeq, "arg_simple",       iseq_arg_simple, 0) ;
++    rb_define_method(rb_cISeq, "argc",             iseq_argc, 0) ;
++#ifdef FINISHED
++    rb_define_method(rb_cISeq, "compile_options",  iseq_compile_options, 0) ;
++    rb_define_method(rb_cISeq, "equal?",           iseq_equal, 1) ;
++    rb_define_method(rb_cISeq, "line_range",       iseq_line_range, 0) ;
++    rb_define_method(rb_cISeq, "local_iseq",       iseq_local_iseq, 0) ;
++    rb_define_method(rb_cISeq, "local_name",       iseq_local_name, 1) ;
++    rb_define_method(rb_cISeq, "parent",           iseq_parent, 0) ;
++#endif
++    rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
++    rb_define_method(rb_cISeq, "klass",            iseq_klass, 0) ;
++    rb_define_method(rb_cISeq, "lineno",           iseq_line_no, 0) ;
++    rb_define_method(rb_cISeq, "local_size",       iseq_local_size, 0) ;
++    rb_define_method(rb_cISeq, "local_table_size", iseq_local_table_size, 0) ;
++    rb_define_method(rb_cISeq, "name",             iseq_name, 0) ;
++    rb_define_method(rb_cISeq, "offset2lines",     iseq_offset2lines, 1) ;
++    rb_define_method(rb_cISeq, "offsetlines",      iseq_offsetlines, 0) ;
++    rb_define_method(rb_cISeq, "orig",             iseq_orig, 0) ;
++    rb_define_method(rb_cISeq, "self",             iseq_self, 0) ;
++    rb_define_method(rb_cISeq, "type",             iseq_type, 0) ;
++    rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
+     rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
+     rb_define_method(rb_cISeq, "disasm", rb_iseq_disasm, 0);
+     rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
+     rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
+     rb_define_method(rb_cISeq, "eval", iseq_eval, 0);
++    rb_define_method(rb_cISeq, "source", rb_iseq_source, 0);
+ 
+ #if 0 /* TBD */
+     rb_define_method(rb_cISeq, "marshal_dump", iseq_marshal_dump, 0);
+diff --git a/load.c b/load.c
+index 0ff4b60..4bfc157 100644
+--- a/load.c
++++ b/load.c
+@@ -301,11 +301,13 @@ rb_load_internal(VALUE fname, int wrap)
+     if (state == 0) {
+ 	NODE *node;
+ 	VALUE iseq;
++	char iseq_name[MAXPATHLEN];
+ 
+ 	th->mild_compile_error++;
+ 	node = (NODE *)rb_load_file(RSTRING_PTR(fname));
+ 	loaded = TRUE;
+-	iseq = rb_iseq_new_top(node, rb_str_new2("<top (required)>"), fname, rb_realpath_internal(Qnil, fname, 1), Qfalse);
++	snprintf(iseq_name, sizeof(iseq_name), "<top %s>", RSTRING_PTR(fname));
++	iseq = rb_iseq_new_top(node, rb_str_new2(iseq_name), fname, rb_realpath_internal(Qnil, fname, 1), Qfalse);
+ 	th->mild_compile_error--;
+ 	rb_iseq_eval(iseq);
+     }
+diff --git a/test/debugger-ext/test_iseq.rb b/test/debugger-ext/test_iseq.rb
+new file mode 100644
+index 0000000..10cd913
+--- /dev/null
++++ b/test/debugger-ext/test_iseq.rb
+@@ -0,0 +1,25 @@
++require 'test/unit'
++class TestISeqSource < Test::Unit::TestCase
++  def test_source
++    iseq = RubyVM::InstructionSequence.new("x=1")
++    assert_equal  2, iseq.local_size
++    assert_equal  0, iseq.argc
++    assert_equal -1, iseq.arg_rest
++    assert_equal  0, iseq.arg_post_len
++    assert_equal -1, iseq.arg_block
++    assert_equal  1, iseq.arg_simple
++    assert_equal  1, iseq.local_table_size
++    assert_operator 0, :<=, iseq.iseq_size
++    assert_equal [1], iseq.offset2lines(0)
++    assert iseq.offsetlines.is_a?(Hash)
++    assert iseq.offsetlines.values.all?{|x| x == [1]}
++    assert iseq.disasm.is_a?(String)
++    assert_equal 1, iseq.eval
++    assert iseq.self.kind_of?(RubyVM::InstructionSequence)
++    # puts iseq.disasm
++    # puts iseq.name
++    # puts iseq.type
++    # puts iseq.klass
++    # puts iseq.lineno
++  end
++end
+diff --git a/test/debugger-ext/test_iseq_hash.rb b/test/debugger-ext/test_iseq_hash.rb
+new file mode 100644
+index 0000000..e7486c1
+--- /dev/null
++++ b/test/debugger-ext/test_iseq_hash.rb
+@@ -0,0 +1,42 @@
++# See that setting ISEQS__ and SCRIPT_ISEQS__ saves 
++# RubyVM::Instruction_sequenses
++require 'test/unit'
++SCRIPT_ISEQS__ = {}
++ISEQS__ = {}
++class TestIseqAccess < Test::Unit::TestCase
++  ## FIXME: this doesn't work. Find out why.
++  # def setup
++  #   old_verbosity = $VERBOSE
++  #   $VERBOSE = nil
++  #   Kernel.const_set(:ISEQS__, {})
++  #   Kernel.const_set(:SCRIPT_ISEQS__, {})
++  #   $VERBOSE = old_verbosity
++  # end
++  def teardown
++    old_verbosity = $VERBOSE
++    $VERBOSE = nil
++    Kernel.const_set(:ISEQS__, nil)
++    Kernel.const_set(:SCRIPT_ISEQS__, nil)
++    $VERBOSE = old_verbosity
++  end
++
++  def test_basic
++   sizes=[]
++    [ISEQS__, SCRIPT_ISEQS__].each do |iseq_hash|
++      sizes << iseq_hash.size
++    end
++    # defining five should trigger five instruction sequence additions
++   # to ISEQS__ and SCRIPT_ISEQS__
++    # 
++    eval 'def five; 5 end'
++    # assert_equal sizes[0], sizes[1]
++    [SCRIPT_ISEQS__, ISEQS__].each do |iseq_hash|
++      # assert_equal true, iseq_hash.size > sizes.pop
++      assert_equal Hash, iseq_hash.class
++      a = iseq_hash.first
++      assert_equal Array, a.class
++      assert_equal RubyVM::InstructionSequence, iseq_hash.values[0][0].class
++    end
++    assert_equal RubyVM::InstructionSequence, ISEQS__["five"][0].class
++  end
++end
+diff --git a/test/debugger-ext/testit.sh b/test/debugger-ext/testit.sh
+new file mode 100755
+index 0000000..14b5806
+--- /dev/null
++++ b/test/debugger-ext/testit.sh
+@@ -0,0 +1,11 @@
++#!/bin/bash
++if (( $# == 0 )) ; then
++    args=test_*.rb
++else
++    args=$*
++fi
++for t in $args ; do 
++    echo "===== $t ====="
++    ../../miniruby -I../../lib -I../.. $t
++    # gdb ../../miniruby
++done
+diff --git a/vm_core.h b/vm_core.h
+index b28a222..1d90480 100644
+--- a/vm_core.h
++++ b/vm_core.h
+@@ -255,6 +255,10 @@ struct rb_iseq_struct {
+ 
+     /* used at compile time */
+     struct iseq_compile_data *compile_data;
++
++    /* If this instruction sequence came from eval, the string of the
++       source as a String. */
++    VALUE source;
+ };
+ 
+ enum ruby_special_exceptions {
+@@ -500,7 +504,7 @@ VALUE rb_iseq_new(NODE*, VALUE, VALUE, VALUE, VALUE, enum iseq_type);
+ VALUE rb_iseq_new_top(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE parent);
+ VALUE rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath);
+ VALUE rb_iseq_new_with_bopt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, VALUE);
+-VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, const rb_compile_option_t*);
++VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, VALUE, const rb_compile_option_t*);
+ VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
+ VALUE rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, VALUE opt);
+ VALUE rb_iseq_disasm(VALUE self);
+diff --git a/vm_eval.c b/vm_eval.c
+index 65bec06..6957aa2 100644
+--- a/vm_eval.c
++++ b/vm_eval.c
+@@ -1041,6 +1041,7 @@ eval_string_with_cref(VALUE self, VALUE src, VALUE scope, NODE *cref, const char
+ 
+ 	/* save new env */
+ 	GetISeqPtr(iseqval, iseq);
++	iseq->source = src;
+ 	if (bind && iseq->local_table_size > 0) {
+ 	    bind->env = rb_vm_make_env_object(th, th->cfp);
+ 	}
