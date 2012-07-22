@@ -1,0 +1,97 @@
+Adds: "source" method to iseq which if this instruction sequence came
+from eval, the string of the source as a String.
+
+Also adds script that helps me run unit tests easier. Probably not
+needed if I understood the Ruby testing system better.
+
+The source unit test needs fixing.
+
+diff --git a/iseq.c b/iseq.c
+index 28cc1e5..588e386 100644
+--- a/iseq.c
++++ b/iseq.c
+@@ -727,6 +727,18 @@ find_prev_line_no(rb_iseq_t *iseqdat, unsigned long pos)
+     return 0;
+ }
+ 
++/**
++ * Return String used in the creation of this instruction sequence. If none
++ * recorded, 0 (or false) is returned.
++ */
++VALUE
++rb_iseq_source(VALUE self)
++{
++    rb_iseq_t *iseq = iseq_check(self);
++    rb_secure(1);
++    return iseq->source;
++}
++
+ static VALUE
+ insn_operand_intern(rb_iseq_t *iseq,
+ 		    VALUE insn, int op_no, VALUE op,
+@@ -1504,6 +1516,7 @@ Init_ISeq(void)
+     rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
+     rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
+     rb_define_method(rb_cISeq, "eval", iseq_eval, 0);
++    rb_define_method(rb_cISeq, "source", rb_iseq_source, 0);
+ 
+ #if 0 /* TBD */
+     rb_define_method(rb_cISeq, "marshal_dump", iseq_marshal_dump, 0);
+diff --git a/vm_core.h b/vm_core.h
+index b28a222..f6f42ca 100644
+--- a/vm_core.h
++++ b/vm_core.h
+@@ -255,6 +255,10 @@ struct rb_iseq_struct {
+ 
+     /* used at compile time */
+     struct iseq_compile_data *compile_data;
++
++    /* If this instruction sequence came from eval, the string of the
++       source as a String. */
++    VALUE source;
+ };
+ 
+ enum ruby_special_exceptions {
+diff --git a/vm_eval.c b/vm_eval.c
+index 65bec06..6957aa2 100644
+--- a/vm_eval.c
++++ b/vm_eval.c
+@@ -1041,6 +1041,7 @@ eval_string_with_cref(VALUE self, VALUE src, VALUE scope, NODE *cref, const char
+ 
+ 	/* save new env */
+ 	GetISeqPtr(iseqval, iseq);
++	iseq->source = src;
+ 	if (bind && iseq->local_table_size > 0) {
+ 	    bind->env = rb_vm_make_env_object(th, th->cfp);
+ 	}
+diff --git a/test/debugger-ext/test_iseq_source.rb b/test/debugger-ext/test_iseq_source.rb
+new file mode 100644
+index 0000000..d8d4650
+--- /dev/null
++++ b/test/debugger-ext/test_iseq_source.rb
+@@ -0,0 +1,9 @@
++require 'test/unit'
++class TestISeqSource < Test::Unit::TestCase
++  def test_source
++    iseq = RubyVM::InstructionSequence.new("eval 'x=1'")
++    puts iseq.disasm
++    puts iseq.source
++    assert_equal true, true
++  end
++end
+diff --git a/test/debugger-ext/testit.sh b/test/debugger-ext/testit.sh
+new file mode 100755
+index 0000000..3f1a94e
+--- /dev/null
++++ b/test/debugger-ext/testit.sh
+@@ -0,0 +1,10 @@
++#!/bin/bash
++if (( $# == 0 )) ; then
++    args=test_*.rb
++else
++    args=$*
++fi
++for t in $args ; do 
++    ../../miniruby -I../../lib -I../.. $t
++    # gdb ../../miniruby
++done
