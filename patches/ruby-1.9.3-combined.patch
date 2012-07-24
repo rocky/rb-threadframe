@@ -12,7 +12,7 @@ index fb51053..8f7bc75 100644
      iseq_add_mark_object(iseq, ret);
      return ret;
 diff --git a/iseq.c b/iseq.c
-index 28cc1e5..15e32e7 100644
+index 28cc1e5..fce2f86 100644
 --- a/iseq.c
 +++ b/iseq.c
 @@ -282,13 +282,17 @@ prepare_iseq_build(rb_iseq_t *iseq,
@@ -54,7 +54,7 @@ index 28cc1e5..15e32e7 100644
  				&COMPILE_OPTION_DEFAULT);
  }
  
-@@ -393,34 +397,83 @@ rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath)
+@@ -393,34 +397,85 @@ rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath)
      rb_thread_t *th = GET_THREAD();
      VALUE parent = th->base_block->iseq->self;
      return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), filename, filepath, INT2FIX(0),
@@ -82,7 +82,8 @@ index 28cc1e5..15e32e7 100644
 +    ID hash_id;
 +    int rc = 0;
 +    CONST_ID(hash_id, "SCRIPT_ISEQS__");
-+    if (rb_const_defined_at(rb_cObject, hash_id)) {
++    if (rb_const_defined_at(rb_cObject, hash_id) && 
++	rb_safe_level() < 4) {
 +	VALUE hash = rb_const_get_at(rb_cObject, hash_id);
 +	rc = 1;
 +	if (TYPE(hash) == T_HASH) {
@@ -94,7 +95,8 @@ index 28cc1e5..15e32e7 100644
 +	}
 +    }
 +    CONST_ID(hash_id, "ISEQS__");
-+    if (rb_const_defined_at(rb_cObject, hash_id)) {
++    if (rb_const_defined_at(rb_cObject, hash_id) &&
++	rb_safe_level() < 4) {
 +	VALUE hash = rb_const_get_at(rb_cObject, hash_id);
 +	rc = 1;
 +	if (TYPE(hash) == T_HASH) {
@@ -144,7 +146,7 @@ index 28cc1e5..15e32e7 100644
  }
  
  VALUE
-@@ -429,7 +482,7 @@ rb_iseq_new_with_bopt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VA
+@@ -429,7 +484,7 @@ rb_iseq_new_with_bopt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VA
  {
      /* TODO: argument check */
      return rb_iseq_new_with_bopt_and_opt(node, name, filename, filepath, line_no, parent, type,
@@ -153,7 +155,7 @@ index 28cc1e5..15e32e7 100644
  }
  
  #define CHECK_ARRAY(v)   rb_convert_type((v), T_ARRAY, "Array", "to_ary")
-@@ -450,6 +503,7 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
+@@ -450,6 +505,7 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
      rb_iseq_t *iseq;
      rb_compile_option_t option;
      int i = 0;
@@ -161,7 +163,7 @@ index 28cc1e5..15e32e7 100644
  
      /* [magic, major_version, minor_version, format_type, misc,
       *  name, filename, line_no,
-@@ -514,8 +568,9 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
+@@ -514,8 +570,9 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
  		       parent, (enum iseq_type)iseq_type, 0, &option);
  
      rb_iseq_build_from_ary(iseq, locals, args, exception, body);
@@ -172,7 +174,7 @@ index 28cc1e5..15e32e7 100644
      return iseqval;
  }
  
-@@ -559,11 +614,11 @@ rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, V
+@@ -559,11 +616,11 @@ rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, V
      if (th->base_block && th->base_block->iseq) {
  	return rb_iseq_new_with_opt(node, th->base_block->iseq->name,
  				    file, filepath, line, th->base_block->iseq->self,
@@ -186,7 +188,7 @@ index 28cc1e5..15e32e7 100644
      }
  }
  
-@@ -609,7 +664,7 @@ iseq_s_compile_file(int argc, VALUE *argv, VALUE self)
+@@ -609,7 +666,7 @@ iseq_s_compile_file(int argc, VALUE *argv, VALUE self)
      make_compile_option(&option, opt);
      return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), file,
  				rb_realpath_internal(Qnil, file, 1), line, Qfalse,
@@ -195,7 +197,7 @@ index 28cc1e5..15e32e7 100644
  }
  
  static VALUE
-@@ -655,9 +710,13 @@ iseq_inspect(VALUE self)
+@@ -655,9 +712,13 @@ iseq_inspect(VALUE self)
          return rb_sprintf("#<%s: uninitialized>", rb_obj_classname(self));
      }
  
@@ -212,7 +214,7 @@ index 28cc1e5..15e32e7 100644
  }
  
  static
-@@ -727,6 +786,18 @@ find_prev_line_no(rb_iseq_t *iseqdat, unsigned long pos)
+@@ -727,6 +788,18 @@ find_prev_line_no(rb_iseq_t *iseqdat, unsigned long pos)
      return 0;
  }
  
@@ -231,7 +233,7 @@ index 28cc1e5..15e32e7 100644
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -1493,17 +1564,153 @@ rb_iseq_build_for_ruby2cext(
+@@ -1493,17 +1566,153 @@ rb_iseq_build_for_ruby2cext(
      return iseqval;
  }
  
@@ -437,13 +439,14 @@ index 0000000..10cd913
 +end
 diff --git a/test/debugger-ext/test_iseq_hash.rb b/test/debugger-ext/test_iseq_hash.rb
 new file mode 100644
-index 0000000..e7486c1
+index 0000000..89eef15
 --- /dev/null
 +++ b/test/debugger-ext/test_iseq_hash.rb
-@@ -0,0 +1,42 @@
+@@ -0,0 +1,47 @@
 +# See that setting ISEQS__ and SCRIPT_ISEQS__ saves 
 +# RubyVM::Instruction_sequenses
 +require 'test/unit'
++$SAFE = 0
 +SCRIPT_ISEQS__ = {}
 +ISEQS__ = {}
 +class TestIseqAccess < Test::Unit::TestCase
@@ -455,13 +458,13 @@ index 0000000..e7486c1
 +  #   Kernel.const_set(:SCRIPT_ISEQS__, {})
 +  #   $VERBOSE = old_verbosity
 +  # end
-+  def teardown
-+    old_verbosity = $VERBOSE
-+    $VERBOSE = nil
-+    Kernel.const_set(:ISEQS__, nil)
-+    Kernel.const_set(:SCRIPT_ISEQS__, nil)
-+    $VERBOSE = old_verbosity
-+  end
++  # def teardown
++  #   old_verbosity = $VERBOSE
++  #   $VERBOSE = nil
++  #   Kernel.const_set(:ISEQS__, nil)
++  #   Kernel.const_set(:SCRIPT_ISEQS__, nil)
++  #   $VERBOSE = old_verbosity
++  # end
 +
 +  def test_basic
 +   sizes=[]
@@ -481,8 +484,12 @@ index 0000000..e7486c1
 +      assert_equal RubyVM::InstructionSequence, iseq_hash.values[0][0].class
 +    end
 +    assert_equal RubyVM::InstructionSequence, ISEQS__["five"][0].class
++    # Null ISEQS__ and SCRIPT_ISEQS__ but avoid: dynanmic constant warning
++    eval "ISEQS__ = nil; SCRIPT_ISEQS__ = nil"
 +  end
 +end
++# We want to double-check we didn't mess up any pointers somewhere.
++at_exit { GC.start  }
 diff --git a/test/debugger-ext/testit.sh b/test/debugger-ext/testit.sh
 new file mode 100755
 index 0000000..14b5806

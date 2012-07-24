@@ -69,7 +69,7 @@ index 71cb7b2..15e32e7 100644
  				&COMPILE_OPTION_DEFAULT);
  }
  
-@@ -393,34 +397,83 @@ rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath)
+@@ -393,34 +397,85 @@ rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath)
      rb_thread_t *th = GET_THREAD();
      VALUE parent = th->base_block->iseq->self;
      return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), filename, filepath, INT2FIX(0),
@@ -97,7 +97,8 @@ index 71cb7b2..15e32e7 100644
 +    ID hash_id;
 +    int rc = 0;
 +    CONST_ID(hash_id, "SCRIPT_ISEQS__");
-+    if (rb_const_defined_at(rb_cObject, hash_id)) {
++    if (rb_const_defined_at(rb_cObject, hash_id) && 
++	rb_safe_level() < 4) {
 +	VALUE hash = rb_const_get_at(rb_cObject, hash_id);
 +	rc = 1;
 +	if (TYPE(hash) == T_HASH) {
@@ -109,7 +110,8 @@ index 71cb7b2..15e32e7 100644
 +	}
 +    }
 +    CONST_ID(hash_id, "ISEQS__");
-+    if (rb_const_defined_at(rb_cObject, hash_id)) {
++    if (rb_const_defined_at(rb_cObject, hash_id) &&
++	rb_safe_level() < 4) {
 +	VALUE hash = rb_const_get_at(rb_cObject, hash_id);
 +	rc = 1;
 +	if (TYPE(hash) == T_HASH) {
@@ -228,10 +230,11 @@ new file mode 100644
 index 0000000..1f573f9
 --- /dev/null
 +++ b/test/debugger-ext/test_iseq_hash.rb
-@@ -0,0 +1,42 @@
+@@ -0,0 +1,47 @@
 +# See that setting ISEQS__ and SCRIPT_ISEQS__ saves 
 +# RubyVM::Instruction_sequenses
 +require 'test/unit'
++$SAFE = 0
 +SCRIPT_ISEQS__ = {}
 +ISEQS__ = {}
 +class TestIseqAccess < Test::Unit::TestCase
@@ -243,13 +246,13 @@ index 0000000..1f573f9
 +  #   Kernel.const_set(:SCRIPT_ISEQS__, {})
 +  #   $VERBOSE = old_verbosity
 +  # end
-+  def teardown
-+    old_verbosity = $VERBOSE
-+    $VERBOSE = nil
-+    Kernel.const_set(:ISEQS__, nil)
-+    Kernel.const_set(:SCRIPT_ISEQS__, nil)
-+    $VERBOSE = old_verbosity
-+  end
++  # def teardown
++  #   old_verbosity = $VERBOSE
++  #   $VERBOSE = nil
++  #   Kernel.const_set(:ISEQS__, nil)
++  #   Kernel.const_set(:SCRIPT_ISEQS__, nil)
++  #   $VERBOSE = old_verbosity
++  # end
 +
 +  def test_basic
 +   sizes=[]
@@ -257,7 +260,7 @@ index 0000000..1f573f9
 +      sizes << iseq_hash.size
 +    end
 +    # defining five should trigger five instruction sequence additions
-+   # to ISEQS__ and SCRIPT_ISEQS__
++    # to ISEQS__ and SCRIPT_ISEQS__
 +    # 
 +    eval 'def five; 5 end'
 +    # assert_equal sizes[0], sizes[1]
@@ -269,5 +272,9 @@ index 0000000..1f573f9
 +      assert_equal RubyVM::InstructionSequence, iseq_hash.values[0][0].class
 +    end
 +    assert_equal RubyVM::InstructionSequence, ISEQS__["five"][0].class
++    # Null ISEQS__ and SCRIPT_ISEQS__ but avoid: dynanmic constant warning
++    eval "ISEQS__ = nil; SCRIPT_ISEQS__ = nil"
 +  end
 +end
++# We want to double-check we didn't mess up any pointers somewhere.
++at_exit { GC.start  }
