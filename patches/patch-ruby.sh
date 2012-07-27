@@ -14,11 +14,11 @@ case $patchfile in
     1.9.3 | head | trunk )
 	for file in \
 	    000-testit.patch \
-	    001-thread-tracing.patch \
-	    002-iseq-eval-source-save.patch \
-	    003-iseq-field-access.patch \
-	    004-iseq-SCRIPT_ISEQS__.patch \
-	    005-iseq-top-name.patch 
+	    110-thread-tracing.patch \
+	    210-iseq-field-access.patch \
+	    220-iseq-eval-source-save.patch \
+	    230-iseq-top-name.patch \
+	    240-iseq-SCRIPT_ISEQS__.patch
 	do 
 	    patch_file=${dirname}/1.9.3/$file
 	    echo -- Applying patches in $patch_file ... | tee -a patches_applied.log

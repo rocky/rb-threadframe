@@ -1,10 +1,21 @@
+Below is a description of the patches.
+
+About the numbering used below. Numbers at a given power of ten are
+supposed to be independent; that is they applied independent of the
+other patches at that level. So 000 and 100 and 1xx and and 2xx are
+independent.  Likewise for 210, 220, 230 or 210, 211, 212. But 225 is
+thought to be dependent on 220. Of course, if patches are skipped
+applying higher number patches may give messages about "fuzz" being
+applied to line numbers and file offsets.
+
+
 000-testit.patch:
 
 Adds a script that helps me run the debugger-extension unit tests
 easier. Probably not needed if I understood the Ruby testing system
 better.
 -------------------
-001-thread-tracing.patch
+110-thread-tracing.patch
 
 Adds per-thread tracing by adding methods Thread#tracing? and Thread#tracing=
 
@@ -13,20 +24,27 @@ just exposes the ability the set or query thread tracing individually
 by adding a couple of methods.
 
 -------------------
-002-iseq-eval-source-save.patch:
-
-Adds: "source" method to iseq which if this instruction sequence came
-from eval, is the string of the source as a String. TODO: figure out how
-to have this "source" field filled out more often.
--------------------
-003-iseq-field-access.patch
+210-iseq-field-access.patch
 
 Access to more of the iseq fields: argc, arg_rest, arg_block,
 offsetlines, offset2line, local_size, local_table_size, iseq_size,
 arg_simple
 
 -------------------
-004-iseq-SCRIPT_ISEQS__.patch
+220-iseq-eval-source-save.patch:
+
+Give name for top instruction sequences (those that don't have a
+parent) a more uniqe and descriptive name. In a debugger we show and
+make use of these names in specifying locations.
+
+-------------------
+230-top-name.patch:
+
+Adds: "source" method to iseq which if this instruction sequence came
+from eval, is the string of the source as a String. TODO: figure out how
+to have this "source" field filled out more often.
+-------------------
+240-iseq-SCRIPT_ISEQS__.patch
 
 A debugger or similar introspection tool needs to be able to find all
 instruction sequences and access them. This patch facilitates this by
