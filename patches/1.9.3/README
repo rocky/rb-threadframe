@@ -16,7 +16,8 @@ by adding a couple of methods.
 002-iseq-eval-source-save.patch:
 
 Adds: "source" method to iseq which if this instruction sequence came
-from eval, the string of the source as a String.
+from eval, is the string of the source as a String. TODO: figure out how
+to have this "source" field filled out more often.
 -------------------
 003-iseq-field-access.patch
 

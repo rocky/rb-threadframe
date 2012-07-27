@@ -1,5 +1,6 @@
 Adds: "source" method to iseq which if this instruction sequence came
-from eval, the string of the source as a String.
+from eval, is the string of the source as a String. TODO: figure out how
+to have this "source" field filled out more often.
 
 diff --git a/iseq.c b/iseq.c
 index 28cc1e5..588e386 100644
