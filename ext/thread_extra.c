@@ -1,9 +1,9 @@
 /* 
- * Copyright (C) 2010 Rocky Bernstein
+ * Copyright (C) 2010, 2012 Rocky Bernstein
  */
 #if 0  /* The following is to fake out rdoc, until I find a better fix. */
 /* 
- *  Additions to the RubyVM::Method class
+ *  Additions to the Thread class
  */
 VALUE rb_cThread = rb_define_class("Method", ...)
 #endif

@@ -2,7 +2,7 @@ diff --git a/iseq.c b/iseq.c
 index 7a4b89a..71cb7b2 100644
 --- a/iseq.c
 +++ b/iseq.c
-@@ -710,9 +710,13 @@ iseq_inspect(VALUE self)
+@@ -712,9 +712,13 @@ iseq_inspect(VALUE self)
          return rb_sprintf("#<%s: uninitialized>", rb_obj_classname(self));
      }
  

@@ -1,4 +1,44 @@
-00-eval-source-save.patch:
+000-testit.patch:
+
+Adds a script that helps me run the debugger-extension unit tests
+easier. Probably not needed if I understood the Ruby testing system
+better.
+-------------------
+001-thread-tracing.patch
+
+Adds per-thread tracing by adding methods Thread#tracing? and Thread#tracing=
+
+The basic mechanism of per-tracing thread was already inside. This
+just exposes the ability the set or query thread tracing individually
+by adding a couple of methods.
+
+-------------------
+002-iseq-eval-source-save.patch:
 
 Adds: "source" method to iseq which if this instruction sequence came
 from eval, the string of the source as a String.
+-------------------
+003-iseq-field-access.patch
+
+Access to more of the iseq fields: argc, arg_rest, arg_block,
+offsetlines, offset2line, local_size, local_table_size, iseq_size,
+arg_simple
+
+-------------------
+004-iseq-SCRIPT_ISEQS__.patch
+
+A debugger or similar introspection tool needs to be able to find all
+instruction sequences and access them. This patch facilitates this by
+adding the following behavior, analogous to SCRIPT_LINES__ for
+capturing source-code lines.
+
+If SCRIPT_ISEQS__ is defined and is a hash, then every time a new
+instruction sequence is added, it is accessible from SCRIPT_ISEQS__
+using the "filename" as a key.
+
+Similarly, if ISEQS__ is defined and is a hash, then every time a new
+instruction sequence is added, it is accessible from ISEQS__ using its
+iseq_name as a key.
+
+If ISEQS__ is set, we don't discard the compile options.
+

@@ -14,6 +14,7 @@ case $patchfile in
     1.9.3 | head | trunk )
 	for file in \
 	    000-testit.patch \
+	    001-thread-tracing.patch \
 	    002-iseq-eval-source-save.patch \
 	    003-iseq-field-access.patch \
 	    004-iseq-SCRIPT_ISEQS__.patch \

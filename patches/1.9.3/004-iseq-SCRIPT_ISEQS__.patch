@@ -11,7 +11,7 @@ Similarly, if ISEQS__ is defined and is a hash, then every time a new
 instruction sequence is added, it is accessible from ISEQS__ using its
 iseq_name as a key.
 
-In this patch if ISEQS__ is set we don't discard the compile options.
+If ISEQS__ is set, we don't discard the compile options.
 
 diff --git a/compile.c b/compile.c
 index fb51053..8f7bc75 100644

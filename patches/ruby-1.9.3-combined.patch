@@ -12,10 +12,34 @@ index fb51053..8f7bc75 100644
      iseq_add_mark_object(iseq, ret);
      return ret;
 diff --git a/iseq.c b/iseq.c
-index 28cc1e5..fce2f86 100644
+index 28cc1e5..85a8b37 100644
 --- a/iseq.c
 +++ b/iseq.c
-@@ -282,13 +282,17 @@ prepare_iseq_build(rb_iseq_t *iseq,
+@@ -218,6 +218,23 @@ set_relation(rb_iseq_t *iseq, const VALUE parent)
+     }
+ }
+ 
++/* 
++ * This routine is here to allow an external C extension to create a
++ * RubyVM::InstructionSequence object sequence from its own C pointer
++ * of type rb_iseq_t *. For example, the rb-threadframe uses this
++ * routine to implement Method#iseq and Proc#iseq.
++ */
++VALUE
++rb_iseq_alloc_shared(VALUE klass)
++{
++    VALUE volatile obj;
++    rb_iseq_t *iseq;
++
++    obj = Data_Make_Struct(klass, rb_iseq_t, iseq_mark, NULL, iseq);
++    MEMZERO(iseq, rb_iseq_t, 1);
++    return obj;
++}
++
+ static VALUE
+ prepare_iseq_build(rb_iseq_t *iseq,
+ 		   VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
+@@ -282,13 +299,17 @@ prepare_iseq_build(rb_iseq_t *iseq,
  }
  
  static VALUE
@@ -37,7 +61,7 @@ index 28cc1e5..fce2f86 100644
      if (RTEST(err)) {
  	rb_funcall2(err, rb_intern("set_backtrace"), 1, &iseq->filename);
  	rb_exc_raise(err);
-@@ -376,14 +380,14 @@ VALUE
+@@ -376,14 +397,14 @@ VALUE
  rb_iseq_new(NODE *node, VALUE name, VALUE filename, VALUE filepath,
  	    VALUE parent, enum iseq_type type)
  {
@@ -54,7 +78,7 @@ index 28cc1e5..fce2f86 100644
  				&COMPILE_OPTION_DEFAULT);
  }
  
-@@ -393,34 +397,85 @@ rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath)
+@@ -393,34 +414,85 @@ rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath)
      rb_thread_t *th = GET_THREAD();
      VALUE parent = th->base_block->iseq->self;
      return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), filename, filepath, INT2FIX(0),
@@ -146,7 +170,7 @@ index 28cc1e5..fce2f86 100644
  }
  
  VALUE
-@@ -429,7 +484,7 @@ rb_iseq_new_with_bopt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VA
+@@ -429,7 +501,7 @@ rb_iseq_new_with_bopt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VA
  {
      /* TODO: argument check */
      return rb_iseq_new_with_bopt_and_opt(node, name, filename, filepath, line_no, parent, type,
@@ -155,7 +179,7 @@ index 28cc1e5..fce2f86 100644
  }
  
  #define CHECK_ARRAY(v)   rb_convert_type((v), T_ARRAY, "Array", "to_ary")
-@@ -450,6 +505,7 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
+@@ -450,6 +522,7 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
      rb_iseq_t *iseq;
      rb_compile_option_t option;
      int i = 0;
@@ -163,7 +187,7 @@ index 28cc1e5..fce2f86 100644
  
      /* [magic, major_version, minor_version, format_type, misc,
       *  name, filename, line_no,
-@@ -514,8 +570,9 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
+@@ -514,8 +587,9 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
  		       parent, (enum iseq_type)iseq_type, 0, &option);
  
      rb_iseq_build_from_ary(iseq, locals, args, exception, body);
@@ -174,7 +198,7 @@ index 28cc1e5..fce2f86 100644
      return iseqval;
  }
  
-@@ -559,11 +616,11 @@ rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, V
+@@ -559,11 +633,11 @@ rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, V
      if (th->base_block && th->base_block->iseq) {
  	return rb_iseq_new_with_opt(node, th->base_block->iseq->name,
  				    file, filepath, line, th->base_block->iseq->self,
@@ -188,7 +212,7 @@ index 28cc1e5..fce2f86 100644
      }
  }
  
-@@ -609,7 +666,7 @@ iseq_s_compile_file(int argc, VALUE *argv, VALUE self)
+@@ -609,7 +683,7 @@ iseq_s_compile_file(int argc, VALUE *argv, VALUE self)
      make_compile_option(&option, opt);
      return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), file,
  				rb_realpath_internal(Qnil, file, 1), line, Qfalse,
@@ -197,7 +221,7 @@ index 28cc1e5..fce2f86 100644
  }
  
  static VALUE
-@@ -655,9 +712,13 @@ iseq_inspect(VALUE self)
+@@ -655,9 +729,13 @@ iseq_inspect(VALUE self)
          return rb_sprintf("#<%s: uninitialized>", rb_obj_classname(self));
      }
  
@@ -214,7 +238,7 @@ index 28cc1e5..fce2f86 100644
  }
  
  static
-@@ -727,6 +788,18 @@ find_prev_line_no(rb_iseq_t *iseqdat, unsigned long pos)
+@@ -727,6 +805,18 @@ find_prev_line_no(rb_iseq_t *iseqdat, unsigned long pos)
      return 0;
  }
  
@@ -233,7 +257,7 @@ index 28cc1e5..fce2f86 100644
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -1493,17 +1566,153 @@ rb_iseq_build_for_ruby2cext(
+@@ -1493,17 +1583,153 @@ rb_iseq_build_for_ruby2cext(
      return iseqval;
  }
  
@@ -387,6 +411,25 @@ index 28cc1e5..fce2f86 100644
  
  #if 0 /* TBD */
      rb_define_method(rb_cISeq, "marshal_dump", iseq_marshal_dump, 0);
+diff --git a/iseq.h b/iseq.h
+index 8df190e..9388f7a 100644
+--- a/iseq.h
++++ b/iseq.h
+@@ -118,6 +118,14 @@ enum defined_type {
+     DEFINED_FUNC
+ };
+ 
++struct METHOD {
++    VALUE recv;
++    VALUE rclass;
++    ID id;
++    rb_method_entry_t *me;
++    struct unlinked_method_entry_list_entry *ume;
++};
++
+ #if defined __GNUC__ && __GNUC__ >= 4
+ #pragma GCC visibility pop
+ #endif
 diff --git a/load.c b/load.c
 index 0ff4b60..4bfc157 100644
 --- a/load.c
@@ -406,6 +449,25 @@ index 0ff4b60..4bfc157 100644
  	th->mild_compile_error--;
  	rb_iseq_eval(iseq);
      }
+diff --git a/proc.c b/proc.c
+index 11a2d3e..e3a1dbf 100644
+--- a/proc.c
++++ b/proc.c
+@@ -14,14 +14,6 @@
+ #include "gc.h"
+ #include "iseq.h"
+ 
+-struct METHOD {
+-    VALUE recv;
+-    VALUE rclass;
+-    ID id;
+-    rb_method_entry_t *me;
+-    struct unlinked_method_entry_list_entry *ume;
+-};
+-
+ VALUE rb_cUnboundMethod;
+ VALUE rb_cMethod;
+ VALUE rb_cBinding;
 diff --git a/test/debugger-ext/test_iseq.rb b/test/debugger-ext/test_iseq.rb
 new file mode 100644
 index 0000000..10cd913
@@ -490,6 +552,27 @@ index 0000000..89eef15
 +end
 +# We want to double-check we didn't mess up any pointers somewhere.
 +at_exit { GC.start  }
+diff --git a/test/debugger-ext/test_thread.rb b/test/debugger-ext/test_thread.rb
+new file mode 100644
+index 0000000..89afb5e
+--- /dev/null
++++ b/test/debugger-ext/test_thread.rb
+@@ -0,0 +1,15 @@
++require 'test/unit'
++
++class TestThread < Test::Unit::TestCase
++  def test_thread_tracing
++    assert_equal(false, Thread.current.tracing?)
++    Thread.current.tracing = true
++    assert_equal(true, Thread.current.tracing?)
++    Thread.current.tracing = false
++    assert_equal(false, Thread.current.tracing?)
++  end    
++end
++
++# We want to double-check we didn't mess up any pointers somewhere along
++# the line.
++at_exit { GC.start  }
 diff --git a/test/debugger-ext/testit.sh b/test/debugger-ext/testit.sh
 new file mode 100755
 index 0000000..14b5806
@@ -507,6 +590,64 @@ index 0000000..14b5806
 +    ../../miniruby -I../../lib -I../.. $t
 +    # gdb ../../miniruby
 +done
+diff --git a/thread.c b/thread.c
+index 2cf1064..69e6daa 100644
+--- a/thread.c
++++ b/thread.c
+@@ -4579,6 +4579,37 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
+     return result;
+ }
+ 
++
++/* 
++ *  call-seq:
++ *  Thread#tracing? -> bool
++ * 
++ *  Returns the value of the thread event-hook tracing.
++ */
++VALUE
++rb_thread_tracing(VALUE self)
++{
++    rb_thread_t *th;
++    GetThreadPtr(self, th);
++    return th->tracing ? Qtrue : Qfalse;
++}
++
++/* 
++ *  call-seq:
++ *  Thread#tracing= bool
++ * 
++ *  Sets the value of thread event-hook tracing.
++ */
++VALUE
++rb_thread_tracing_set(VALUE self, VALUE new_value)
++{
++    rb_thread_t *th;
++    GetThreadPtr(self, th);
++
++    th->tracing = RTEST(new_value) ? Qtrue : Qfalse;
++    return th->tracing;
++}
++
+ /*
+  *  call-seq:
+  *     thr.backtrace    -> array
+@@ -4700,6 +4731,10 @@ Init_Thread(void)
+     rb_define_method(rb_cThread, "set_trace_func", thread_set_trace_func_m, 1);
+     rb_define_method(rb_cThread, "add_trace_func", thread_add_trace_func_m, 1);
+ 
++    rb_define_method(rb_cThread, "tracing=",  rb_thread_tracing_set, 1);
++    rb_define_method(rb_cThread, "tracing?",  rb_thread_tracing, 0);
++
++
+     /* init thread core */
+     {
+ 	/* main thread setting */
+@@ -4832,4 +4867,3 @@ rb_reset_coverages(void)
+     GET_VM()->coverages = Qfalse;
+     rb_remove_event_hook(update_coverage);
+ }
+-
 diff --git a/vm_core.h b/vm_core.h
 index b28a222..1d90480 100644
 --- a/vm_core.h
