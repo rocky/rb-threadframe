@@ -43,7 +43,7 @@ thread_exec_event_tracing_set(VALUE self, VALUE new_value)
 
 /* 
  *  call-seq:
- *  Thread#tracing -> bool
+ *  Thread#tracing? -> bool
  * 
  *  Returns the value of the thread event-hook tracing.
  */
@@ -80,5 +80,5 @@ Init_thread_extra(void)
     rb_define_method(rb_cThread, "exec_event_tracing",   
 		     thread_exec_event_tracing, 0);
     rb_define_method(rb_cThread, "tracing=",  thread_tracing_set, 1);
-    rb_define_method(rb_cThread, "tracing",   thread_tracing, 0);
+    rb_define_method(rb_cThread, "tracing?",  thread_tracing, 0);
 }
