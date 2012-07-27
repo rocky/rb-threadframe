@@ -18,7 +18,8 @@ case $patchfile in
 	    210-iseq-field-access.patch \
 	    220-iseq-eval-source-save.patch \
 	    230-iseq-top-name.patch \
-	    240-iseq-SCRIPT_ISEQS__.patch
+	    240-iseq-SCRIPT_ISEQS__.patch \
+	    300-os-startup.patch
 	do 
 	    patch_file=${dirname}/1.9.3/$file
 	    echo -- Applying patches in $patch_file ... | tee -a patches_applied.log

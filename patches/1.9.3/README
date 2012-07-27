@@ -60,4 +60,12 @@ instruction sequence is added, it is accessible from ISEQS__ using its
 iseq_name as a key.
 
 If ISEQS__ is set, we don't discard the compile options.
+Some programs like a debugger may want a way to reliably restart the program.
+
+-------------------
+300-os-startup.patch
+
+RubyVM::OS_ARGV and RubyVM::OS_STARTUP_DIR captures the initial @ARGV
+and current working directory to make this happen. (Inside a Ruby
+program, one can change @ARGV and cwd)
 
