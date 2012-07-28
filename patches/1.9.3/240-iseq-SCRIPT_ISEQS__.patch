@@ -161,12 +161,12 @@ index 71cb7b2..15e32e7 100644
  }
  
  VALUE
-@@ -429,7 +482,7 @@ rb_iseq_new_with_bopt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VA
+@@ -429,7 +484,7 @@ rb_iseq_new_with_bopt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VA
  {
      /* TODO: argument check */
      return rb_iseq_new_with_bopt_and_opt(node, name, filename, filepath, line_no, parent, type,
 -					   bopt, &COMPILE_OPTION_DEFAULT);
-+					 bopt, Qnil, &COMPILE_OPTION_DEFAULT);
++                                         bopt, Qnil, &COMPILE_OPTION_DEFAULT);
  }
  
  #define CHECK_ARRAY(v)   rb_convert_type((v), T_ARRAY, "Array", "to_ary")

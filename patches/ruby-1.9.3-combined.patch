@@ -12,23 +12,22 @@ index 71059de..4633d7c 100644
      iseq_add_mark_object(iseq, ret);
      return ret;
 diff --git a/include/ruby/ruby.h b/include/ruby/ruby.h
-index 2f97b33..7365da4 100644
+index 2f97b33..2496dc1 100644
 --- a/include/ruby/ruby.h
 +++ b/include/ruby/ruby.h
-@@ -1318,6 +1318,12 @@ RUBY_EXTERN VALUE rb_eMathDomainError;
+@@ -1318,6 +1318,11 @@ RUBY_EXTERN VALUE rb_eMathDomainError;
  
  RUBY_EXTERN VALUE rb_stdin, rb_stdout, rb_stderr;
  
 +/* in vm_method.c, and proc.c */
 +RUBY_EXTERN VALUE rb_method_alias_count(VALUE);
-+RUBY_EXTERN VALUE rb_method_original_id(VALUE);
 +RUBY_EXTERN VALUE rb_method_original_id(VALUE self);
 +RUBY_EXTERN VALUE rb_method_type(VALUE self);
 +
  static inline VALUE
  rb_class_of(VALUE obj)
  {
-@@ -1481,6 +1487,12 @@ int ruby_vsnprintf(char *str, size_t n, char const *fmt, va_list ap);
+@@ -1481,6 +1486,12 @@ int ruby_vsnprintf(char *str, size_t n, char const *fmt, va_list ap);
  #include "ruby/subst.h"
  #endif
  
@@ -42,7 +41,7 @@ index 2f97b33..7365da4 100644
  #if 0
  { /* satisfy cc-mode */
 diff --git a/iseq.c b/iseq.c
-index 7380663..1ff6fc5 100644
+index 7380663..3c6f70e 100644
 --- a/iseq.c
 +++ b/iseq.c
 @@ -282,13 +282,17 @@ prepare_iseq_build(rb_iseq_t *iseq,
@@ -181,7 +180,7 @@ index 7380663..1ff6fc5 100644
      /* TODO: argument check */
      return rb_iseq_new_with_bopt_and_opt(node, name, filename, filepath, line_no, parent, type,
 -					   bopt, &COMPILE_OPTION_DEFAULT);
-+					 bopt, Qnil, &COMPILE_OPTION_DEFAULT);
++                                         bopt, Qnil, &COMPILE_OPTION_DEFAULT);
  }
  
  #define CHECK_ARRAY(v)   rb_convert_type((v), T_ARRAY, "Array", "to_ary")

@@ -4,7 +4,7 @@ diff --git a/iseq.c b/iseq.c
 index 588e386..7a4b89a 100644
 --- a/iseq.c
 +++ b/iseq.c
-@@ -1505,12 +1505,147 @@ rb_iseq_build_for_ruby2cext(
+@@ -1493,12 +1493,147 @@ rb_iseq_build_for_ruby2cext(
      return iseqval;
  }
  
