@@ -12,10 +12,23 @@ index 71059de..4633d7c 100644
      iseq_add_mark_object(iseq, ret);
      return ret;
 diff --git a/include/ruby/ruby.h b/include/ruby/ruby.h
-index 2f97b33..b909250 100644
+index 2f97b33..7365da4 100644
 --- a/include/ruby/ruby.h
 +++ b/include/ruby/ruby.h
-@@ -1481,6 +1481,12 @@ int ruby_vsnprintf(char *str, size_t n, char const *fmt, va_list ap);
+@@ -1318,6 +1318,12 @@ RUBY_EXTERN VALUE rb_eMathDomainError;
+ 
+ RUBY_EXTERN VALUE rb_stdin, rb_stdout, rb_stderr;
+ 
++/* in vm_method.c, and proc.c */
++RUBY_EXTERN VALUE rb_method_alias_count(VALUE);
++RUBY_EXTERN VALUE rb_method_original_id(VALUE);
++RUBY_EXTERN VALUE rb_method_original_id(VALUE self);
++RUBY_EXTERN VALUE rb_method_type(VALUE self);
++
+ static inline VALUE
+ rb_class_of(VALUE obj)
+ {
+@@ -1481,6 +1487,12 @@ int ruby_vsnprintf(char *str, size_t n, char const *fmt, va_list ap);
  #include "ruby/subst.h"
  #endif
  
@@ -29,7 +42,7 @@ index 2f97b33..b909250 100644
  #if 0
  { /* satisfy cc-mode */
 diff --git a/iseq.c b/iseq.c
-index 7380663..8ab41e8 100644
+index 7380663..1ff6fc5 100644
 --- a/iseq.c
 +++ b/iseq.c
 @@ -282,13 +282,17 @@ prepare_iseq_build(rb_iseq_t *iseq,
@@ -180,7 +193,7 @@ index 7380663..8ab41e8 100644
  
      /* [magic, major_version, minor_version, format_type, misc,
       *  name, filename, line_no,
-@@ -514,8 +570,9 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
+@@ -514,11 +570,28 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
  		       parent, (enum iseq_type)iseq_type, 0, &option);
  
      rb_iseq_build_from_ary(iseq, locals, args, exception, body);
@@ -191,7 +204,26 @@ index 7380663..8ab41e8 100644
      return iseqval;
  }
  
-@@ -559,11 +616,11 @@ rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, V
++/* 
++ *  call-seq:
++ *  RubyVM::InstructionSequence#arity -> Fixnum
++ *
++ *  Returns the number of arguments that would not be ignored.
++ *  See Ruby 1.9 proc_arity of proc.c
++ */
++VALUE
++rb_iseq_arity(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    if (Qnil == iseqval) return Qnil;
++    GetISeqPtr(iseqval, iseq);
++    return (iseq) ? INT2FIX(get_iseq_arity(iseq)) : Qnil;
++}
++
+ static VALUE
+ iseq_s_load(int argc, VALUE *argv, VALUE self)
+ {
+@@ -559,11 +632,11 @@ rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, V
      if (th->base_block && th->base_block->iseq) {
  	return rb_iseq_new_with_opt(node, th->base_block->iseq->name,
  				    file, filepath, line, th->base_block->iseq->self,
@@ -205,7 +237,7 @@ index 7380663..8ab41e8 100644
      }
  }
  
-@@ -609,7 +666,7 @@ iseq_s_compile_file(int argc, VALUE *argv, VALUE self)
+@@ -609,7 +682,7 @@ iseq_s_compile_file(int argc, VALUE *argv, VALUE self)
      make_compile_option(&option, opt);
      return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), file,
  				rb_realpath_internal(Qnil, file, 1), line, Qfalse,
@@ -214,7 +246,7 @@ index 7380663..8ab41e8 100644
  }
  
  static VALUE
-@@ -655,9 +712,13 @@ iseq_inspect(VALUE self)
+@@ -655,9 +728,13 @@ iseq_inspect(VALUE self)
          return rb_sprintf("#<%s: uninitialized>", rb_obj_classname(self));
      }
  
@@ -231,7 +263,7 @@ index 7380663..8ab41e8 100644
  }
  
  static
-@@ -727,6 +788,18 @@ find_prev_line_no(rb_iseq_t *iseqdat, unsigned long pos)
+@@ -727,6 +804,18 @@ find_prev_line_no(rb_iseq_t *iseqdat, unsigned long pos)
      return 0;
  }
  
@@ -250,7 +282,7 @@ index 7380663..8ab41e8 100644
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -1493,17 +1566,153 @@ rb_iseq_build_for_ruby2cext(
+@@ -1493,17 +1582,154 @@ rb_iseq_build_for_ruby2cext(
      return iseqval;
  }
  
@@ -396,6 +428,7 @@ index 7380663..8ab41e8 100644
 +    rb_define_method(rb_cISeq, "type",             iseq_type, 0) ;
 +    rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
      rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
++    rb_define_method(rb_cISeq, "arity",   rb_iseq_arity, 0);
      rb_define_method(rb_cISeq, "disasm", rb_iseq_disasm, 0);
      rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
      rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
@@ -404,6 +437,34 @@ index 7380663..8ab41e8 100644
  
  #if 0 /* TBD */
      rb_define_method(rb_cISeq, "marshal_dump", iseq_marshal_dump, 0);
+diff --git a/iseq.h b/iseq.h
+index beeacbb..87cd3bb 100644
+--- a/iseq.h
++++ b/iseq.h
+@@ -30,6 +30,8 @@ struct st_table *ruby_insn_make_insn_table(void);
+ /* proc.c */
+ rb_iseq_t *rb_method_get_iseq(VALUE body);
+ rb_iseq_t *rb_proc_get_iseq(VALUE proc, int *is_proc);
++int method_arity(VALUE);
++int get_iseq_arity(rb_iseq_t *iseq);
+ 
+ struct rb_compile_option_struct {
+     int inline_const_cache;
+@@ -118,6 +120,14 @@ enum defined_type {
+     DEFINED_FUNC
+ };
+ 
++struct METHOD {
++    VALUE recv;
++    VALUE rclass;
++    ID id;
++    rb_method_entry_t *me;
++    struct unlinked_method_entry_list_entry *ume;
++};
++
+ #if defined __GNUC__ && __GNUC__ >= 4
+ #pragma GCC visibility pop
+ #endif
 diff --git a/load.c b/load.c
 index 0ff4b60..4bfc157 100644
 --- a/load.c
@@ -423,6 +484,100 @@ index 0ff4b60..4bfc157 100644
  	th->mild_compile_error--;
  	rb_iseq_eval(iseq);
      }
+diff --git a/proc.c b/proc.c
+index cb44b10..80de893 100644
+--- a/proc.c
++++ b/proc.c
+@@ -14,21 +14,12 @@
+ #include "gc.h"
+ #include "iseq.h"
+ 
+-struct METHOD {
+-    VALUE recv;
+-    VALUE rclass;
+-    ID id;
+-    rb_method_entry_t *me;
+-    struct unlinked_method_entry_list_entry *ume;
+-};
+-
+ VALUE rb_cUnboundMethod;
+ VALUE rb_cMethod;
+ VALUE rb_cBinding;
+ VALUE rb_cProc;
+ 
+ static VALUE bmcall(VALUE, VALUE);
+-static int method_arity(VALUE);
+ 
+ /* Proc */
+ 
+@@ -326,6 +317,28 @@ rb_binding_new(void)
+     return bindval;
+ }
+ 
++/*  Like rb_binding_new(), but we allow you to pass your own thread and
++ *  cfp rather than assume the current thread and current frame
++ *  pointer. 
++*/
++VALUE
++rb_binding_frame_new(void *vth, void *vcfp)
++{
++    rb_thread_t * th = (rb_thread_t *) vth;
++    rb_control_frame_t * cfp  = (rb_control_frame_t *) vcfp;
++    VALUE bindval = binding_alloc(rb_cBinding);
++    rb_binding_t *bind;
++    
++    if (cfp == 0) {
++        rb_raise(rb_eRuntimeError, 
++		 "Can't create Binding Object on top of Fiber.");
++    }
++
++    GetBindingPtr(bindval, bind);
++    bind->env = rb_vm_make_env_object(th, cfp);
++    return bindval;
++}
++
+ /*
+  *  call-seq:
+  *     binding -> a_binding
+@@ -631,6 +644,29 @@ proc_arity(VALUE self)
+     return INT2FIX(arity);
+ }
+ 
++int 
++get_iseq_arity(rb_iseq_t *iseq) 
++{
++    if (iseq) {
++	if (BUILTIN_TYPE(iseq) != T_NODE) {
++	    if (iseq->arg_rest < 0) {
++		return iseq->argc;
++	    }
++	    else {
++		return -(iseq->argc + 1 + iseq->arg_post_len);
++	    }
++	}
++	else {
++	    NODE *node = (NODE *)iseq;
++	    if (nd_type(node) == NODE_IFUNC && node->nd_cfnc == bmcall) {
++		/* method(:foo).to_proc.arity */
++		return method_arity(node->nd_tval);
++	    }
++	}
++    }
++    return -1;
++}
++
+ int
+ rb_proc_arity(VALUE self)
+ {
+@@ -1649,7 +1685,7 @@ method_arity_m(VALUE method)
+     return INT2FIX(n);
+ }
+ 
+-static int
++int
+ method_arity(VALUE method)
+ {
+     struct METHOD *data;
 diff --git a/ruby.c b/ruby.c
 index 3c97d01..799f2ca 100644
 --- a/ruby.c
@@ -459,10 +614,10 @@ index 3c97d01..799f2ca 100644
  #endif
 diff --git a/test/debugger-ext/test_iseq.rb b/test/debugger-ext/test_iseq.rb
 new file mode 100644
-index 0000000..10cd913
+index 0000000..07a7e1f
 --- /dev/null
 +++ b/test/debugger-ext/test_iseq.rb
-@@ -0,0 +1,25 @@
+@@ -0,0 +1,26 @@
 +require 'test/unit'
 +class TestISeqSource < Test::Unit::TestCase
 +  def test_source
@@ -487,13 +642,14 @@ index 0000000..10cd913
 +    # puts iseq.klass
 +    # puts iseq.lineno
 +  end
++
 +end
 diff --git a/test/debugger-ext/test_iseq_hash.rb b/test/debugger-ext/test_iseq_hash.rb
 new file mode 100644
-index 0000000..4854600
+index 0000000..303dcd3
 --- /dev/null
 +++ b/test/debugger-ext/test_iseq_hash.rb
-@@ -0,0 +1,47 @@
+@@ -0,0 +1,57 @@
 +# See that setting ISEQS__ and SCRIPT_ISEQS__ saves 
 +# RubyVM::Instruction_sequenses
 +require 'test/unit'
@@ -535,6 +691,16 @@ index 0000000..4854600
 +      assert_equal RubyVM::InstructionSequence, iseq_hash.values[0][0].class
 +    end
 +    assert_equal RubyVM::InstructionSequence, ISEQS__["five"][0].class
++
++    # Check RubyVM::InstructionSequence#arity
++    eval 'def five; 5 end'
++    eval 'def add(a,b); a+b end'
++    eval 'def splat(*a); 5 end'
++# #   [['five', 0,], ['add', 2], ['splat', -1]].each do |meth, expect|
++    [['five', 0,], ['splat', -1]].each do |meth, expect|
++      assert_equal(expect, ISEQS__[meth][0].arity)
++    end
++
 +    # Null ISEQS__ and SCRIPT_ISEQS__ but avoid: dynanmic constant warning
 +    eval "ISEQS__ = nil; SCRIPT_ISEQS__ = nil"
 +  end
@@ -543,15 +709,18 @@ index 0000000..4854600
 +at_exit { GC.start  }
 diff --git a/test/debugger-ext/test_os_startup.rb b/test/debugger-ext/test_os_startup.rb
 new file mode 100644
-index 0000000..b65ee2c
+index 0000000..5851c9a
 --- /dev/null
 +++ b/test/debugger-ext/test_os_startup.rb
-@@ -0,0 +1,8 @@
+@@ -0,0 +1,11 @@
 +require 'test/unit'
 +
 +class TestThread < Test::Unit::TestCase
 +  def test_os_startup
-+    assert RubyVM::OS_ARGV
++    assert_equal(true, RubyVM::OS_ARGV.any?{|arg| $0 == arg},
++                 "program name args should contain #{$0}")
++    assert_operator(2, :<=, RubyVM::OS_ARGV.size, 
++                    "RubyVM::OS_ARGV should contain at least the Ruby interpeter and the program name")
 +    assert RubyVM::OS_STARTUP_DIR
 +  end    
 +end
@@ -687,10 +856,10 @@ index e997afa..78b1c56 100644
      fcore = rb_class_new(rb_cBasicObject);
      RBASIC(fcore)->flags = T_ICLASS;
 diff --git a/vm_core.h b/vm_core.h
-index 7211005..1e0273b 100644
+index 7211005..aef7195 100644
 --- a/vm_core.h
 +++ b/vm_core.h
-@@ -255,6 +255,10 @@ struct rb_iseq_struct {
+@@ -255,6 +255,20 @@ struct rb_iseq_struct {
  
      /* used at compile time */
      struct iseq_compile_data *compile_data;
@@ -698,10 +867,75 @@ index 7211005..1e0273b 100644
 +    /* If this instruction sequence came from eval, the string of the
 +       source as a String. */
 +    VALUE source;
++
++    /* If we are saving tree nodes (a compile option), then tree_node
++       is the internal parse tree node representation for this
++       instruction sequence.
++    */
++    NODE *tree_node;
++    int in_use;  /* Reference count of number of times and instruction
++		    sequence is in use such as via thread_frame object
++		    access or is stored in ISEQS__ or SCRIPT_ISEQS.
++		  */
  };
  
  enum ruby_special_exceptions {
-@@ -500,7 +504,7 @@ VALUE rb_iseq_new(NODE*, VALUE, VALUE, VALUE, VALUE, enum iseq_type);
+@@ -406,6 +420,16 @@ typedef struct rb_thread_struct {
+ 
+     int waiting_fd;
+ 
++    /* tracer */
++    rb_event_hook_t *event_hooks;
++    rb_event_flag_t event_flags;
++    int tracing;  /* 0 if not tracing. If less than 0, skip that many
++		     C call/return pairs */
++
++    /* misc */
++    int method_missing_reason;
++    int abort_on_exception;
++
+     /* for rb_iterate */
+     const rb_block_t *passed_block;
+ 
+@@ -427,6 +451,14 @@ typedef struct rb_thread_struct {
+     enum rb_thread_status status;
+     int priority;
+ 
++    /* statistics data for profiler */
++    VALUE stat_insn_usage;
++
++    /* fiber */
++    VALUE fiber;
++    VALUE root_fiber;
++    rb_jmpbuf_t root_jmpbuf;
++
+     native_thread_data_t native_thread_data;
+     void *blocking_region_buffer;
+ 
+@@ -470,22 +502,7 @@ typedef struct rb_thread_struct {
+     jmp_buf machine_regs;
+     int mark_stack_len;
+ 
+-    /* statistics data for profiler */
+-    VALUE stat_insn_usage;
+-
+-    /* tracer */
+-    rb_event_hook_t *event_hooks;
+-    rb_event_flag_t event_flags;
+-    int tracing;
+-
+-    /* fiber */
+-    VALUE fiber;
+-    VALUE root_fiber;
+-    rb_jmpbuf_t root_jmpbuf;
+-
+     /* misc */
+-    int method_missing_reason;
+-    int abort_on_exception;
+ #ifdef USE_SIGALTSTACK
+     void *altstack;
+ #endif
+@@ -500,7 +517,7 @@ VALUE rb_iseq_new(NODE*, VALUE, VALUE, VALUE, VALUE, enum iseq_type);
  VALUE rb_iseq_new_top(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE parent);
  VALUE rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath);
  VALUE rb_iseq_new_with_bopt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, VALUE);

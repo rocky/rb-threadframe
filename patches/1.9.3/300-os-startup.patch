@@ -55,3 +55,19 @@ index 3c97d01..799f2ca 100644
  #if defined(USE_DLN_A_OUT)
      dln_argv0 = origarg.argv[0];
  #endif
+new file mode 100644
+index 0000000..5851c9a
+--- /dev/null
++++ b/test/debugger-ext/test_os_startup.rb
+@@ -0,0 +1,11 @@
++require 'test/unit'
++
++class TestThread < Test::Unit::TestCase
++  def test_os_startup
++    assert_equal(true, RubyVM::OS_ARGV.any?{|arg| $0 == arg},
++                 "program name args should contain #{$0}")
++    assert_operator(2, :<=, RubyVM::OS_ARGV.size, 
++                    "RubyVM::OS_ARGV should contain at least the Ruby interpeter and the program name")
++    assert RubyVM::OS_STARTUP_DIR
++  end    
++end

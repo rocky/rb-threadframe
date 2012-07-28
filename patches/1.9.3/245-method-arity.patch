@@ -1,0 +1,165 @@
+Adds Method#arity. 
+
+The unit test added here uses ISEQS__ from
+240-iseq-SCRIPT_ISEQS__.patch and adds code to that the unit
+test. Probably the unit test here could be rewritten to avoid this.
+
+diff --git a/iseq.c b/iseq.c
+index 8ab41e8..1ff6fc5 100644
+--- a/iseq.c
++++ b/iseq.c
+@@ -576,6 +576,22 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
+     return iseqval;
+ }
+ 
++/* 
++ *  call-seq:
++ *  RubyVM::InstructionSequence#arity -> Fixnum
++ *
++ *  Returns the number of arguments that would not be ignored.
++ *  See Ruby 1.9 proc_arity of proc.c
++ */
++VALUE
++rb_iseq_arity(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    if (Qnil == iseqval) return Qnil;
++    GetISeqPtr(iseqval, iseq);
++    return (iseq) ? INT2FIX(get_iseq_arity(iseq)) : Qnil;
++}
++
+ static VALUE
+ iseq_s_load(int argc, VALUE *argv, VALUE self)
+ {
+@@ -1708,6 +1724,7 @@ Init_ISeq(void)
+     rb_define_method(rb_cISeq, "type",             iseq_type, 0) ;
+     rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
+     rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
++    rb_define_method(rb_cISeq, "arity",   rb_iseq_arity, 0);
+     rb_define_method(rb_cISeq, "disasm", rb_iseq_disasm, 0);
+     rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
+     rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
+diff --git a/iseq.h b/iseq.h
+index bb7d438..87cd3bb 100644
+--- a/iseq.h
++++ b/iseq.h
+@@ -30,6 +30,8 @@ struct st_table *ruby_insn_make_insn_table(void);
+ /* proc.c */
+ rb_iseq_t *rb_method_get_iseq(VALUE body);
+ rb_iseq_t *rb_proc_get_iseq(VALUE proc, int *is_proc);
++int method_arity(VALUE);
++int get_iseq_arity(rb_iseq_t *iseq);
+ 
+ struct rb_compile_option_struct {
+     int inline_const_cache;
+diff --git a/proc.c b/proc.c
+index 6aaf86f..80de893 100644
+--- a/proc.c
++++ b/proc.c
+@@ -20,7 +20,6 @@ VALUE rb_cBinding;
+ VALUE rb_cProc;
+ 
+ static VALUE bmcall(VALUE, VALUE);
+-static int method_arity(VALUE);
+ 
+ /* Proc */
+ 
+@@ -318,6 +317,28 @@ rb_binding_new(void)
+     return bindval;
+ }
+ 
++/*  Like rb_binding_new(), but we allow you to pass your own thread and
++ *  cfp rather than assume the current thread and current frame
++ *  pointer. 
++*/
++VALUE
++rb_binding_frame_new(void *vth, void *vcfp)
++{
++    rb_thread_t * th = (rb_thread_t *) vth;
++    rb_control_frame_t * cfp  = (rb_control_frame_t *) vcfp;
++    VALUE bindval = binding_alloc(rb_cBinding);
++    rb_binding_t *bind;
++    
++    if (cfp == 0) {
++        rb_raise(rb_eRuntimeError, 
++		 "Can't create Binding Object on top of Fiber.");
++    }
++
++    GetBindingPtr(bindval, bind);
++    bind->env = rb_vm_make_env_object(th, cfp);
++    return bindval;
++}
++
+ /*
+  *  call-seq:
+  *     binding -> a_binding
+@@ -623,6 +644,29 @@ proc_arity(VALUE self)
+     return INT2FIX(arity);
+ }
+ 
++int 
++get_iseq_arity(rb_iseq_t *iseq) 
++{
++    if (iseq) {
++	if (BUILTIN_TYPE(iseq) != T_NODE) {
++	    if (iseq->arg_rest < 0) {
++		return iseq->argc;
++	    }
++	    else {
++		return -(iseq->argc + 1 + iseq->arg_post_len);
++	    }
++	}
++	else {
++	    NODE *node = (NODE *)iseq;
++	    if (nd_type(node) == NODE_IFUNC && node->nd_cfnc == bmcall) {
++		/* method(:foo).to_proc.arity */
++		return method_arity(node->nd_tval);
++	    }
++	}
++    }
++    return -1;
++}
++
+ int
+ rb_proc_arity(VALUE self)
+ {
+@@ -1641,7 +1685,7 @@ method_arity_m(VALUE method)
+     return INT2FIX(n);
+ }
+ 
+-static int
++int
+ method_arity(VALUE method)
+ {
+     struct METHOD *data;
+diff --git a/test/debugger-ext/test_iseq.rb b/test/debugger-ext/test_iseq.rb
+index 10cd913..07a7e1f 100644
+--- a/test/debugger-ext/test_iseq.rb
++++ b/test/debugger-ext/test_iseq.rb
+@@ -22,4 +22,5 @@ class TestISeqSource < Test::Unit::TestCase
+     # puts iseq.klass
+     # puts iseq.lineno
+   end
++
+ end
+diff --git a/test/debugger-ext/test_iseq_hash.rb b/test/debugger-ext/test_iseq_hash.rb
+index 4854600..303dcd3 100644
+--- a/test/debugger-ext/test_iseq_hash.rb
++++ b/test/debugger-ext/test_iseq_hash.rb
+@@ -39,6 +39,16 @@ class TestIseqAccess < Test::Unit::TestCase
+       assert_equal RubyVM::InstructionSequence, iseq_hash.values[0][0].class
+     end
+     assert_equal RubyVM::InstructionSequence, ISEQS__["five"][0].class
++
++    # Check RubyVM::InstructionSequence#arity
++    eval 'def five; 5 end'
++    eval 'def add(a,b); a+b end'
++    eval 'def splat(*a); 5 end'
++# #   [['five', 0,], ['add', 2], ['splat', -1]].each do |meth, expect|
++    [['five', 0,], ['splat', -1]].each do |meth, expect|
++      assert_equal(expect, ISEQS__[meth][0].arity)
++    end
++
+     # Null ISEQS__ and SCRIPT_ISEQS__ but avoid: dynanmic constant warning
+     eval "ISEQS__ = nil; SCRIPT_ISEQS__ = nil"
+   end

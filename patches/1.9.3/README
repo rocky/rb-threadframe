@@ -61,6 +61,14 @@ iseq_name as a key.
 
 If ISEQS__ is set, we don't discard the compile options.
 Some programs like a debugger may want a way to reliably restart the program.
+-------------------
+245-method-arity.patch
+
+Adds Method#arity. 
+
+The unit test added here uses ISEQS__ from
+240-iseq-SCRIPT_ISEQS__.patch and adds code to that the unit
+test. Probably the unit test here could be rewritten to avoid this.
 
 -------------------
 300-os-startup.patch
