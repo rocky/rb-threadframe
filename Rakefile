@@ -36,7 +36,7 @@ desc 'Create the core thread-frame shared library extension'
 task :ext do
   Dir.chdir('ext') do
     system("#{Gem.ruby} extconf.rb && make")
-  end
+  end if '1.9.2' == RUBY_VERSION
 end
 
 desc 'Remove built files'

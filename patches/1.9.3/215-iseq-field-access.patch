@@ -1,0 +1,242 @@
+More InstructionSequence methods: 
+InstructionSequence#local_iseq and
+InstructionSequence#local_name(i) returns String name for local entry i
+
+diff --git a/iseq.c b/iseq.c
+index 9f28049..3293327 100644
+--- a/iseq.c
++++ b/iseq.c
+@@ -1636,6 +1636,57 @@ rb_iseq_build_for_ruby2cext(
+     return iseqval;
+ }
+ 
++VALUE 
++rb_iseq_local_iseq(VALUE self)
++{
++    rb_iseq_t *piseq;
++    rb_iseq_t *local_iseq;
++    VALUE local_iseqval;
++    GetISeqPtr(self, piseq);
++
++    if (!RTEST(piseq->local_iseq)) return Qnil;
++    local_iseqval = iseq_alloc_shared(rb_cISeq);
++    GetISeqPtr(local_iseqval, local_iseq);
++    memcpy(local_iseq, piseq->local_iseq, sizeof(struct rb_iseq_struct));
++    return local_iseqval;
++}
++
++/* 
++ * call-seq:
++ *     RubyVM::InstructionSequence#local_name(i) - String
++ * 
++ *  Returns the string name of local variable in i'th position
++ *  of the instruction sequence local table, or nil if i is
++ * out of range.
++ */
++VALUE
++rb_iseq_local_name(VALUE iseqval, VALUE val)
++{
++    rb_iseq_t *iseq;
++    if (FIXNUM_P(val)) {
++      long int i = FIX2INT(val);
++      long int size;
++      
++      GetISeqPtr(iseqval, iseq);
++      
++      size = iseq->local_table_size;
++      
++      if (i < 0) i = size + i;
++      
++      if (i >= size)
++	rb_raise(rb_eIndexError, 
++		 "local table index %ld should be in the range -%ld .. %ld",
++		 i, size, size-1);
++      
++      return rb_str_new2(rb_id2name(iseq->local_table[i]));
++    } else {
++      rb_raise(rb_eTypeError, "type mismatch: %s given, Fixnum expected", 
++	       rb_class2name(CLASS_OF(val)));
++    }
++    /* not reached. */
++    return Qnil;
++}
++
+ /* 
+  * call-seq:
+  *     RubyVM::InstructionSequence#name -> String
+@@ -1757,12 +1808,13 @@ Init_ISeq(void)
+     rb_define_method(rb_cISeq, "arg_rest",         iseq_arg_rest, 0) ;
+     rb_define_method(rb_cISeq, "arg_simple",       iseq_arg_simple, 0) ;
+     rb_define_method(rb_cISeq, "argc",             iseq_argc, 0) ;
++
++    rb_define_method(rb_cISeq, "local_iseq",       rb_iseq_local_iseq, 0) ;
++    rb_define_method(rb_cISeq, "local_name",       rb_iseq_local_name, 1) ;
+ #ifdef FINISHED
+     rb_define_method(rb_cISeq, "compile_options",  iseq_compile_options, 0) ;
+     rb_define_method(rb_cISeq, "equal?",           iseq_equal, 1) ;
+     rb_define_method(rb_cISeq, "line_range",       iseq_line_range, 0) ;
+-    rb_define_method(rb_cISeq, "local_iseq",       iseq_local_iseq, 0) ;
+-    rb_define_method(rb_cISeq, "local_name",       iseq_local_name, 1) ;
+     rb_define_method(rb_cISeq, "parent",           iseq_parent, 0) ;
+ #endif
+     rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
+diff --git a/test/debugger-ext/test_iseq.rb b/test/debugger-ext/test_iseq.rb
+index 07a7e1f..e5f8d00 100644
+--- /dev/null
++++ b/test/debugger-ext/test_iseq.rb
+@@ -0,0 +1,123 @@
++require 'test/unit'
++
++class TestISeq < Test::Unit::TestCase
++
++  class C
++    def initialize(test_obj, optional=true)
++      iseq = RubyVM::Frame::current.iseq
++      test_obj.assert_equal('test_obj', iseq.local_name(0))
++      test_obj.assert_equal(1, iseq.arity)
++      test_obj.assert_equal(-1, iseq.arg_block)
++      test_obj.assert_equal(1, iseq.argc)
++    end
++  end
++  
++  def test_fields
++    start_lineno = __LINE__ - 1;
++    iseq = RubyVM::Frame::current.iseq
++    assert iseq
++    assert_equal('test_fields', iseq.name)
++    ## FIXME: Why does this fail? 
++    ## assert_equal(start_lineno, iseq.lineno, 'iseq.lineno')
++    assert_equal(0, iseq.arity)
++    assert_equal(-1, iseq.arg_block)
++    assert_equal(0, iseq.argc)
++    assert_equal(0, iseq.arg_opts)
++    assert_equal(4, iseq.local_table_size)
++    x  = lambda do |x,y| 
++      iseq = RubyVM::Frame::current.iseq
++      assert iseq
++      assert_equal(2, iseq.arity)
++      assert_equal(-1, iseq.arg_block)
++      assert_equal(2, iseq.argc)
++      assert_equal(0, iseq.arg_opts)
++      assert_equal(3, iseq.local_table_size)
++      ['x', 'y'].each_with_index do |expect, i|
++        assert_equal(expect, iseq.local_name(i))
++      end
++      
++      assert_equal('x', iseq.local_name(-1))
++      assert_raise IndexError do
++        x = iseq.local_name(10)
++      end
++    end
++    x.call(1,2)
++
++    x  = Proc.new do |a|
++      iseq = RubyVM::Frame::current.iseq
++      assert iseq
++      assert_equal(1, iseq.arity)
++      assert_equal(-1, iseq.arg_block)
++      assert_equal(1, iseq.argc)
++      assert_equal(0, iseq.arg_opts)
++      assert_equal(1, iseq.local_table_size)
++      ['a'].each_with_index do |expect, i|
++        assert_equal(expect, iseq.local_name(i))
++      end
++      assert_raises IndexError do
++        x = iseq.local_name(100)
++      end
++      assert_raises TypeError do 
++        p iseq.local_name('a')
++      end
++    end
++    x.call(1,2)
++    C.new(self, 5)
++    end_lineno = __LINE__ + 3
++    # FIXME:
++    # assert_equal((start_lineno..end_lineno), 
++    #              method(:test_fields).iseq.line_range, 'line range')
++  end
++
++  def test_iseq_equal
++    tf = RubyVM::Frame.current
++    tf2 = RubyVM::Frame.current
++    while !tf.iseq do
++      tf = tf.prev
++      tf2 = tf2.prev
++    end
++    assert_equal(false, tf.iseq.equal?(nil))
++    ## FIXME:
++    ## assert_equal(true,  tf.iseq.equal?(tf.iseq))
++    ## assert_equal(true,  tf.iseq.equal?(tf2.iseq))
++    tf2 = tf2.prev 
++    while !tf2.iseq do tf2 = tf2.prev end
++    assert_equal(false, tf.iseq.equal?(tf2.iseq))
++    ## FIXME
++    # assert_raises TypeError do
++    #   tf.iseq.equal?(tf)
++    # end
++  end
++
++  # # FIXME: killcache interface will probably change. Try make less sensitive
++  # # to compile sequence
++  # def test_iseq_killcache
++  #   iseq = RubyVM::Frame.current.iseq
++  #   count = iseq.killcache
++  #   if 0 != count
++  #     assert_equal(0, iseq.killcache, 
++  #                'Doing killcache a second time should do nothing')
++  #   end
++  # end
++
++  def test_offsetlines
++    start     = __LINE__ - 1
++    tf        = RubyVM::Frame::current
++    iseq      = tf.iseq
++    offlines  = iseq.offsetlines
++    pc        = tf.pc_offset
++    assert_equal(__LINE__, offlines[pc][0]+1)
++    offlines.values.each do |value|
++      assert(value[0] >= start, "#{value[0]} should be not less than starting line #{start}")
++      # Rough count of # of lines is less than 20
++      assert(value[0] < start + 20, "#{value[0]} should be less than starting line #{start}")
++    end
++    offlines.keys.each do |offset|
++      assert_equal offlines[offset][0], iseq.offset2lines(offset)[0]
++    end
+   end
+ 
+ end
++
++# We want to double-check we didn't mess up any pointers somewhere.
++at_exit { GC.start  }
+diff --git a/test/debugger-ext/test_iseq_source.rb b/test/debugger-ext/test_iseq_source.rb
+new file mode 100644
+index 0000000..07a7e1f
+--- /dev/null
++++ b/test/debugger-ext/test_iseq_source.rb
+@@ -0,0 +1,26 @@
++require 'test/unit'
++class TestISeqSource < Test::Unit::TestCase
++  def test_source
++    iseq = RubyVM::InstructionSequence.new("x=1")
++    assert_equal  2, iseq.local_size
++    assert_equal  0, iseq.argc
++    assert_equal -1, iseq.arg_rest
++    assert_equal  0, iseq.arg_post_len
++    assert_equal -1, iseq.arg_block
++    assert_equal  1, iseq.arg_simple
++    assert_equal  1, iseq.local_table_size
++    assert_operator 0, :<=, iseq.iseq_size
++    assert_equal [1], iseq.offset2lines(0)
++    assert iseq.offsetlines.is_a?(Hash)
++    assert iseq.offsetlines.values.all?{|x| x == [1]}
++    assert iseq.disasm.is_a?(String)
++    assert_equal 1, iseq.eval
++    assert iseq.self.kind_of?(RubyVM::InstructionSequence)
++    # puts iseq.disasm
++    # puts iseq.name
++    # puts iseq.type
++    # puts iseq.klass
++    # puts iseq.lineno
++  end
++
++end

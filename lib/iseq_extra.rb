@@ -1,5 +1,5 @@
 require 'digest/sha1'
-require_relative '../ext/thread_frame'
+require_relative '../ext/thread_frame' if '1.9.2' == RUBY_VERSION
 # Some additions to RubyVM::InstructionSequence
 class RubyVM::InstructionSequence
 
@@ -141,8 +141,9 @@ end
 
 if __FILE__ == $0
   # Demo it.
-  iseq = RubyVM::ThreadFrame.current.iseq
-  puts iseq.format_args
+  iseq = RubyVM::Frame.current.iseq
+  ## FIXME
+  ## puts iseq.format_args
   puts iseq.disassemble
   puts iseq.lineoffsets
   puts iseq.sha1
@@ -150,7 +151,7 @@ if __FILE__ == $0
   p iseq.line2offsets(__LINE__+100)
 
   def show_type # :nodoc:
-    tf = RubyVM::ThreadFrame.current
+    tf = RubyVM::Frame.current
     while tf do
       is = tf.iseq
       if is
@@ -166,12 +167,12 @@ if __FILE__ == $0
   
   line = __LINE__
   def find_line(line) # :nodoc
-    tf = RubyVM::ThreadFrame.current
+    tf = RubyVM::Frame.current
     puts "find_line has lines: #{tf.iseq.lines}"
     p tf.iseq.find_iseq_with_line(line)
   end
 
-  tf = RubyVM::ThreadFrame.current
+  tf = RubyVM::Frame.current
   puts tf.iseq.disassemble
   puts("offset %d above should be at line %d" % 
        [tf.iseq.locate_line(line), line])

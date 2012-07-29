@@ -31,6 +31,15 @@ offsetlines, offset2line, local_size, local_table_size, iseq_size,
 arg_simple
 
 -------------------
+215-iseq-field-access.patch
+
+More InstructionSequence methods: 
+InstructionSequence#local_iseq - creates a copy of the instruction sequence
+InstructionSequence#local_name(i) returns String name for local entry i
+
+Depends on 210. The two could be combined.
+
+-------------------
 220-iseq-eval-source-save.patch:
 
 Give name for top instruction sequences (those that don't have a

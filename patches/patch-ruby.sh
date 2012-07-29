@@ -16,6 +16,7 @@ case $patchfile in
 	    000-testit.patch \
 	    110-thread-tracing.patch \
 	    210-iseq-field-access.patch \
+	    215-iseq-field-access.patch \
 	    220-iseq-eval-source-save.patch \
 	    230-iseq-top-name.patch \
 	    240-iseq-SCRIPT_ISEQS__.patch \

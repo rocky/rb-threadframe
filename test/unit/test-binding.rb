@@ -1,5 +1,5 @@
 require 'test/unit'
-require_relative '../../ext/thread_frame'
+require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
 
 def outside(a)
     return eval('a', RubyVM::Frame.new(Thread::current).binding)

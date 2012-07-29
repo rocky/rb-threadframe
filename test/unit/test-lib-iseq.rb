@@ -1,6 +1,7 @@
 require 'test/unit'
-require_relative '../../ext/thread_frame'
-require_relative '../../lib/thread_frame'
+require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
+require_relative '../../lib/thread_frame' if '1.9.2' == RUBY_VERSION
+require_relative '../../lib/iseq_extra'
 
 $global_test_line = __LINE__
 

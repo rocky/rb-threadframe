@@ -156,7 +156,7 @@ diff --git a/test/debugger-ext/test_iseq.rb b/test/debugger-ext/test_iseq.rb
 new file mode 100644
 index 0000000..10cd913
 --- /dev/null
-+++ b/test/debugger-ext/test_iseq.rb
++++ b/test/debugger-ext/test_iseq_source.rb
 @@ -0,0 +1,25 @@
 +require 'test/unit'
 +class TestISeqSource < Test::Unit::TestCase
