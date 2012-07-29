@@ -19,6 +19,8 @@ case $patchfile in
 	    220-iseq-eval-source-save.patch \
 	    230-iseq-top-name.patch \
 	    240-iseq-SCRIPT_ISEQS__.patch \
+	    245-method-arity.patch \
+	    246-frame.patch \
 	    300-os-startup.patch
 	do 
 	    patch_file=${dirname}/1.9.3/$file
@@ -27,10 +29,10 @@ case $patchfile in
 	done
 	;;
     combined ) 
-	file=ruby-trunk-combined.patch
+	file=ruby-1.9.3-combined.patch
 	patch_file=${dirname}/$file
 	echo -- Applying patches in $patch_file
-	patch -p0 < $patch_file
+	patch -p1 < $patch_file
 	;;
     1.9.2 | * )
 	file=ruby-1.9.2-combined.patch

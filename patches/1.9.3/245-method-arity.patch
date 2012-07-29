@@ -56,7 +56,7 @@ diff --git a/proc.c b/proc.c
 index 6aaf86f..80de893 100644
 --- a/proc.c
 +++ b/proc.c
-@@ -20,7 +20,6 @@ VALUE rb_cBinding;
+@@ -28,7 +28,6 @@ VALUE rb_cBinding;
  VALUE rb_cProc;
  
  static VALUE bmcall(VALUE, VALUE);
@@ -64,7 +64,7 @@ index 6aaf86f..80de893 100644
  
  /* Proc */
  
-@@ -318,6 +317,28 @@ rb_binding_new(void)
+@@ -326,6 +325,28 @@ rb_binding_new(void)
      return bindval;
  }
  
@@ -93,7 +93,7 @@ index 6aaf86f..80de893 100644
  /*
   *  call-seq:
   *     binding -> a_binding
-@@ -623,6 +644,29 @@ proc_arity(VALUE self)
+@@ -631,6 +652,29 @@ proc_arity(VALUE self)
      return INT2FIX(arity);
  }
  
@@ -123,7 +123,7 @@ index 6aaf86f..80de893 100644
  int
  rb_proc_arity(VALUE self)
  {
-@@ -1641,7 +1685,7 @@ method_arity_m(VALUE method)
+@@ -1649,7 +1693,7 @@ method_arity_m(VALUE method)
      return INT2FIX(n);
  }
  

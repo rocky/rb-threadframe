@@ -55,6 +55,41 @@ index 3c97d01..799f2ca 100644
  #if defined(USE_DLN_A_OUT)
      dln_argv0 = origarg.argv[0];
  #endif
+diff --git a/vm.c b/vm.c
+index e997afa..78b1c56 100644
+--- a/vm.c
++++ b/vm.c
+@@ -2070,6 +2070,8 @@ nsdr(void)
+     return ary;
+ }
+ 
++extern struct origarg origarg;
++
+ void
+ Init_VM(void)
+ {
+@@ -2082,6 +2084,21 @@ Init_VM(void)
+     rb_undef_alloc_func(rb_cRubyVM);
+     rb_undef_method(CLASS_OF(rb_cRubyVM), "new");
+ 
++    /** set RubyVM::OS_ARGV and RubyVM::OS_STARTUP_DIR */
++    rb_define_const(rb_cRubyVM, "OS_STARTUP_DIR", 
++		    strlen(origarg.os_startup_dir) > 0 ? 
++		    rb_str_new2(origarg.os_startup_dir) : Qnil);
++    {
++	int argc;
++	char **argv;
++	VALUE ary = rb_ary_new();
++	rb_define_const(rb_cRubyVM, "OS_ARGV", ary);
++	for (argc = origarg.argc, argv = origarg.argv; 
++	     argc > 0; argc--, argv++) {
++	    rb_ary_push(ary, rb_str_new2(*argv));
++	}
++    }
++
+     /* ::VM::FrozenCore */
+     fcore = rb_class_new(rb_cBasicObject);
+     RBASIC(fcore)->flags = T_ICLASS;
 new file mode 100644
 index 0000000..5851c9a
 --- /dev/null

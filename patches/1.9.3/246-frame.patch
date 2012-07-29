@@ -1231,7 +1231,7 @@ diff --git a/vm_core.h b/vm_core.h
 index aef7195..f11aeef 100644
 --- a/vm_core.h
 +++ b/vm_core.h
-@@ -256,6 +256,9 @@ struct rb_iseq_struct {
+@@ -256,9 +256,22 @@ struct rb_iseq_struct {
      /* used at compile time */
      struct iseq_compile_data *compile_data;
  
@@ -1241,7 +1241,20 @@ index aef7195..f11aeef 100644
      /* If this instruction sequence came from eval, the string of the
         source as a String. */
      VALUE source;
-@@ -354,6 +357,9 @@ typedef struct {
++
++    /* If we are saving tree nodes (a compile option), then tree_node
++       is the internal parse tree node representation for this
++       instruction sequence.
++    */
++    NODE *tree_node;
++    int in_use;  /* Reference count of number of times and instruction
++		    sequence is in use such as via thread_frame object
++		    access or is stored in ISEQS__ or SCRIPT_ISEQS.
++		  */
+ };
+ 
+ enum ruby_special_exceptions {
+@@ -344,6 +347,9 @@ typedef struct {
      rb_iseq_t *block_iseq;	/* cfp[8] / block[3] */
      VALUE proc;			/* cfp[9] / block[4] */
      const rb_method_entry_t *me;/* cfp[10] */
@@ -1251,7 +1264,7 @@ index aef7195..f11aeef 100644
  } rb_control_frame_t;
  
  typedef struct rb_block_struct {
-@@ -600,6 +606,10 @@ enum vm_special_object_type {
+@@ -587,6 +593,10 @@ enum vm_special_object_type {
  
  #define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)
  
