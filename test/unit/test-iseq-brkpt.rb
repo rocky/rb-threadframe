@@ -1,5 +1,5 @@
 require 'test/unit'
-require_relative '../../ext/thread_frame'
+require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
 
 class TestISeqBrkpt < Test::Unit::TestCase
 

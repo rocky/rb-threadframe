@@ -1,6 +1,7 @@
 # Test of additional proc and method
 require 'test/unit'
-require_relative '../../ext/thread_frame'
+
+require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
 
 class TestProcAndMethod < Test::Unit::TestCase
   def test_proc_iseq

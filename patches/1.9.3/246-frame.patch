@@ -1090,7 +1090,7 @@ index 1ff6fc5..78fba90 100644
  static size_t
  iseq_memsize(const void *ptr)
  {
-@@ -816,6 +833,43 @@ rb_iseq_source(VALUE self)
+@@ -816,6 +833,47 @@
      return iseq->source;
  }
  
@@ -1115,9 +1115,10 @@ index 1ff6fc5..78fba90 100644
 +
 +
 +/**
-+ * Return String source contianer: either "file" if the instruction
-+ * sequence came from a file, or "string" if it came from "eval". 
-+ * TODO: could have come from other sources too. 
++ * Return an Array tuple of source container. This is either ["file"
++ * *filename*] if the instruction sequence came from a file, or
++ * ["string", *source-string*] if it came from "eval".  
++ * TODO: could have come from other sources too.
 + */
 +VALUE
 +rb_iseq_source_container(VALUE iseqval) 
@@ -1125,8 +1126,11 @@ index 1ff6fc5..78fba90 100644
 +    if (Qnil == iseqval) return Qnil;
 +    else {
 +	rb_iseq_t *iseq;
++	VALUE fileval;
 +	GetISeqPtr(iseqval, iseq);
-+	return rb_str_new2(source_container_type(iseq->filename));
++	fileval = iseq->filename;
++	return rb_ary_new3(2, rb_str_new2(source_container_type(fileval)),
++			   fileval);
 +    }
 +}
 +
@@ -1134,7 +1138,7 @@ index 1ff6fc5..78fba90 100644
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -1782,6 +1836,7 @@ Init_ISeq(void)
+@@ -1782,6 +1840,7 @@
      rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
      rb_define_method(rb_cISeq, "eval", iseq_eval, 0);
      rb_define_method(rb_cISeq, "source", rb_iseq_source, 0);
@@ -1162,6 +1166,90 @@ index 87cd3bb..ae710c2 100644
  
  struct rb_compile_option_struct {
      int inline_const_cache;
+diff --git a/vm_core.h b/vm_core.h
+index aef7195..f11aeef 100644
+--- a/vm_core.h
++++ b/vm_core.h
+@@ -256,9 +256,22 @@ struct rb_iseq_struct {
+     /* used at compile time */
+     struct iseq_compile_data *compile_data;
+ 
++    /* Used to set a breakpoint at a VM instruction */
++    unsigned char *breakpoints; 
++
+     /* If this instruction sequence came from eval, the string of the
+        source as a String. */
+     VALUE source;
++
++    /* If we are saving tree nodes (a compile option), then tree_node
++       is the internal parse tree node representation for this
++       instruction sequence.
++    */
++    NODE *tree_node;
++    int in_use;  /* Reference count of number of times and instruction
++		    sequence is in use such as via thread_frame object
++		    access or is stored in ISEQS__ or SCRIPT_ISEQS.
++		  */
+ };
+ 
+ enum ruby_special_exceptions {
+@@ -344,6 +347,9 @@ typedef struct {
+     rb_iseq_t *block_iseq;	/* cfp[8] / block[3] */
+     VALUE proc;			/* cfp[9] / block[4] */
+     const rb_method_entry_t *me;/* cfp[10] */
++    short int tracing;          /* Bits to control per-frame event tracing. 
++				   See VM_FRAME_TRACE_xxx defines.
++				 */
+ } rb_control_frame_t;
+ 
+ typedef struct rb_block_struct {
+@@ -587,6 +603,10 @@
+ 
+ #define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)
+ 
++#define VM_FRAME_TRACE_RETURN 0x01  /* Call trace hook on return. */
++#define VM_FRAME_TRACE_OFF    0x02  /* Turn of event hook tracing in this frame
++				       and any frames created from this one. */
++
+ /* other frame flag */
+ #define VM_FRAME_FLAG_PASSED 0x0100
+ 
+diff --git a/proc.c b/proc.c
+index 80de893..6083923 100644
+--- a/proc.c
++++ b/proc.c
+@@ -725,6 +725,23 @@ rb_proc_get_iseq(VALUE self, int *is_proc)
+     return iseq;
+ }
+ 
++/* 
++ *  call-seq:
++ *  Method#iseq -> RubyVM::InstructionSequence
++ * 
++ *  Returns the instruction sequence of a Method object.
++ */
++VALUE
++rb_method_iseq(VALUE self)
++{
++    VALUE rb_iseq;
++    rb_iseq_t *iseq = rb_method_get_iseq(self);
++    if (!iseq) return Qnil;
++    rb_iseq = iseq_alloc_shared(rb_cISeq);
++    RDATA(rb_iseq)->data = iseq;
++    return rb_iseq;
++}
++
+ static VALUE
+ iseq_location(rb_iseq_t *iseq)
+ {
+@@ -2218,6 +2235,7 @@ Init_Proc(void)
+     rb_define_method(rb_cMethod, "unbind", method_unbind, 0);
+     rb_define_method(rb_cMethod, "source_location", rb_method_location, 0);
+     rb_define_method(rb_cMethod, "parameters", rb_method_parameters, 0);
++    rb_define_method(rb_cMethod, "iseq",       rb_method_iseq, 0);
+     rb_define_method(rb_mKernel, "method", rb_obj_method, 1);
+     rb_define_method(rb_mKernel, "public_method", rb_obj_public_method, 1);
+ 
 diff --git a/test/debugger-ext/test_frame.rb b/test/debugger-ext/test_frame.rb
 new file mode 100644
 index 0000000..37f0777
@@ -1289,50 +1377,110 @@ index 0000000..37f0777
 +# We want to double-check we didn't mess up any pointers somewhere along
 +# the line.
 +at_exit { GC.start  }
-diff --git a/vm_core.h b/vm_core.h
-index aef7195..f11aeef 100644
---- a/vm_core.h
-+++ b/vm_core.h
-@@ -256,9 +256,22 @@ struct rb_iseq_struct {
-     /* used at compile time */
-     struct iseq_compile_data *compile_data;
- 
-+    /* Used to set a breakpoint at a VM instruction */
-+    unsigned char *breakpoints; 
+diff --git a/test/debugger-ext/test_source.rb b/test/debugger-ext/test_source.rb
+new file mode 100644
+index 0000000..47b8041
+--- /dev/null
++++ b/test/debugger-ext/test_source.rb
+@@ -0,0 +1,101 @@
++require 'test/unit'
 +
-     /* If this instruction sequence came from eval, the string of the
-        source as a String. */
-     VALUE source;
++# Test source_location and source_container.
++class TestSource < Test::Unit::TestCase
 +
-+    /* If we are saving tree nodes (a compile option), then tree_node
-+       is the internal parse tree node representation for this
-+       instruction sequence.
-+    */
-+    NODE *tree_node;
-+    int in_use;  /* Reference count of number of times and instruction
-+		    sequence is in use such as via thread_frame object
-+		    access or is stored in ISEQS__ or SCRIPT_ISEQS.
-+		  */
- };
- 
- enum ruby_special_exceptions {
-@@ -344,6 +347,9 @@ typedef struct {
-     rb_iseq_t *block_iseq;	/* cfp[8] / block[3] */
-     VALUE proc;			/* cfp[9] / block[4] */
-     const rb_method_entry_t *me;/* cfp[10] */
-+    short int tracing;          /* Bits to control per-frame event tracing. 
-+				   See VM_FRAME_TRACE_xxx defines.
-+				 */
- } rb_control_frame_t;
- 
- typedef struct rb_block_struct {
-@@ -587,6 +593,10 @@ enum vm_special_object_type {
- 
- #define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)
- 
-+#define VM_FRAME_TRACE_RETURN 0x01  /* Call trace hook on return. */
-+#define VM_FRAME_TRACE_OFF    0x02  /* Turn of event hook tracing in this frame
-+				       and any frames created from this one. */
++  def test_iseq_source_container
++    test_basic_lineno = __LINE__ - 1
++    tup = method(:test_iseq_source_container).iseq.source_container
++    tup[1] = File.basename(tup[1])
++    assert_equal(['file',  File.basename(__FILE__)], tup)
 +
- /* other frame flag */
- #define VM_FRAME_FLAG_PASSED 0x0100
++    eval('def foo; 5 end')
++    tup = method(:foo).iseq.source_container    
++    assert_equal('string',  tup[0])
++    # puts tup[1]
++
++    iseq = RubyVM::InstructionSequence.compile("1+2")
++    assert_equal('string',  iseq.source_container[0])
++    # puts iseq.source_container[1]
++
++    eval_str = '  RubyVM::Frame.current.source_container # test'
++    tuple = eval(eval_str)
++    assert_equal('string',  tuple[0])
++    assert_equal(eval_str,  tuple[1])
++
++  end
++
++  def test_basic
++    tf = RubyVM::Frame::current
++    # Is this too specific to test/unit.rb implementation details? 
++    tup = tf.source_container
++    tup[1] = File.basename(tup[1])
++    assert_equal(['file',  File.basename(__FILE__)], tup)
++    assert_equal(__LINE__, tf.source_location[0])
++
++    # 1.times creates a C frame.
++    1.times do 
++      expect_line = __LINE__ - 1
++      tf = RubyVM::Frame::current
++      tup = tf.source_container
++      tup[1] = File.basename(tup[1])
++      assert_equal(['file',  File.basename(__FILE__)], tup)
++      assert_equal(tf.source_location[0], __LINE__)
++      tf = tf.prev
++      assert_equal('CFUNC', tf.type)
++      tup = tf.source_container
++      tup[1] = File.basename(tup[1])
++      assert_equal(expect_line, tf.source_location[0])
++    end
++
++    # 1.upto also creates a C frame.
++    1.upto(1) do 
++      expect_line = __LINE__ - 1
++      tf = RubyVM::Frame::current
++      assert_equal('BLOCK', tf.type)
++      tup = tf.source_container
++      tup[1] = File.basename(tup[1])
++      assert_equal(['file',  File.basename(__FILE__)], tup)
++      assert_equal(__LINE__, tf.source_location[0])
++      tf = tf.prev
++      assert_equal('CFUNC', tf.type)
++      tup = tf.source_container
++      tup[1] = File.basename(tup[1])
++      assert_equal(expect_line, tf.source_location[0])
++    end
++
++    x  = lambda do |expect_line| 
++      tf = RubyVM::Frame::current
++      assert_equal('LAMBDA', tf.type)
++      tup = tf.source_container
++      tup[1] = File.basename(tup[1])
++      assert_equal(['file',  File.basename(__FILE__)], tup)
++      assert_equal(__LINE__, tf.source_location[0])
++      tf = tf.prev
++      assert_equal('CFUNC', tf.type)
++      tup = tf.source_container
++      tup[1] = File.basename(tup[1])
++      assert_equal(expect_line, tf.source_location[0])
++    end
++    x.call(__LINE__)
++
++    x  = Proc.new do |expect_line|
++      tf = RubyVM::Frame::current
++      tup = tf.source_container
++      tup[1] = File.basename(tup[1])
++      assert_equal(['file',  File.basename(__FILE__)], tup)
++      assert_equal(__LINE__, tf.source_location[0])
++      tf = tf.prev
++      tup = tf.source_container
++      tup[1] = File.basename(tup[1])
++      # FIXME? 
++      # assert_equal(['file',  File.basename(__FILE__)], tup)
++      assert_equal(expect_line, tf.source_location[0])
++    end
++    x.call(__LINE__)
++  end
++end
++
++# We want to double-check we didn't mess up any pointers somewhere along
++# the line.
++at_exit { GC.start  }
