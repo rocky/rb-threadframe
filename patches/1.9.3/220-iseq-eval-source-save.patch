@@ -25,7 +25,7 @@ index 28cc1e5..588e386 100644
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -1639,6 +1651,7 @@ Init_ISeq(void)
+@@ -1691,6 +1703,7 @@ Init_ISeq(void)
      rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
      rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
      rb_define_method(rb_cISeq, "eval", iseq_eval, 0);

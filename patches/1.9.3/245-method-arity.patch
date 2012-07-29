@@ -31,7 +31,7 @@ index 8ab41e8..1ff6fc5 100644
  static VALUE
  iseq_s_load(int argc, VALUE *argv, VALUE self)
  {
-@@ -1708,6 +1724,7 @@ Init_ISeq(void)
+@@ -1760,6 +1776,7 @@ Init_ISeq(void)
      rb_define_method(rb_cISeq, "type",             iseq_type, 0) ;
      rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
      rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
@@ -132,16 +132,6 @@ index 6aaf86f..80de893 100644
  method_arity(VALUE method)
  {
      struct METHOD *data;
-diff --git a/test/debugger-ext/test_iseq.rb b/test/debugger-ext/test_iseq.rb
-index 10cd913..07a7e1f 100644
---- a/test/debugger-ext/test_iseq.rb
-+++ b/test/debugger-ext/test_iseq.rb
-@@ -22,4 +22,5 @@ class TestISeqSource < Test::Unit::TestCase
-     # puts iseq.klass
-     # puts iseq.lineno
-   end
-+
- end
 diff --git a/test/debugger-ext/test_iseq_hash.rb b/test/debugger-ext/test_iseq_hash.rb
 index 4854600..303dcd3 100644
 --- a/test/debugger-ext/test_iseq_hash.rb

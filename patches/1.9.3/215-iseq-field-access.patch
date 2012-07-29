@@ -6,7 +6,7 @@ diff --git a/iseq.c b/iseq.c
 index 9f28049..3293327 100644
 --- a/iseq.c
 +++ b/iseq.c
-@@ -1636,6 +1636,57 @@ rb_iseq_build_for_ruby2cext(
+@@ -1493,6 +1493,57 @@ rb_iseq_build_for_ruby2cext(
      return iseqval;
  }
  
@@ -64,7 +64,7 @@ index 9f28049..3293327 100644
  /* 
   * call-seq:
   *     RubyVM::InstructionSequence#name -> String
-@@ -1757,12 +1808,13 @@ Init_ISeq(void)
+@@ -1614,12 +1665,13 @@ Init_ISeq(void)
      rb_define_method(rb_cISeq, "arg_rest",         iseq_arg_rest, 0) ;
      rb_define_method(rb_cISeq, "arg_simple",       iseq_arg_simple, 0) ;
      rb_define_method(rb_cISeq, "argc",             iseq_argc, 0) ;
@@ -81,7 +81,8 @@ index 9f28049..3293327 100644
  #endif
      rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
 diff --git a/test/debugger-ext/test_iseq.rb b/test/debugger-ext/test_iseq.rb
-index 07a7e1f..e5f8d00 100644
+new file mode 100644
+index 0000000..e5f8d00
 --- /dev/null
 +++ b/test/debugger-ext/test_iseq.rb
 @@ -0,0 +1,123 @@
@@ -202,9 +203,9 @@ index 07a7e1f..e5f8d00 100644
 +    offlines.keys.each do |offset|
 +      assert_equal offlines[offset][0], iseq.offset2lines(offset)[0]
 +    end
-   end
- 
- end
++  end
++
++end
 +
 +# We want to double-check we didn't mess up any pointers somewhere.
 +at_exit { GC.start  }
