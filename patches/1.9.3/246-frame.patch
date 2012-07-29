@@ -21,10 +21,10 @@ index eb89a2b..cb32293 100644
  		$(BUILTIN_TRANSOBJS) \
 diff --git a/frame.c b/frame.c
 new file mode 100644
-index 0000000..313492e
+index 0000000..9a99740
 --- /dev/null
 +++ b/frame.c
-@@ -0,0 +1,1005 @@
+@@ -0,0 +1,1016 @@
 +/* 
 + * Copyright (C) 2012 Rocky Bernstein
 + *
@@ -71,8 +71,8 @@ index 0000000..313492e
 +    VALUE *signature2[1]; /* proc */
 +} thread_frame_t;
 +
-+VALUE rb_cFrame;       /* ThreadFrame class */
-+VALUE rb_eThreadFrameError;  /* Error raised on invalid frames. */
++VALUE rb_cFrame;       /* RubyVM::Frame class */
++VALUE rb_eFrameError;  /* Error raised on invalid frames. */
 +
 +/* Static forward declarations */
 +static VALUE frame_iseq(VALUE klass);
@@ -119,7 +119,7 @@ index 0000000..313492e
 +}
 +
 +/* 
-+   Allocate a RubyVM::ThreadFrame used by new. Less common than
++   Allocate a RubyVM::Frame' used by new. Less common than
 +   thread_frame_t_alloc(). The caller is responsible for filling in
 +   the C struct data. Below we wrap NULL.
 + */
@@ -130,7 +130,7 @@ index 0000000..313492e
 +}
 +
 +/* 
-+   Allocate a RubyVM::ThreadFrame and set its threadframe structure.
++   Allocate a RubyVM::Frame' and set its threadframe structure.
 +   This is the more common allocate routine since one normally doesn't
 +   create a threadframe without <i>first</i> having something to put in it.
 + */
@@ -215,7 +215,7 @@ index 0000000..313492e
 + *  call-seq:
 + *     RubyVM::Frame#threadframe  -> frame_object
 + * 
-+ *  Returns a RubyVM::ThreadFrame object for the given thread.
++ *  Returns a RubyVM::Frame' object for the given thread.
 + */
 +static VALUE
 +frame_threadframe(VALUE thval)
@@ -234,7 +234,7 @@ index 0000000..313492e
 +#define FRAME_SETUP_WITH_ERROR			    \
 +    FRAME_SETUP;				    \
 +    if (Qtrue == frame_invalid_internal(tf)) \
-+	rb_raise(rb_eThreadFrameError, "invalid frame")
++	rb_raise(rb_eFrameError, "invalid frame")
 +
 +#define FRAME_FIELD_METHOD(FIELD)	\
 +static VALUE					\
@@ -258,6 +258,25 @@ index 0000000..313492e
 +    }								\
 +}
 +
++#if 0
++/*
++ *  call-seq:
++ *     RubyVM::Frame#sp(n)  -> object
++ * 
++ * Returns a RubyVM object stored at stack position <i>i</i>. The top object
++ * is position 0. 1 is the next object.
++ */
++VALUE 
++thread_frame_sp(VALUE klass, VALUE index) 
++{
++    /* handled by THREAD_FRAME_FP_METHOD macro;  */
++}
++#endif
++/* The above declaration is to make RDOC happy. 
++   FIXME: Figure out a way to check if "index" is valid!
++*/
++FRAME_FP_METHOD(sp)
++
 +static long int
 +frame_sp_size_internal(thread_frame_t *tf) 
 +{
@@ -274,12 +293,12 @@ index 0000000..313492e
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::ThreadFrame#sp_size  -> FixNum
++ *     RubyVM::Frame'#sp_size  -> FixNum
 + * 
 + * Returns the number of stack or sp entries in the current
 + * frame. That is the, number values that have been pushed onto the
 + * stack since the current call.  This is different than
-+ * RubyVM::ThreadFrame#stack_size which counts the number of frames in
++ * RubyVM::Frame'#stack_size which counts the number of frames in
 + * the call stack. +nil+ is returned if there is an error.
 + */
 +VALUE 
@@ -291,7 +310,7 @@ index 0000000..313492e
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::ThreadFrame#sp_set(n, newvalue)  -> object
++ *     RubyVM::Frame'#sp_set(n, newvalue)  -> object
 + * 
 + * Sets VM stack position <i>n</i> to <i>newvalue</i>. The top object
 + * is position 0. 1 is the next object.
@@ -317,7 +336,7 @@ index 0000000..313492e
 +#ifndef NO_reg_pc
 +/*
 + *  call-seq:
-+ *     RubyVM::ThreadFrame#pc_offset=
++ *     RubyVM::Frame'#pc_offset=
 + * 
 + * Sets pc to the offset given. 
 + * WARNING, this is pretty dangerous. You need to set this to a valid
@@ -345,7 +364,7 @@ index 0000000..313492e
 +#if 0
 +/*
 + *  call-seq:
-+ *     RubyVM::ThreadFrame#flag -> Fixnum
++ *     RubyVM::Frame'#flag -> Fixnum
 + *
 + *  Returns the frame flags, a FIXNUM which should be interpreted as a
 + *  bitmask.
@@ -361,7 +380,7 @@ index 0000000..313492e
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::ThreadFrame#binding   -> binding
++ *     RubyVM::Frame'#binding   -> binding
 + *
 + *  Returns a binding for a given thread frame.
 + */
@@ -388,7 +407,7 @@ index 0000000..313492e
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::ThreadFrame#equal(tf)   -> bool
++ *     RubyVM::Frame'#equal(tf)   -> bool
 + *
 + *  Returns true if two thread frames are equal.
 + */
@@ -406,7 +425,7 @@ index 0000000..313492e
 +	}
 +	Data_Get_Struct(tfval2, thread_frame_t, tf2);
 +	if (Qtrue == frame_invalid_internal(tf2))
-+	    rb_raise(rb_eThreadFrameError, "invalid frame");
++	    rb_raise(rb_eFrameError, "invalid frame");
 +
 +	/* And just when you thought I'd never get around to the
 +	   actual comparison... 
@@ -423,16 +442,15 @@ index 0000000..313492e
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::ThreadFrame.new(thread)          -> frame_object
++ *     RubyVM::Frame'.new(thread)          -> frame_object
 + *
-+ *  Returns an RubyVM::ThreadFrame object which can contains dynamic frame
++ *  Returns an RubyVM::Frame' object which can contains dynamic frame
 + *  information. Don't use this directly. Instead use one of the 
 + *  class methods.
 + *
-+ *    RubyVM::ThreadFrame::VERSION               => 0.1 
-+ *    RubyVM::ThreadFrame::current.flag          => 72
-+ *    RubyVM::ThreadFrame::current.proc          => false
-+ *    RubyVM::ThreadFrame::current.self          => 'main'
++ *    RubyVM::Frame'::current.flag          => 72
++ *    RubyVM::Frame'::current.proc          => false
++ *    RubyVM::Frame'::current.self          => 'main'
 + */
 +static VALUE
 +frame_initialize(VALUE tfval, VALUE thval)
@@ -447,7 +465,7 @@ index 0000000..313492e
 +
 +/*
 + * call-seq:
-+ *    RubyVM::ThreadFrame#invalid? -> Boolean
++ *    RubyVM::Frame'#invalid? -> Boolean
 + *
 + * Returns true if the frame is no longer valid. On the other hand,
 + * since the test we use is weak, returning false might not mean the
@@ -481,10 +499,10 @@ index 0000000..313492e
 +
 +/*
 + *  call-seq:
-+ *     ThreadFrame#method  -> String or nil
++ *     RubyVM::Frame#method  -> String or nil
 + * 
 + * Returns the method associated with the frame or nil of none.
-+ * ThreadFrameError can be raised if the threadframe
++ * FrameError can be raised if the threadframe
 + * object is no longer valid.
 + */
 +static VALUE
@@ -516,10 +534,10 @@ index 0000000..313492e
 +
 +/*
 + *  call-seq:
-+ *     ThreadFrame#pc_offset  -> Fixnum
++ *     RubyVM::Frame#pc_offset  -> Fixnum
 + * 
 + * Returns the offset inside the iseq or "program-counter offset" or -1
-+ * If invalid/unstarted. ThreadFrameError can be raised if the threadframe
++ * If invalid/unstarted. FrameError can be raised if the threadframe
 + * object is no longer valid.
 + */
 +static VALUE
@@ -540,7 +558,7 @@ index 0000000..313492e
 +
 +/*
 + *  call-seq:
-+ *     ThreadFrame#iseq           -> ISeq
++ *     RubyVM::Frame#iseq           -> ISeq
 + *
 + *  Returns an instruction sequence object from the instruction sequence
 + *  found inside the ThreadFrame object or nil if there is none.
@@ -585,9 +603,9 @@ index 0000000..313492e
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::ThreadFrame#prev(n=1) -> frame_object
++ *     RubyVM::Frame'#prev(n=1) -> frame_object
 + *
-+ *  Returns a RubyVM::ThreadFrame object for the frame prior to the
++ *  Returns a RubyVM::Frame' object for the frame prior to the
 + *  ThreadFrame object or +nil+ if there is none. Setting n=0 just
 + *  returns the object passed.  A negative starts from the end. So
 + *  prev(-1) is the top frame.  Counts outside of the range
@@ -683,10 +701,10 @@ index 0000000..313492e
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::ThreadFrame::current  -> frame_object
++ *     RubyVM::Frame'::current  -> frame_object
 + * 
 + *  Returns a ThreadFrame object for the currently executing thread.
-+ *  Same as: RubyVM::ThreadFrame.new(Thread::current)
++ *  Same as: RubyVM::Frame'.new(Thread::current)
 + */
 +static VALUE
 +frame_s_current(VALUE klass)
@@ -698,12 +716,12 @@ index 0000000..313492e
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::ThreadFrame::prev(thread)     -> threadframe_object
-+ *     RubyVM::ThreadFrame::prev(thread, n)  -> threadframe_object
-+ *     RubyVM::ThreadFrame::prev             -> threadframe_object
-+ *     RubyVM::ThreadFrame::prev(n)          -> threadframe_object
++ *     RubyVM::Frame'::prev(thread)     -> threadframe_object
++ *     RubyVM::Frame'::prev(thread, n)  -> threadframe_object
++ *     RubyVM::Frame'::prev             -> threadframe_object
++ *     RubyVM::Frame'::prev(n)          -> threadframe_object
 + *
-+ *  In the first form, we return a RubyVM::ThreadFrame prior to the
++ *  In the first form, we return a RubyVM::Frame' prior to the
 + *  Thread object passed. That is we go back one frame from the
 + *  current frfame.
 + *
@@ -720,7 +738,7 @@ index 0000000..313492e
 + *  and 0 is invalid. If the +n+ is negative, we count from the bottom
 + *  of the frame stack.
 + *
-+ *  In all cases we return a RubyVM::ThreadFrame or nil if we can't 
++ *  In all cases we return a RubyVM::Frame' or nil if we can't 
 + *  go back (or forward for a negative +n+) that many frames. 
 + *
 + */
@@ -739,7 +757,7 @@ index 0000000..313492e
 +    switch (argc) {
 +      case 0:
 +	th = ruby_current_thread;
-+        /* Do'nt count the RubyVM::ThreadFrame.prev call */
++        /* Do'nt count the RubyVM::Frame'.prev call */
 +	prev_count = 2; 
 +	break;
 +      case 1:
@@ -750,7 +768,7 @@ index 0000000..313492e
 +	} else 
 +	    if (Qtrue == rb_obj_is_kind_of(first_val, rb_cThread)) {
 +		GetThreadPtr(first_val, th);
-+               /* Don't count the RubyVM::ThreadFrame.prev call */
++               /* Don't count the RubyVM::Frame'.prev call */
 +		prev_count = 1; 
 +	    } else {
 +		rb_raise(rb_eTypeError, 
@@ -788,10 +806,10 @@ index 0000000..313492e
 +    return frame_prev_internal(th->cfp, th, prev_count);
 +}
 +
-+#if FINISHED
++
 +/*
 + * call-seq:
-+ *    RubyVM::ThreadFrame#source_container() -> [Type, String]
++ *    RubyVM::Frame'#source_container() -> [Type, String]
 + *
 + * Returns a tuple representing kind of container, e.g. file
 + * eval'd string object, and the name of the container. If file,
@@ -838,11 +856,10 @@ index 0000000..313492e
 +
 +    return rb_ary_new3(2, rb_str_new2(contain_type), filename);
 +}
-+#endif
 +
 +/*
 + * call-seq:
-+ *    RubyVM::ThreadFrame#source_location() -> Array 
++ *    RubyVM::Frame#source_location() -> Array 
 + *
 + * Returns an array of source location positions that match
 + * +tf.instruction_offset+. A source location position is left
@@ -850,8 +867,8 @@ index 0000000..313492e
 + * and start and end column, or a start line number, start column, end
 + * line number, end column.
 + */
-+static VALUE
-+frame_source_location(VALUE klass)
++VALUE
++rb_frame_source_location(VALUE klass)
 +{
 +    rb_control_frame_t *cfp;
 +    FRAME_SETUP ;
@@ -876,7 +893,7 @@ index 0000000..313492e
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::ThreadFrame#stack_size  -> Fixnum;
++ *     RubyVM::Frame'#stack_size  -> Fixnum;
 + *
 + *  Returns a count of the number of frames including the current one. 
 + *  ThreadFrame#prev(ThreadFrame#stack_size) = nil
@@ -913,7 +930,7 @@ index 0000000..313492e
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::ThreadFrame#thread   -> thread
++ *     RubyVM::Frame'#thread   -> thread
 + *
 + *  Returns the thread object for the thread frame.
 + */
@@ -997,16 +1014,14 @@ index 0000000..313492e
 +    rb_define_method(rb_cFrame, "return_stop=", frame_return_stop_set, 1);
 +    rb_define_method(rb_cFrame, "return_stop?", frame_is_return_stop, 0);
 +    rb_define_method(rb_cFrame, "self", frame_self, 0);
-+#ifdef FINISHED
 +    rb_define_method(rb_cFrame, "source_container", 
 +		     frame_source_container, 0);
-+    rb_define_method(rb_cFrame, "source_location", 
-+		     frame_source_location, 0);
-+#endif
++    rb_define_method(rb_cFrame, "source_location", rb_frame_source_location, 0);
 +
 +    /* sp[] and sp[]= would be neater, but that would require making sp an
 +       object which I am not sure I want to do.
 +     */
++    rb_define_method(rb_cFrame, "sp",     frame_sp, 1);
 +    rb_define_method(rb_cFrame, "sp_set", frame_sp_set, 2);
 +    rb_define_method(rb_cFrame, "sp_size", frame_sp_size, 0);
 +
@@ -1019,16 +1034,12 @@ index 0000000..313492e
 +    rb_define_method(rb_cFrame, "trace_off=", frame_trace_off_set, 1);
 +    rb_define_method(rb_cFrame, "type", frame_type, 0);
 +
-+    rb_define_method(rb_cFrame, "equal?", 
-+		     frame_equal, 1);
++    rb_define_method(rb_cFrame, "equal?", frame_equal, 1);
 +
-+    rb_eThreadFrameError = rb_define_class("FrameError", 
-+					   rb_eStandardError);
++    rb_eFrameError = rb_define_class("FrameError", rb_eStandardError);
 +
 +    rb_define_singleton_method(rb_cFrame, "prev", frame_s_prev, -1);
 +    rb_define_singleton_method(rb_cFrame, "current", frame_s_current, 0);
-+
-+    
 +}
 diff --git a/inits.c b/inits.c
 index 73b9eb4..c0a415e 100644
@@ -1079,15 +1090,68 @@ index 1ff6fc5..78fba90 100644
  static size_t
  iseq_memsize(const void *ptr)
  {
+@@ -816,6 +833,43 @@ rb_iseq_source(VALUE self)
+     return iseq->source;
+ }
+ 
++const char *
++source_container_type(VALUE fileval) 
++{
++    const char *filename = RSTRING_PTR(fileval);
++    size_t len = strlen(filename);
++
++    /* FIXME: Looking for (...) is a hack that I would love to know how
++       to remove. Probably Ruby has to be changed to record this kind
++       of information.
++     */
++    if (len > 0 && 
++	((filename[0] == '(' && filename[len-1] == ')')
++	 || 0 == strncmp(filename, "<compiled>", 
++			 sizeof("<compiled>"))))
++	return "string";
++    else
++	return "file";
++}
++
++
++/**
++ * Return String source contianer: either "file" if the instruction
++ * sequence came from a file, or "string" if it came from "eval". 
++ * TODO: could have come from other sources too. 
++ */
++VALUE
++rb_iseq_source_container(VALUE iseqval) 
++{
++    if (Qnil == iseqval) return Qnil;
++    else {
++	rb_iseq_t *iseq;
++	GetISeqPtr(iseqval, iseq);
++	return rb_str_new2(source_container_type(iseq->filename));
++    }
++}
++
++
+ static VALUE
+ insn_operand_intern(rb_iseq_t *iseq,
+ 		    VALUE insn, int op_no, VALUE op,
+@@ -1730,6 +1784,7 @@ Init_ISeq(void)
+     rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
+     rb_define_method(rb_cISeq, "eval", iseq_eval, 0);
+     rb_define_method(rb_cISeq, "source", rb_iseq_source, 0);
++    rb_define_method(rb_cISeq, "source_container", rb_iseq_source_container, 0) ;
+ 
+ #if 0 /* TBD */
+     rb_define_method(rb_cISeq, "marshal_dump", iseq_marshal_dump, 0);
 diff --git a/iseq.h b/iseq.h
-index 87cd3bb..ab86428 100644
+index 87cd3bb..ae710c2 100644
 --- a/iseq.h
 +++ b/iseq.h
-@@ -26,12 +26,14 @@ VALUE rb_iseq_build_from_ary(rb_iseq_t *iseq, VALUE locals, VALUE args,
+@@ -26,12 +26,15 @@ VALUE rb_iseq_build_from_ary(rb_iseq_t *iseq, VALUE locals, VALUE args,
  VALUE rb_iseq_load(VALUE data, VALUE parent, VALUE opt);
  VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
  struct st_table *ruby_insn_make_insn_table(void);
 +VALUE iseq_alloc_shared(VALUE klass);
++const char *source_container_type(VALUE fileval);
  
  /* proc.c */
  rb_iseq_t *rb_method_get_iseq(VALUE body);
@@ -1100,10 +1164,10 @@ index 87cd3bb..ab86428 100644
      int inline_const_cache;
 diff --git a/test/debugger-ext/test_frame.rb b/test/debugger-ext/test_frame.rb
 new file mode 100644
-index 0000000..3c61a14
+index 0000000..37f0777
 --- /dev/null
 +++ b/test/debugger-ext/test_frame.rb
-@@ -0,0 +1,123 @@
+@@ -0,0 +1,121 @@
 +require 'test/unit'
 +
 +class TestThread < Test::Unit::TestCase
@@ -1128,13 +1192,12 @@ index 0000000..3c61a14
 +                 [offset_2, offset_1])
 +  end
 +
-+  # def test_sp
-+  #   tf = RubyVM::Frame::current.prev
-+  #   assert tf.sp(1)
-+  #   tf.sp_set(1, 5)
-+  #   assert_equal(5, tf.sp(1),
-+  #                'chcking value of recently-set sp(1)')
-+  # end
++  def test_sp
++    tf = RubyVM::Frame.prev
++    assert tf.sp(1)
++    tf.sp_set(1, 5)
++    assert_equal(5, tf.sp(1), 'checking value of recently-set sp(1)')
++  end
 +
 +  def test_fields(notused=nil)
 +    tf = RubyVM::Frame::current
@@ -1163,10 +1226,9 @@ index 0000000..3c61a14
 +    # 1.times creates a C frame.
 +    1.times do 
 +      tf = RubyVM::Frame::current
-+      # FIXME:
-+      # tup = tf.source_container
-+      # tup[1] = File.basename(tup[1])
-+      # assert_equal(['file', 'test-thread.rb'], tup)
++      tup = tf.source_container
++      tup[1] = File.basename(tup[1])
++      assert_equal(['file', 'test_frame.rb'], tup)
 +      assert_equal('block in test_fields', tf.method)
 +      assert_equal('CFUNC', tf.prev.type)
 +      assert_equal('times', tf.prev.method) 
@@ -1180,21 +1242,22 @@ index 0000000..3c61a14
 +      ## assert_equal(0, tf.argc)
 +    end
 +
-+    ## FIXME
-+    # # 1.upto also creates a C frame.
-+    # 1.upto(1) do 
-+    #   tf = RubyVM::Frame::current.prev
-+    #   assert_equal('CFUNC', tf.type)
-+    #   assert_equal(1, tf.arity, 'C arity should work nowadays' )
-+    #   assert_equal(1, tf.argc)
-+    # end
++    # 1.upto also creates a C frame.
++    1.upto(1) do 
++      # We could use ".prev" below instead of '.current.prev", but we
++      # may as well test current.prev.
++      tf = RubyVM::Frame::current.prev  
++      assert_equal('CFUNC', tf.type)
++      # assert_equal(1, tf.arity, 'C arity should work nowadays' )
++      # assert_equal(1, tf.argc)
++    end
 +
 +    x  = lambda do |x,y| 
 +      frame = RubyVM::Frame::current
 +      assert_equal('block in test_fields', frame.method)
 +      assert_equal('LAMBDA', frame.type)
++      assert_equal(x, tf.self)
 +      ## FIXME:
-+      ## assert_equal(x, tf.self)
 +      ## assert_equal(2, frame.arity)
 +      ## assert_equal(2, frame.argc)
 +    end
@@ -1203,8 +1266,7 @@ index 0000000..3c61a14
 +    x  = Proc.new do |x, y|
 +      frame = RubyVM::Frame::current
 +      assert_equal('block in test_fields', frame.method)
-+      ## FIXME
-+      ## assert_equal(x, tf.self)
++      assert_equal(x, tf.self)
 +    assert_equal('BLOCK', frame.type)
 +    end
 +    x.call(x,2)
