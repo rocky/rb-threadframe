@@ -1,0 +1,163 @@
+Add support to get at run-time the number of parameters passed to a C
+function. Currently the arity (but called "argc") is stored in the
+method structure. In order for a debugger to show and access C
+function arguments, it needs to know how many were passed.
+
+Ideally I would like to see this extended for non-C calls,
+OPTIMIZED_METHOD_TYPE_SEND, and OPTIMIZED_METHOD_TYPE_CALL.
+
+This depends on frame.c (246-frame.patch) to add the argc method and
+to add to test_frame.rb. It could be split into a two parts. One part
+for the C runtime and another part for frame.c
+
+diff --git a/frame.c b/frame.c
+index 947a459..41a1f78 100644
+--- a/frame.c
++++ b/frame.c
+@@ -352,6 +352,28 @@
+ 
+ /*
+  *  call-seq:
++ *     RubyVM::Frame#argc -> Fixnum
++ *
++ *  Returns the number of arguments that were actually passed 
++ *  in the call to this frame. This differs from arity when
++ *  arity can take optional or "splat"ted parameters.
++ *
++ */
++VALUE
++rb_frame_argc(VALUE klass)
++{
++    FRAME_SETUP_WITH_ERROR;
++
++    if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
++	return INT2FIX(tf->cfp->me->def->body.cfunc.actual_argc);
++    } else if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
++	return rb_iseq_argc(rb_frame_iseq(klass));
++    } else
++	return Qnil;
++}
++
++/*
++ *  call-seq:
+  *     RubyVM::Frame'#binding   -> binding
+  *
+  *  Returns a binding for a given thread frame.
+@@ -974,6 +996,7 @@
+ 
+     rb_define_method(rb_cFrame, "invalid?", frame_invalid, 0);
+ 
++    rb_define_method(rb_cFrame, "argc",         rb_frame_argc, 0);
+     rb_define_method(rb_cFrame, "binding",      rb_frame_binding, 0);
+     rb_define_method(rb_cFrame, "flag",         frame_flag, 0);
+     rb_define_method(rb_cFrame, "initialize",   frame_initialize, 1);
+@@ -976,4 +999,5 @@ Init_Frame(void)
+
++    rb_define_method(rb_cFrame, "argc",         rb_frame_argc, 0);
+     rb_define_method(rb_cFrame, "binding",      rb_frame_binding, 0);
+     rb_define_method(rb_cFrame, "flag",         frame_flag, 0);
+     rb_define_method(rb_cFrame, "initialize",   frame_initialize, 1);
+diff --git a/iseq.h b/iseq.h
+index 56240e3..4507996 100644
+--- a/iseq.h
++++ b/iseq.h
+@@ -28,6 +28,7 @@ VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
+ struct st_table *ruby_insn_make_insn_table(void);
+ VALUE iseq_alloc_shared(VALUE klass);
+ const char *source_container_type(VALUE fileval);
++VALUE rb_iseq_argc(VALUE iseqval);
+ 
+ /* proc.c */
+ rb_iseq_t *rb_method_get_iseq(VALUE body);
+diff --git a/method.h b/method.h
+index 896e309..aa7d861 100644
+--- a/method.h
++++ b/method.h
+@@ -46,7 +46,11 @@ typedef enum {
+ 
+ typedef struct rb_method_cfunc_struct {
+     VALUE (*func)(ANYARGS);
+-    int argc;
++    int argc; /* This should probably be called "arity" since it is based
++		 on the static prototype, not the supplied arguments
++		 at runtime. */
++    int actual_argc; /* This probably should be called argc. It is the
++			argument count at runtime.*/
+ } rb_method_cfunc_t;
+ 
+ typedef struct rb_method_attr_struct {
+diff --git a/test/debugger-ext/test_frame.rb b/test/debugger-ext/test_frame.rb
+index 37f0777..b8cf1c8 100644
+--- a/test/debugger-ext/test_frame.rb
++++ b/test/debugger-ext/test_frame.rb
+@@ -40,7 +40,7 @@ class TestThread < Test::Unit::TestCase
+     assert_equal(self, tf.self)
+     ## FIXME:
+     ## assert_equal(0, tf.arity)
+-    ## assert_equal(0, tf.argc)
++    assert_equal(0, tf.argc)
+ 
+     # assert_raises IndexError do
+     #   x = tf.lfp(tf.iseq.local_size+1)
+@@ -65,11 +65,11 @@ class TestThread < Test::Unit::TestCase
+       assert_equal(self, tf.self)
+       ## FIXME:
+       ## assert_equal(0, tf.prev.arity, 'C arity should work nowadays' )
+-      ## assert_equal(0, tf.prev.argc, 'C args is the same as arity')
++      assert_equal(0, tf.prev.argc, 'C args is the same as arity')
+       assert_equal('test_fields', tf.prev.prev.method) 
+       ## FIXME:
+       ## assert_equal(0, tf.arity)
+-      ## assert_equal(0, tf.argc)
++      assert_equal(0, tf.argc)
+     end
+ 
+     # 1.upto also creates a C frame.
+@@ -79,7 +79,7 @@ class TestThread < Test::Unit::TestCase
+       tf = RubyVM::Frame::current.prev  
+       assert_equal('CFUNC', tf.type)
+       # assert_equal(1, tf.arity, 'C arity should work nowadays' )
+-      # assert_equal(1, tf.argc)
++      assert_equal(1, tf.argc)
+     end
+ 
+     x  = lambda do |x,y| 
+@@ -89,7 +89,7 @@ class TestThread < Test::Unit::TestCase
+       assert_equal(x, tf.self)
+       ## FIXME:
+       ## assert_equal(2, frame.arity)
+-      ## assert_equal(2, frame.argc)
++      assert_equal(2, frame.argc)
+     end
+     x.call(x,2)
+ 
+diff --git a/vm_eval.c b/vm_eval.c
+index 6957aa2..991c487 100644
+--- a/vm_eval.c
++++ b/vm_eval.c
+@@ -75,6 +75,10 @@ vm_call0(rb_thread_t* th, VALUE recv, VALUE id, int argc, const VALUE *argv,
+ 		vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
+ 			      recv, (VALUE)blockptr, 0, reg_cfp->sp, 0, 1);
+ 
++	    /* Store actual argument count. Note that cfunc.argc
++	       contains the prototype value.
++	    */
++	    me->def->body.cfunc.actual_argc = argc;
+ 	    cfp->me = me;
+ 	    val = call_cfunc(def->body.cfunc.func, recv, def->body.cfunc.argc, argc, argv);
+ 
+diff --git a/vm_insnhelper.c b/vm_insnhelper.c
+index 8e7fe94..33bb45c 100644
+--- a/vm_insnhelper.c
++++ b/vm_insnhelper.c
+@@ -398,6 +398,10 @@ vm_call_cfunc(rb_thread_t *th, rb_control_frame_t *reg_cfp,
+ 
+     cfp = vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
+ 			recv, (VALUE) blockptr, 0, reg_cfp->sp, 0, 1);
++    /* Store actual argument count. Note that cfunc.argc contains the
++       prototype value.
++    */
++    me->def->body.cfunc.actual_argc = num;
+     cfp->me = me;
+     reg_cfp->sp -= num + 1;
+ 

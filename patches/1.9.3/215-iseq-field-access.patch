@@ -64,10 +64,10 @@ index 9f28049..3293327 100644
  /* 
   * call-seq:
   *     RubyVM::InstructionSequence#name -> String
-@@ -1614,12 +1665,13 @@ Init_ISeq(void)
-     rb_define_method(rb_cISeq, "arg_rest",         iseq_arg_rest, 0) ;
-     rb_define_method(rb_cISeq, "arg_simple",       iseq_arg_simple, 0) ;
-     rb_define_method(rb_cISeq, "argc",             iseq_argc, 0) ;
+@@ -1614,11 +1665,13 @@ Init_ISeq(void)
+     rb_define_method(rb_cISeq, "arg_rest",         rb_iseq_arg_rest, 0) ;
+     rb_define_method(rb_cISeq, "arg_simple",       rb_iseq_arg_simple, 0) ;
++    rb_define_method(rb_cISeq, "argc",             rb_iseq_argc, 0) ;
 +
 +    rb_define_method(rb_cISeq, "local_iseq",       rb_iseq_local_iseq, 0) ;
 +    rb_define_method(rb_cISeq, "local_name",       rb_iseq_local_name, 1) ;

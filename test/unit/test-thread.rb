@@ -7,7 +7,7 @@ class TestThread < Test::Unit::TestCase
                  RubyVM::Frame::current.thread)
     assert_equal(RubyVM::Frame.new(Thread::current).thread, 
                  Thread::current)
-    assert_equal(Thread::current.threadframe.thread, Thread::current)
+    assert_equal(Thread::current.frame.thread, Thread::current)
   end
 
   def test_pc_offset

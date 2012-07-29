@@ -4,7 +4,7 @@ diff --git a/iseq.c b/iseq.c
 index 588e386..7a4b89a 100644
 --- a/iseq.c
 +++ b/iseq.c
-@@ -1493,12 +1493,147 @@ rb_iseq_build_for_ruby2cext(
+@@ -1493,12 +1493,146 @@ rb_iseq_build_for_ruby2cext(
      return iseqval;
  }
  
@@ -83,8 +83,8 @@ index 588e386..7a4b89a 100644
 +}
 +
 +#define ISEQ_FIELD_METHOD(FIELD)		\
-+static VALUE					\
-+iseq_##FIELD(VALUE iseqval)			\
++VALUE					        \
++rb_iseq_##FIELD(VALUE iseqval)			\
 +{						\
 +  rb_iseq_t *iseq;				\
 +  if (Qnil == iseqval) return Qnil;		\
@@ -98,7 +98,7 @@ index 588e386..7a4b89a 100644
 +
 +#define ISEQ_INT_FIELD_METHOD(FIELD)		\
 +extern VALUE					\
-+iseq_##FIELD(VALUE iseqval)			\
++rb_iseq_##FIELD(VALUE iseqval)			\
 +{						\
 +  rb_iseq_t *iseq;				\
 +  GetISeqPtr(iseqval, iseq);			\
@@ -123,12 +123,11 @@ index 588e386..7a4b89a 100644
      /* declare ::RubyVM::InstructionSequence */
      rb_cISeq = rb_define_class_under(rb_cRubyVM, "InstructionSequence", rb_cObject);
      rb_define_alloc_func(rb_cISeq, iseq_alloc);
-+    rb_define_method(rb_cISeq, "arg_block",        iseq_arg_block, 0) ;
-+    rb_define_method(rb_cISeq, "arg_opts",         iseq_arg_opts, 0) ;
-+    rb_define_method(rb_cISeq, "arg_post_len",     iseq_arg_post_len, 0) ;
-+    rb_define_method(rb_cISeq, "arg_rest",         iseq_arg_rest, 0) ;
-+    rb_define_method(rb_cISeq, "arg_simple",       iseq_arg_simple, 0) ;
-+    rb_define_method(rb_cISeq, "argc",             iseq_argc, 0) ;
++    rb_define_method(rb_cISeq, "arg_block",        rb_iseq_arg_block, 0) ;
++    rb_define_method(rb_cISeq, "arg_opts",         rb_iseq_arg_opts, 0) ;
++    rb_define_method(rb_cISeq, "arg_post_len",     rb_iseq_arg_post_len, 0) ;
++    rb_define_method(rb_cISeq, "arg_rest",         rb_iseq_arg_rest, 0) ;
++    rb_define_method(rb_cISeq, "arg_simple",       rb_iseq_arg_simple, 0) ;
 +#ifdef FINISHED
 +    rb_define_method(rb_cISeq, "compile_options",  iseq_compile_options, 0) ;
 +    rb_define_method(rb_cISeq, "equal?",           iseq_equal, 1) ;
@@ -137,18 +136,18 @@ index 588e386..7a4b89a 100644
 +    rb_define_method(rb_cISeq, "local_name",       iseq_local_name, 1) ;
 +    rb_define_method(rb_cISeq, "parent",           iseq_parent, 0) ;
 +#endif
-+    rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
-+    rb_define_method(rb_cISeq, "klass",            iseq_klass, 0) ;
-+    rb_define_method(rb_cISeq, "lineno",           iseq_line_no, 0) ;
-+    rb_define_method(rb_cISeq, "local_size",       iseq_local_size, 0) ;
-+    rb_define_method(rb_cISeq, "local_table_size", iseq_local_table_size, 0) ;
++    rb_define_method(rb_cISeq, "iseq_size",        rb_iseq_iseq_size, 0) ;
++    rb_define_method(rb_cISeq, "klass",            rb_iseq_klass, 0) ;
++    rb_define_method(rb_cISeq, "lineno",           rb_iseq_line_no, 0) ;
++    rb_define_method(rb_cISeq, "local_size",       rb_iseq_local_size, 0) ;
++    rb_define_method(rb_cISeq, "local_table_size", rb_iseq_local_table_size, 0) ;
 +    rb_define_method(rb_cISeq, "name",             iseq_name, 0) ;
 +    rb_define_method(rb_cISeq, "offset2lines",     iseq_offset2lines, 1) ;
 +    rb_define_method(rb_cISeq, "offsetlines",      iseq_offsetlines, 0) ;
-+    rb_define_method(rb_cISeq, "orig",             iseq_orig, 0) ;
-+    rb_define_method(rb_cISeq, "self",             iseq_self, 0) ;
-+    rb_define_method(rb_cISeq, "type",             iseq_type, 0) ;
-+    rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
++    rb_define_method(rb_cISeq, "orig",             rb_iseq_orig, 0) ;
++    rb_define_method(rb_cISeq, "self",             rb_iseq_self, 0) ;
++    rb_define_method(rb_cISeq, "type",             rb_iseq_type, 0) ;
++    rb_define_method(rb_cISeq, "iseq_size",        rb_iseq_iseq_size, 0) ;
      rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
      rb_define_method(rb_cISeq, "disasm", rb_iseq_disasm, 0);
      rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);

@@ -1092,7 +1092,7 @@ Init_thread_frame(void)
     /* Additions to RubyVM */
     rb_cThreadFrame = rb_define_class_under(rb_cRubyVM, "Frame", 
 					    rb_cObject);
-    rb_define_method(rb_cThread, "threadframe", thread_frame_threadframe, 0);
+    rb_define_method(rb_cThread, "frame", thread_frame_threadframe, 0);
 
     /* Thread::Frame */
     rb_define_const(rb_cThreadFrame, "VERSION", 

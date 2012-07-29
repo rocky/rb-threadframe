@@ -22,6 +22,7 @@ case $patchfile in
 	    240-iseq-SCRIPT_ISEQS__.patch \
 	    245-method-arity.patch \
 	    246-frame.patch \
+	    247-c-argc.patch \
 	    300-os-startup.patch
 	do 
 	    patch_file=${dirname}/1.9.3/$file

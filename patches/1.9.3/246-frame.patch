@@ -24,7 +24,7 @@ new file mode 100644
 index 0000000..9a99740
 --- /dev/null
 +++ b/frame.c
-@@ -0,0 +1,1016 @@
+@@ -0,0 +1,1015 @@
 +/* 
 + * Copyright (C) 2012 Rocky Bernstein
 + *
@@ -32,7 +32,6 @@ index 0000000..9a99740
 + *  Things like getting a binding for a control frame. In Ruby 1.9.2 this code 
 + *  was in extension rb-threadframe
 + */
-+/* What release we got? */
 +
 +#include <string.h>
 +#include <signal.h>
@@ -75,7 +74,7 @@ index 0000000..9a99740
 +VALUE rb_eFrameError;  /* Error raised on invalid frames. */
 +
 +/* Static forward declarations */
-+static VALUE frame_iseq(VALUE klass);
++VALUE rb_frame_iseq(VALUE klass);
 +static VALUE frame_prev_internal(rb_control_frame_t *prev_cfp, 
 +					rb_thread_t *th, int n);
 +static int   frame_stack_size_internal(rb_control_frame_t *cfp, 
@@ -342,8 +341,8 @@ index 0000000..9a99740
 + * WARNING, this is pretty dangerous. You need to set this to a valid
 + * instruction offset since little checking is done.
 + */
-+static VALUE
-+frame_set_pc_offset(VALUE klass, VALUE offset_val)
++VALUE
++rb_frame_set_pc_offset(VALUE klass, VALUE offset_val)
 +{
 +    int offset;
 +    FRAME_SETUP_WITH_ERROR ;
@@ -384,8 +383,8 @@ index 0000000..9a99740
 + *
 + *  Returns a binding for a given thread frame.
 + */
-+static VALUE
-+frame_binding(VALUE klass)
++VALUE
++rb_frame_binding(VALUE klass)
 +{
 +    FRAME_SETUP_WITH_ERROR ;
 +
@@ -505,8 +504,8 @@ index 0000000..9a99740
 + * FrameError can be raised if the threadframe
 + * object is no longer valid.
 + */
-+static VALUE
-+frame_method(VALUE klass)
++VALUE
++rb_frame_method(VALUE klass)
 +{
 +    FRAME_SETUP_WITH_ERROR ;			\
 +
@@ -540,8 +539,8 @@ index 0000000..9a99740
 + * If invalid/unstarted. FrameError can be raised if the threadframe
 + * object is no longer valid.
 + */
-+static VALUE
-+frame_pc_offset(VALUE klass)
++VALUE
++rb_frame_pc_offset(VALUE klass)
 +{
 +    unsigned long pc;
 +    FRAME_SETUP_WITH_ERROR ;
@@ -564,8 +563,8 @@ index 0000000..9a99740
 + *  found inside the ThreadFrame object or nil if there is none.
 + *
 + */
-+static VALUE
-+frame_iseq(VALUE klass)
++VALUE
++rb_frame_iseq(VALUE klass)
 +{
 +    rb_iseq_t *iseq;
 +    VALUE rb_iseq;
@@ -580,8 +579,8 @@ index 0000000..9a99740
 +/* 
 +   See the above frame_prev comment for what's going on here.
 +*/
-+static VALUE
-+frame_next(VALUE klass)
++VALUE
++rb_frame_next(VALUE klass)
 +{
 +    rb_control_frame_t *cfp = NULL;
 +    FRAME_SETUP_WITH_ERROR ;
@@ -723,7 +722,7 @@ index 0000000..9a99740
 + *
 + *  In the first form, we return a RubyVM::Frame' prior to the
 + *  Thread object passed. That is we go back one frame from the
-+ *  current frfame.
++ *  current frame.
 + *
 + *  In the second form we try to go back that many thread frames. 
 + *
@@ -995,22 +994,22 @@ index 0000000..9a99740
 +{
 +    /* Additions to RubyVM */
 +    rb_cFrame = rb_define_class_under(rb_cRubyVM, "Frame", rb_cObject);
-+    rb_define_method(rb_cThread, "threadframe", frame_threadframe, 0);
++    rb_define_method(rb_cThread, "frame", frame_threadframe, 0);
 +
 +    /* RubyVM::Frame */
 +    rb_define_alloc_func(rb_cFrame, frame_alloc);
 +
 +    rb_define_method(rb_cFrame, "invalid?", frame_invalid, 0);
 +
-+    rb_define_method(rb_cFrame, "binding", frame_binding, 0);
-+    rb_define_method(rb_cFrame, "flag", frame_flag, 0);
-+    rb_define_method(rb_cFrame, "initialize", frame_initialize, 1);
-+    rb_define_method(rb_cFrame, "iseq", frame_iseq, 0);
-+    rb_define_method(rb_cFrame, "method", frame_method, 0);
-+    rb_define_method(rb_cFrame, "next", frame_next, 0);
-+    rb_define_method(rb_cFrame, "pc_offset", frame_pc_offset, 0);
-+    rb_define_method(rb_cFrame, "prev", frame_prev, -1);
-+    rb_define_method(rb_cFrame, "proc", frame_proc, 0);
++    rb_define_method(rb_cFrame, "binding",      rb_frame_binding, 0);
++    rb_define_method(rb_cFrame, "flag",         frame_flag, 0);
++    rb_define_method(rb_cFrame, "initialize",   frame_initialize, 1);
++    rb_define_method(rb_cFrame, "iseq",         rb_frame_iseq, 0);
++    rb_define_method(rb_cFrame, "method",       rb_frame_method, 0);
++    rb_define_method(rb_cFrame, "next",         rb_frame_next, 0);
++    rb_define_method(rb_cFrame, "pc_offset",    rb_frame_pc_offset, 0);
++    rb_define_method(rb_cFrame, "prev",         frame_prev, -1);
++    rb_define_method(rb_cFrame, "proc",         frame_proc, 0);
 +    rb_define_method(rb_cFrame, "return_stop=", frame_return_stop_set, 1);
 +    rb_define_method(rb_cFrame, "return_stop?", frame_is_return_stop, 0);
 +    rb_define_method(rb_cFrame, "self", frame_self, 0);
@@ -1264,7 +1263,7 @@ index 0000000..37f0777
 +                 RubyVM::Frame::current.thread)
 +    assert_equal(RubyVM::Frame.new(Thread::current).thread, 
 +                 Thread::current)
-+    assert_equal(Thread::current.threadframe.thread, Thread::current)
++    assert_equal(Thread::current.frame.thread, Thread::current)
 +  end
 +
 +  def test_pc_offset
@@ -1509,7 +1508,7 @@ index 0000000..d437e94
 +    assert_equal(10, eval('$a', b))
 +    assert_equal(self, tf.self)
 +    1.times do |i;a| 
-+      tf2 = Thread::current.threadframe()
++      tf2 = Thread::current.frame()
 +      b2  = tf2.binding
 +      a = 2
 +      assert_equal(2, eval('a', b2))
@@ -1520,7 +1519,7 @@ index 0000000..d437e94
 +      assert_equal(1, eval('a', tf2.prev(2).binding))
 +    end
 +    def inner(a)
-+      tf3 = Thread::current.threadframe()
++      tf3 = Thread::current.frame()
 +      b3  = tf3.binding
 +      if a == 4
 +        assert_equal(4, eval('a', b3))

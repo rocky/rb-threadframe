@@ -18,7 +18,7 @@ class TestBinding < Test::Unit::TestCase
     assert_equal(10, eval('$a', b))
     assert_equal(self, tf.self)
     1.times do |i;a| 
-      tf2 = Thread::current.threadframe()
+      tf2 = Thread::current.frame()
       b2  = tf2.binding
       a = 2
       assert_equal(2, eval('a', b2))
@@ -29,7 +29,7 @@ class TestBinding < Test::Unit::TestCase
       assert_equal(1, eval('a', tf2.prev(2).binding))
     end
     def inner(a)
-      tf3 = Thread::current.threadframe()
+      tf3 = Thread::current.frame()
       b3  = tf3.binding
       if a == 4
         assert_equal(4, eval('a', b3))
