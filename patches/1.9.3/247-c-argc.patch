@@ -14,7 +14,7 @@ diff --git a/frame.c b/frame.c
 index 947a459..41a1f78 100644
 --- a/frame.c
 +++ b/frame.c
-@@ -352,6 +352,28 @@
+@@ -352,6 +352,49 @@
  
  /*
   *  call-seq:
@@ -40,20 +40,36 @@ index 947a459..41a1f78 100644
 +
 +/*
 + *  call-seq:
++ *     RubyVM::Frame#arity -> Fixnum
++ *
++ *  Returns the number of arguments that would not be ignored.
++ *  See Ruby 1.9 proc_arity of proc.c
++ *
++ */
++static VALUE
++rb_frame_arity(VALUE klass)
++{
++    FRAME_SETUP_WITH_ERROR ;
++
++    if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
++	return rb_iseq_arity(rb_frame_iseq(klass));
++    } else if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
++	return INT2FIX(tf->cfp->me->def->body.cfunc.argc);
++    } else
++	return Qnil;
++}
++
++/*
++ *  call-seq:
   *     RubyVM::Frame'#binding   -> binding
   *
   *  Returns a binding for a given thread frame.
-@@ -974,6 +996,7 @@
+@@ -974,6 +996,8 @@
  
      rb_define_method(rb_cFrame, "invalid?", frame_invalid, 0);
  
 +    rb_define_method(rb_cFrame, "argc",         rb_frame_argc, 0);
-     rb_define_method(rb_cFrame, "binding",      rb_frame_binding, 0);
-     rb_define_method(rb_cFrame, "flag",         frame_flag, 0);
-     rb_define_method(rb_cFrame, "initialize",   frame_initialize, 1);
-@@ -976,4 +999,5 @@ Init_Frame(void)
-
-+    rb_define_method(rb_cFrame, "argc",         rb_frame_argc, 0);
++    rb_define_method(rb_cFrame, "arity",        rb_frame_arity, 0);
      rb_define_method(rb_cFrame, "binding",      rb_frame_binding, 0);
      rb_define_method(rb_cFrame, "flag",         frame_flag, 0);
      rb_define_method(rb_cFrame, "initialize",   frame_initialize, 1);
@@ -61,11 +77,12 @@ diff --git a/iseq.h b/iseq.h
 index 56240e3..4507996 100644
 --- a/iseq.h
 +++ b/iseq.h
-@@ -28,6 +28,7 @@ VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
+@@ -28,6 +28,8 @@ VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
  struct st_table *ruby_insn_make_insn_table(void);
  VALUE iseq_alloc_shared(VALUE klass);
  const char *source_container_type(VALUE fileval);
 +VALUE rb_iseq_argc(VALUE iseqval);
++VALUE rb_iseq_arity(VALUE iseqval);
  
  /* proc.c */
  rb_iseq_t *rb_method_get_iseq(VALUE body);
@@ -90,43 +107,55 @@ diff --git a/test/debugger-ext/test_frame.rb b/test/debugger-ext/test_frame.rb
 index 37f0777..b8cf1c8 100644
 --- a/test/debugger-ext/test_frame.rb
 +++ b/test/debugger-ext/test_frame.rb
-@@ -40,7 +40,7 @@ class TestThread < Test::Unit::TestCase
+@@ -38,9 +38,8 @@ class TestThread < Test::Unit::TestCase
+     assert(pc2 > pc1, 'PC offset should have changed (for the greater)')
+     assert_equal('test_fields', tf.method)
      assert_equal(self, tf.self)
-     ## FIXME:
-     ## assert_equal(0, tf.arity)
+-    ## FIXME:
+-    ## assert_equal(0, tf.arity)
 -    ## assert_equal(0, tf.argc)
++    assert_equal(0, tf.arity)
 +    assert_equal(0, tf.argc)
  
      # assert_raises IndexError do
      #   x = tf.lfp(tf.iseq.local_size+1)
-@@ -65,11 +65,11 @@ class TestThread < Test::Unit::TestCase
+@@ -63,13 +62,11 @@ class TestThread < Test::Unit::TestCase
+       assert_equal('CFUNC', tf.prev.type)
+       assert_equal('times', tf.prev.method) 
        assert_equal(self, tf.self)
-       ## FIXME:
-       ## assert_equal(0, tf.prev.arity, 'C arity should work nowadays' )
+-      ## FIXME:
+-      ## assert_equal(0, tf.prev.arity, 'C arity should work nowadays' )
 -      ## assert_equal(0, tf.prev.argc, 'C args is the same as arity')
++      assert_equal(0, tf.prev.arity, 'C arity should work nowadays' )
 +      assert_equal(0, tf.prev.argc, 'C args is the same as arity')
        assert_equal('test_fields', tf.prev.prev.method) 
-       ## FIXME:
-       ## assert_equal(0, tf.arity)
+-      ## FIXME:
+-      ## assert_equal(0, tf.arity)
 -      ## assert_equal(0, tf.argc)
++      assert_equal(0, tf.arity)
 +      assert_equal(0, tf.argc)
      end
  
      # 1.upto also creates a C frame.
-@@ -79,7 +79,7 @@ class TestThread < Test::Unit::TestCase
+@@ -78,8 +75,8 @@ class TestThread < Test::Unit::TestCase
+       # may as well test current.prev.
        tf = RubyVM::Frame::current.prev  
        assert_equal('CFUNC', tf.type)
-       # assert_equal(1, tf.arity, 'C arity should work nowadays' )
+-      # assert_equal(1, tf.arity, 'C arity should work nowadays' )
 -      # assert_equal(1, tf.argc)
++      assert_equal(1, tf.arity, 'C arity should work nowadays' )
 +      assert_equal(1, tf.argc)
      end
  
      x  = lambda do |x,y| 
-@@ -89,7 +89,7 @@ class TestThread < Test::Unit::TestCase
+@@ -87,9 +84,8 @@ class TestThread < Test::Unit::TestCase
+       assert_equal('block in test_fields', frame.method)
+       assert_equal('LAMBDA', frame.type)
        assert_equal(x, tf.self)
-       ## FIXME:
-       ## assert_equal(2, frame.arity)
+-      ## FIXME:
+-      ## assert_equal(2, frame.arity)
 -      ## assert_equal(2, frame.argc)
++      assert_equal(2, frame.arity)
 +      assert_equal(2, frame.argc)
      end
      x.call(x,2)

@@ -24,11 +24,10 @@ class TestThread < Test::Unit::TestCase
   end
 
   def test_sp
-    tf = RubyVM::Frame::current.prev
+    tf = RubyVM::Frame.prev
     assert tf.sp(1)
     tf.sp_set(1, 5)
-    assert_equal(5, tf.sp(1),
-                 'chcking value of recently-set sp(1)')
+    assert_equal(5, tf.sp(1), 'checking value of recently-set sp(1)')
   end
 
   def test_source_container
@@ -91,12 +90,13 @@ class TestThread < Test::Unit::TestCase
     assert_equal(self, tf.self)
     assert_equal(0, tf.arity)
     assert_equal(0, tf.argc)
-    assert tf.dfp(0)
-    assert tf.lfp(0)
+    ## FIXME: Should we allow this?
+    ## assert tf.dfp(0)
+    ## assert tf.lfp(0)
 
-    assert_raises IndexError do
-      x = tf.lfp(tf.iseq.local_size+1)
-    end
+    # assert_raises IndexError do
+    #   x = tf.lfp(tf.iseq.local_size+1)
+    # end
 
 
     tf_prev = tf.prev
@@ -110,7 +110,7 @@ class TestThread < Test::Unit::TestCase
       tf = RubyVM::Frame::current
       tup = tf.source_container
       tup[1] = File.basename(tup[1])
-      assert_equal(['file', 'test-thread.rb'], tup)
+      assert_equal(['file', 'test-frame.rb'], tup)
       assert_equal('block in test_fields', tf.method)
       assert_equal('CFUNC', tf.prev.type)
       assert_equal('times', tf.prev.method) 
@@ -124,7 +124,9 @@ class TestThread < Test::Unit::TestCase
 
     # 1.upto also creates a C frame.
     1.upto(1) do 
-      tf = RubyVM::Frame::current.prev
+      # We could use ".prev" below instead of '.current.prev", but we
+      # may as well test current.prev.
+      tf = RubyVM::Frame::current.prev  
       assert_equal('CFUNC', tf.type)
       assert_equal(1, tf.arity, 'C arity should work nowadays' )
       assert_equal(1, tf.argc)
@@ -135,8 +137,8 @@ class TestThread < Test::Unit::TestCase
       assert_equal('block in test_fields', frame.method)
       assert_equal('LAMBDA', frame.type)
       assert_equal(x, tf.self)
-    assert_equal(2, frame.arity)
-    assert_equal(2, frame.argc)
+      assert_equal(2, frame.arity)
+      assert_equal(2, frame.argc)
     end
     x.call(x,2)
 
@@ -150,7 +152,7 @@ class TestThread < Test::Unit::TestCase
 
   end
 
-  def test_threadframe_equal
+  def test_frame_equal
     tf = RubyVM::Frame.current
     tf2 = RubyVM::Frame.current
     assert_equal(true,  tf.equal?(tf))

@@ -64,7 +64,8 @@ index 9f28049..3293327 100644
  /* 
   * call-seq:
   *     RubyVM::InstructionSequence#name -> String
-@@ -1614,11 +1665,13 @@ Init_ISeq(void)
+@@ -1613,12 +1664,14 @@ Init_ISeq(void)
+     rb_define_method(rb_cISeq, "arg_post_len",     rb_iseq_arg_post_len, 0) ;
      rb_define_method(rb_cISeq, "arg_rest",         rb_iseq_arg_rest, 0) ;
      rb_define_method(rb_cISeq, "arg_simple",       rb_iseq_arg_simple, 0) ;
 +    rb_define_method(rb_cISeq, "argc",             rb_iseq_argc, 0) ;
@@ -79,7 +80,7 @@ index 9f28049..3293327 100644
 -    rb_define_method(rb_cISeq, "local_name",       iseq_local_name, 1) ;
      rb_define_method(rb_cISeq, "parent",           iseq_parent, 0) ;
  #endif
-     rb_define_method(rb_cISeq, "iseq_size",        iseq_iseq_size, 0) ;
+     rb_define_method(rb_cISeq, "iseq_size",        rb_iseq_iseq_size, 0) ;
 diff --git a/test/debugger-ext/test_iseq.rb b/test/debugger-ext/test_iseq.rb
 new file mode 100644
 index 0000000..e5f8d00
