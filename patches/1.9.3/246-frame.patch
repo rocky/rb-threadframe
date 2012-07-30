@@ -24,7 +24,7 @@ new file mode 100644
 index 0000000..9a99740
 --- /dev/null
 +++ b/frame.c
-@@ -0,0 +1,1015 @@
+@@ -0,0 +1,1014 @@
 +/* 
 + * Copyright (C) 2012 Rocky Bernstein
 + *
@@ -84,7 +84,6 @@ index 0000000..9a99740
 +
 +extern void iseq_mark(void *ptr); /* in iseq.c */
 +
-+
 +/* 
 +  FIXME: I've never seen the following routine get called.
 +  Why? 
@@ -118,7 +117,7 @@ index 0000000..9a99740
 +}
 +
 +/* 
-+   Allocate a RubyVM::Frame' used by new. Less common than
++   Allocate a RubyVM::Frame used by new. Less common than
 +   thread_frame_t_alloc(). The caller is responsible for filling in
 +   the C struct data. Below we wrap NULL.
 + */
@@ -129,7 +128,7 @@ index 0000000..9a99740
 +}
 +
 +/* 
-+   Allocate a RubyVM::Frame' and set its threadframe structure.
++   Allocate a RubyVM::Frame and set its threadframe structure.
 +   This is the more common allocate routine since one normally doesn't
 +   create a threadframe without <i>first</i> having something to put in it.
 + */
@@ -214,7 +213,7 @@ index 0000000..9a99740
 + *  call-seq:
 + *     RubyVM::Frame#threadframe  -> frame_object
 + * 
-+ *  Returns a RubyVM::Frame' object for the given thread.
++ *  Returns a RubyVM::Frame object for the given thread.
 + */
 +static VALUE
 +frame_threadframe(VALUE thval)
@@ -292,12 +291,12 @@ index 0000000..9a99740
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::Frame'#sp_size  -> FixNum
++ *     RubyVM::Frame#sp_size  -> FixNum
 + * 
 + * Returns the number of stack or sp entries in the current
 + * frame. That is the, number values that have been pushed onto the
 + * stack since the current call.  This is different than
-+ * RubyVM::Frame'#stack_size which counts the number of frames in
++ * RubyVM::Frame#stack_size which counts the number of frames in
 + * the call stack. +nil+ is returned if there is an error.
 + */
 +VALUE 
@@ -309,7 +308,7 @@ index 0000000..9a99740
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::Frame'#sp_set(n, newvalue)  -> object
++ *     RubyVM::Frame#sp_set(n, newvalue)  -> object
 + * 
 + * Sets VM stack position <i>n</i> to <i>newvalue</i>. The top object
 + * is position 0. 1 is the next object.
@@ -335,7 +334,7 @@ index 0000000..9a99740
 +#ifndef NO_reg_pc
 +/*
 + *  call-seq:
-+ *     RubyVM::Frame'#pc_offset=
++ *     RubyVM::Frame#pc_offset=
 + * 
 + * Sets pc to the offset given. 
 + * WARNING, this is pretty dangerous. You need to set this to a valid
@@ -363,7 +362,7 @@ index 0000000..9a99740
 +#if 0
 +/*
 + *  call-seq:
-+ *     RubyVM::Frame'#flag -> Fixnum
++ *     RubyVM::Frame#flag -> Fixnum
 + *
 + *  Returns the frame flags, a FIXNUM which should be interpreted as a
 + *  bitmask.
@@ -379,7 +378,7 @@ index 0000000..9a99740
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::Frame'#binding   -> binding
++ *     RubyVM::Frame#binding   -> binding
 + *
 + *  Returns a binding for a given thread frame.
 + */
@@ -406,7 +405,7 @@ index 0000000..9a99740
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::Frame'#equal(tf)   -> bool
++ *     RubyVM::Frame#equal(tf)   -> bool
 + *
 + *  Returns true if two thread frames are equal.
 + */
@@ -441,15 +440,15 @@ index 0000000..9a99740
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::Frame'.new(thread)          -> frame_object
++ *     RubyVM::Frame.new(thread)          -> frame_object
 + *
-+ *  Returns an RubyVM::Frame' object which can contains dynamic frame
++ *  Returns an RubyVM::Frame object which can contains dynamic frame
 + *  information. Don't use this directly. Instead use one of the 
 + *  class methods.
 + *
-+ *    RubyVM::Frame'::current.flag          => 72
-+ *    RubyVM::Frame'::current.proc          => false
-+ *    RubyVM::Frame'::current.self          => 'main'
++ *    RubyVM::Frame::current.flag          => 72
++ *    RubyVM::Frame::current.proc          => false
++ *    RubyVM::Frame::current.self          => 'main'
 + */
 +static VALUE
 +frame_initialize(VALUE tfval, VALUE thval)
@@ -464,7 +463,7 @@ index 0000000..9a99740
 +
 +/*
 + * call-seq:
-+ *    RubyVM::Frame'#invalid? -> Boolean
++ *    RubyVM::Frame#invalid? -> Boolean
 + *
 + * Returns true if the frame is no longer valid. On the other hand,
 + * since the test we use is weak, returning false might not mean the
@@ -602,9 +601,9 @@ index 0000000..9a99740
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::Frame'#prev(n=1) -> frame_object
++ *     RubyVM::Frame#prev(n=1) -> frame_object
 + *
-+ *  Returns a RubyVM::Frame' object for the frame prior to the
++ *  Returns a RubyVM::Frame object for the frame prior to the
 + *  ThreadFrame object or +nil+ if there is none. Setting n=0 just
 + *  returns the object passed.  A negative starts from the end. So
 + *  prev(-1) is the top frame.  Counts outside of the range
@@ -700,10 +699,10 @@ index 0000000..9a99740
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::Frame'::current  -> frame_object
++ *     RubyVM::Frame::current  -> frame_object
 + * 
 + *  Returns a ThreadFrame object for the currently executing thread.
-+ *  Same as: RubyVM::Frame'.new(Thread::current)
++ *  Same as: RubyVM::Frame.new(Thread::current)
 + */
 +static VALUE
 +frame_s_current(VALUE klass)
@@ -715,12 +714,12 @@ index 0000000..9a99740
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::Frame'::prev(thread)     -> threadframe_object
-+ *     RubyVM::Frame'::prev(thread, n)  -> threadframe_object
-+ *     RubyVM::Frame'::prev             -> threadframe_object
-+ *     RubyVM::Frame'::prev(n)          -> threadframe_object
++ *     RubyVM::Frame::prev(thread)     -> threadframe_object
++ *     RubyVM::Frame::prev(thread, n)  -> threadframe_object
++ *     RubyVM::Frame::prev             -> threadframe_object
++ *     RubyVM::Frame::prev(n)          -> threadframe_object
 + *
-+ *  In the first form, we return a RubyVM::Frame' prior to the
++ *  In the first form, we return a RubyVM::Frame prior to the
 + *  Thread object passed. That is we go back one frame from the
 + *  current frame.
 + *
@@ -737,7 +736,7 @@ index 0000000..9a99740
 + *  and 0 is invalid. If the +n+ is negative, we count from the bottom
 + *  of the frame stack.
 + *
-+ *  In all cases we return a RubyVM::Frame' or nil if we can't 
++ *  In all cases we return a RubyVM::Frame or nil if we can't 
 + *  go back (or forward for a negative +n+) that many frames. 
 + *
 + */
@@ -756,7 +755,7 @@ index 0000000..9a99740
 +    switch (argc) {
 +      case 0:
 +	th = ruby_current_thread;
-+        /* Do'nt count the RubyVM::Frame'.prev call */
++        /* Don't count the RubyVM::Frame.prev call */
 +	prev_count = 2; 
 +	break;
 +      case 1:
@@ -767,7 +766,7 @@ index 0000000..9a99740
 +	} else 
 +	    if (Qtrue == rb_obj_is_kind_of(first_val, rb_cThread)) {
 +		GetThreadPtr(first_val, th);
-+               /* Don't count the RubyVM::Frame'.prev call */
++               /* Don't count the RubyVM::Frame.prev call */
 +		prev_count = 1; 
 +	    } else {
 +		rb_raise(rb_eTypeError, 
@@ -808,7 +807,7 @@ index 0000000..9a99740
 +
 +/*
 + * call-seq:
-+ *    RubyVM::Frame'#source_container() -> [Type, String]
++ *    RubyVM::Frame#source_container() -> [Type, String]
 + *
 + * Returns a tuple representing kind of container, e.g. file
 + * eval'd string object, and the name of the container. If file,
@@ -892,7 +891,7 @@ index 0000000..9a99740
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::Frame'#stack_size  -> Fixnum;
++ *     RubyVM::Frame#stack_size  -> Fixnum;
 + *
 + *  Returns a count of the number of frames including the current one. 
 + *  ThreadFrame#prev(ThreadFrame#stack_size) = nil
@@ -929,7 +928,7 @@ index 0000000..9a99740
 +
 +/*
 + *  call-seq:
-+ *     RubyVM::Frame'#thread   -> thread
++ *     RubyVM::Frame#thread   -> thread
 + *
 + *  Returns the thread object for the thread frame.
 + */
@@ -999,7 +998,7 @@ index 0000000..9a99740
 +    /* RubyVM::Frame */
 +    rb_define_alloc_func(rb_cFrame, frame_alloc);
 +
-+    rb_define_method(rb_cFrame, "invalid?", frame_invalid, 0);
++    rb_define_method(rb_cFrame, "invalid?",     frame_invalid, 0);
 +
 +    rb_define_method(rb_cFrame, "binding",      rb_frame_binding, 0);
 +    rb_define_method(rb_cFrame, "flag",         frame_flag, 0);

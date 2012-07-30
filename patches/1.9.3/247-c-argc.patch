@@ -14,7 +14,7 @@ diff --git a/frame.c b/frame.c
 index 947a459..41a1f78 100644
 --- a/frame.c
 +++ b/frame.c
-@@ -352,6 +352,49 @@
+@@ -351,6 +351,49 @@
  
  /*
   *  call-seq:
@@ -61,12 +61,12 @@ index 947a459..41a1f78 100644
 +
 +/*
 + *  call-seq:
-  *     RubyVM::Frame'#binding   -> binding
+  *     RubyVM::Frame#binding   -> binding
   *
   *  Returns a binding for a given thread frame.
-@@ -974,6 +996,8 @@
+@@ -973,6 +995,8 @@
  
-     rb_define_method(rb_cFrame, "invalid?", frame_invalid, 0);
+     rb_define_method(rb_cFrame, "invalid?",     frame_invalid, 0);
  
 +    rb_define_method(rb_cFrame, "argc",         rb_frame_argc, 0);
 +    rb_define_method(rb_cFrame, "arity",        rb_frame_arity, 0);
