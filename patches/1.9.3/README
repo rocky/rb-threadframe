@@ -1,12 +1,30 @@
 Below is a description of the patches.
 
 About the numbering used below. Numbers at a given power of ten are
-supposed to be independent; that is they applied independent of the
-other patches at that level. So 000 and 100 and 1xx and and 2xx are
+supposed to be somewhat independent. (See below for what "somewhat
+independent" means.
+
+"Somewhat" indpendent patch can be applied independent of the other
+patches at that level. So 000 and 100 and 1xx and and 2xx are somewhat
 independent.  Likewise for 210, 220, 230 or 210, 211, 212. But 225 is
 thought to be dependent on 220. Of course, if patches are skipped
 applying higher number patches may give messages about "fuzz" being
 applied to line numbers and file offsets.
+
+More on "somewhat" independent. There are two kinds of
+dependencies. Those where one feature depends on another
+feature. These should be captured by the sub-numbering scheme
+above. But there is another kind of dependence due to the patch
+mechanism which needs context and line numbers to find a patch. Here
+it may be the case that two patches are logically independent but one
+patch changes some context lines that another patch will use. This is
+captured only by the total ordering of the patch numbers. If some
+patches are skipped it is possible the patch mechanism will be able to
+handle this giving "fuzz" and "offset line" messages. Alas, more
+likely though some hunks of the patch may be rejected.
+
+I have not put a lot of effort into ensuring arbitrary intermediate
+patches can be skipped. 
 
 
 000-testit.patch:

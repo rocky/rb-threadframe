@@ -179,7 +179,7 @@ diff --git a/vm_insnhelper.c b/vm_insnhelper.c
 index 8e7fe94..33bb45c 100644
 --- a/vm_insnhelper.c
 +++ b/vm_insnhelper.c
-@@ -398,6 +398,10 @@ vm_call_cfunc(rb_thread_t *th, rb_control_frame_t *reg_cfp,
+@@ -402,6 +402,10 @@ vm_call_cfunc(rb_thread_t *th, rb_control_frame_t *reg_cfp,
  
      cfp = vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
  			recv, (VALUE) blockptr, 0, reg_cfp->sp, 0, 1);

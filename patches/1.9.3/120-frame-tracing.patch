@@ -1,0 +1,93 @@
+*** NOT WORKING YET*** 
+
+We include this a partial patch for later fixup.
+
+This patch adds adds the ability to set tracing on or off per frame.
+Subsequent frames created which are called a frame with tracing set
+off keeps tracing off by default.  (Infrequently one may want to
+override this default behavior such as when wants to debug a
+debugger.)  When frame returns, the trace bit is taken from the value
+set from the previous frame's trace bit.
+
+There is already a such a tracing bit that is similar which is set per
+thread, but I don't think this is as useful.  When a trace hook is
+called, if the hook yields to the debugged program (in the same
+thread), I think the desired intent would be that tracing to turn
+tracing back on if that is what it was before entering the hook.
+
+This patch is helps make a debugger "step out" (or in gdb "finish"
+command) fast.
+
+Finally, sometimes one wants to do some setup before running a trace
+hook, or write some code which simulates calling the hook as though it
+were triggered by the runtime, even though it isn't. An example of
+this is an immediate call to a debugger from the source code to be
+debugged. This is in contrast to waiting for the next event to trigger
+a call to a debugger. 
+
+In ruby-debug situation one writes "debugger(:immediate => true)" and
+this is used as a workaround for getting into the debugger in a method
+at a point when there are no subsequent "line" events in that
+method. Although in the next debugger this won't be needed, it still
+is a nice thing to have. From the programmer's standpoint such an
+immediate stop mechanism more straightforward and predictable.
+
+In such a situation, the setup code ("debugger" above) may also call
+other methods before entering the hook and so we want an easy way to
+make sure those routines don't get traced just as the setup routine
+isn't traced.
+
+One might make a case for removing the trace bit in the thread
+structure and having the frame bit subsume that. To be conservative
+and compatible, I haven't done that.
+
+diff --git a/vm_core.h b/vm_core.h
+index aef7195..f11aeef 100644
+--- a/vm_core.h
++++ b/vm_core.h
+@@ -340,6 +343,9 @@ typedef struct {
+     rb_iseq_t *block_iseq;	/* cfp[8] / block[3] */
+     VALUE proc;			/* cfp[9] / block[4] */
+     const rb_method_entry_t *me;/* cfp[10] */
++    short int tracing;          /* Bits to control per-frame event tracing. 
++				   See VM_FRAME_TRACE_xxx defines.
++				 */
+ } rb_control_frame_t;
+ 
+ typedef struct rb_block_struct {
+@@ -583,6 +599,10 @@
+ 
+ #define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)
+ 
++#define VM_FRAME_TRACE_RETURN 0x01  /* Call trace hook on return. */
++#define VM_FRAME_TRACE_OFF    0x02  /* Turn of event hook tracing in this frame
++				       and any frames created from this one. */
++
+ /* other frame flag */
+ #define VM_FRAME_FLAG_PASSED 0x0100
+ 
+diff --git a/vm_insnhelper.c b/vm_insnhelper.c
+index 33bb45c..47f130c 100644
+--- a/vm_insnhelper.c
++++ b/vm_insnhelper.c
+@@ -28,9 +28,12 @@ vm_push_frame(rb_thread_t * th, const rb_iseq_t * iseq,
+ 	      const VALUE *pc, VALUE *sp, VALUE *lfp,
+ 	      int local_size)
+ {
++    short int tracing = 0;
+     rb_control_frame_t * const cfp = th->cfp - 1;
+     int i;
+ 
++    if (type != VM_FRAME_MAGIC_TOP) tracing = th->cfp->tracing;
++
+     if ((void *)(sp + local_size) >= (void *)cfp) {
+ 	rb_exc_raise(sysstack_error);
+     }
+@@ -63,6 +66,7 @@ vm_push_frame(rb_thread_t * th, const rb_iseq_t * iseq,
+     cfp->block_iseq = 0;
+     cfp->proc = 0;
+     cfp->me = 0;
++    cfp->tracing = tracing & ~VM_FRAME_TRACE_RETURN;
+ 
+ #define COLLECT_PROFILE 0
+ #if COLLECT_PROFILE
