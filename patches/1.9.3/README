@@ -104,3 +104,13 @@ RubyVM::OS_ARGV and RubyVM::OS_STARTUP_DIR captures the initial @ARGV
 and current working directory to make this happen. (Inside a Ruby
 program, one can change @ARGV and cwd)
 
+-------------------
+400-disasm-insns.patch
+
+Add more access to VM opcodes and finer control of disassembly.
+
+rb_iseq_disasm_nochildren() disassembles just the given instruction sequence, not any child instruction sequences (such as those of nested procedures).
+rb_child_iseqs (Ruby iseq#child_iseqs) returns and array of child instruction sequences of "iseq".
+
+Also adds access to an instruction's length, name, operand types. 
+
