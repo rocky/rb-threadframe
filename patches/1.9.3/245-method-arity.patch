@@ -31,7 +31,7 @@ index 8ab41e8..1ff6fc5 100644
  static VALUE
  iseq_s_load(int argc, VALUE *argv, VALUE self)
  {
-@@ -1760,6 +1776,7 @@ Init_ISeq(void)
+@@ -1762,6 +1778,7 @@ Init_ISeq(void)
      rb_define_method(rb_cISeq, "type",             rb_iseq_type, 0) ;
      rb_define_method(rb_cISeq, "iseq_size",        rb_iseq_iseq_size, 0) ;
      rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);

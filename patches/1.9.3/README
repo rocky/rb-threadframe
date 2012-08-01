@@ -42,6 +42,67 @@ just exposes the ability the set or query thread tracing individually
 by adding a couple of methods.
 
 -------------------
+120-frame-tracing.patch
+
+This patch adds adds the ability to set tracing on or off per frame.
+Subsequent frames created which are called a frame with tracing set
+off keeps tracing off by default.  (Infrequently one may want to
+override this default behavior such as when wants to debug a
+debugger.)  When frame returns, the trace bit is taken from the value
+set from the previous frame's trace bit.
+
+There is already a such a tracing bit that is similar which is set per
+thread, but I don't think this is as useful.  When a trace hook is
+called, if the hook yields to the debugged program (in the same
+thread), I think the desired intent would be that tracing to turn
+tracing back on if that is what it was before entering the hook.
+
+This patch is helps make a debugger "step out" (or in gdb "finish"
+command) fast.
+
+Finally, sometimes one wants to do some setup before running a trace
+hook, or write some code which simulates calling the hook as though it
+were triggered by the runtime, even though it isn't. An example of
+this is an immediate call to a debugger from the source code to be
+debugged. This is in contrast to waiting for the next event to trigger
+a call to a debugger. 
+
+In ruby-debug situation one writes "debugger(:immediate => true)" and
+this is used as a workaround for getting into the debugger in a method
+at a point when there are no subsequent "line" events in that
+method. Although in the next debugger this won't be needed, it still
+is a nice thing to have. From the programmer's standpoint such an
+immediate stop mechanism more straightforward and predictable.
+
+In such a situation, the setup code ("debugger" above) may also call
+other methods before entering the hook and so we want an easy way to
+make sure those routines don't get traced just as the setup routine
+isn't traced.
+
+One might make a case for removing the trace bit in the thread
+structure and having the frame bit subsume that. To be conservative
+and compatible, I haven't done that.
+
+-------------------
+130-brkpt.patch
+
+Add support for breakpoints in the VM. This allows debuggers to run at full
+speed.  
+
+External routines added to RubyVM::InstructionSequence (in brkpt.c): 
+  brkpt_alloc - allocate breakpoint vector
+  brkpt_set   - set a breakpoint at a given VM offset
+  brkpt_unset - unset a breakpoint
+  brkpt_get   - see if a breakpoint is set a a particlar VM offset
+  brkpt_get   - get list of breakpoints set in this instruction sequence
+  
+Initial timing evidence by Mark Moseley suggests that the
+overhead is negligible.
+
+Previous RubyVM::InstructionSequence patches facilitate getting access
+to instruction sequences
+
+-------------------
 210-iseq-field-access.patch
 
 Access to more of the iseq fields: argc, arg_rest, arg_block,

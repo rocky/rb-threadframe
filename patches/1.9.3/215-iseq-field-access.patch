@@ -6,8 +6,8 @@ diff --git a/iseq.c b/iseq.c
 index 9f28049..3293327 100644
 --- a/iseq.c
 +++ b/iseq.c
-@@ -1493,6 +1493,57 @@ rb_iseq_build_for_ruby2cext(
-     return iseqval;
+@@ -1509,6 +1509,57 @@
+     return(iseq->name);
  }
  
 +VALUE 
@@ -63,8 +63,8 @@ index 9f28049..3293327 100644
 +
  /* 
   * call-seq:
-  *     RubyVM::InstructionSequence#name -> String
-@@ -1613,12 +1664,14 @@ Init_ISeq(void)
+  *     RubyVM::InstructionSequence#offsetlines -> Hash[Fixnum] -> [Fixnum]
+@@ -1615,12 +1666,14 @@ Init_ISeq(void)
      rb_define_method(rb_cISeq, "arg_post_len",     rb_iseq_arg_post_len, 0) ;
      rb_define_method(rb_cISeq, "arg_rest",         rb_iseq_arg_rest, 0) ;
      rb_define_method(rb_cISeq, "arg_simple",       rb_iseq_arg_simple, 0) ;

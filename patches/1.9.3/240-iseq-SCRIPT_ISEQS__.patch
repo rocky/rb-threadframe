@@ -216,7 +216,7 @@ diff --git a/vm_core.h b/vm_core.h
 index f6f42ca..1d90480 100644
 --- a/vm_core.h
 +++ b/vm_core.h
-@@ -507,7 +507,7 @@ VALUE rb_iseq_new(NODE*, VALUE, VALUE, VALUE, VALUE, enum iseq_type);
+@@ -510,7 +510,7 @@ VALUE rb_iseq_new(NODE*, VALUE, VALUE, VALUE, VALUE, enum iseq_type);
  VALUE rb_iseq_new_top(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE parent);
  VALUE rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath);
  VALUE rb_iseq_new_with_bopt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, VALUE);

@@ -226,7 +226,7 @@ index 427745b..9655a93 100644
  static VALUE
  iseq_s_disasm(VALUE klass, VALUE body)
  {
-@@ -1837,6 +2009,10 @@ Init_ISeq(void)
+@@ -1839,6 +2011,10 @@ Init_ISeq(void)
      rb_define_method(rb_cISeq, "arity",   rb_iseq_arity, 0);
      rb_define_method(rb_cISeq, "disasm", rb_iseq_disasm, 0);
      rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);

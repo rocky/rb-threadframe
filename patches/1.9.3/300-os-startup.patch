@@ -8,7 +8,7 @@ diff --git a/include/ruby/ruby.h b/include/ruby/ruby.h
 index 2f97b33..b909250 100644
 --- a/include/ruby/ruby.h
 +++ b/include/ruby/ruby.h
-@@ -1481,6 +1481,12 @@ int ruby_vsnprintf(char *str, size_t n, char const *fmt, va_list ap);
+@@ -1482,6 +1482,12 @@ int ruby_vsnprintf(char *str, size_t n, char const *fmt, va_list ap);
  #include "ruby/subst.h"
  #endif
  

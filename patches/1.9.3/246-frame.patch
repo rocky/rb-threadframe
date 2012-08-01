@@ -11,7 +11,7 @@ diff --git a/common.mk b/common.mk
 index eb89a2b..cb32293 100644
 --- a/common.mk
 +++ b/common.mk
-@@ -92,6 +92,7 @@ COMMONOBJS    = array.$(OBJEXT) \
+@@ -93,6 +93,7 @@ COMMONOBJS    = array.$(OBJEXT) \
  		vm.$(OBJEXT) \
  		vm_dump.$(OBJEXT) \
  		thread.$(OBJEXT) \
@@ -1136,7 +1136,7 @@ index 1ff6fc5..78fba90 100644
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -1782,6 +1840,7 @@
+@@ -1784,6 +1842,7 @@
      rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
      rb_define_method(rb_cISeq, "eval", iseq_eval, 0);
      rb_define_method(rb_cISeq, "source", rb_iseq_source, 0);
@@ -1168,13 +1168,7 @@ diff --git a/vm_core.h b/vm_core.h
 index aef7195..f11aeef 100644
 --- a/vm_core.h
 +++ b/vm_core.h
-@@ -256,9 +256,22 @@ struct rb_iseq_struct {
-     /* used at compile time */
-     struct iseq_compile_data *compile_data;
- 
-+    /* Used to set a breakpoint at a VM instruction */
-+    unsigned char *breakpoints; 
-+
+@@ -262,6 +262,16 @@ struct rb_iseq_struct {
      /* If this instruction sequence came from eval, the string of the
         source as a String. */
      VALUE source;

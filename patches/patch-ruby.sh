@@ -16,6 +16,7 @@ case $patchfile in
 	    000-testit.patch \
 	    110-thread-tracing.patch \
 	    120-frame-tracing.patch \
+	    130-brkpt.patch \
 	    210-iseq-field-access.patch \
 	    215-iseq-field-access.patch \
 	    220-iseq-eval-source-save.patch \
