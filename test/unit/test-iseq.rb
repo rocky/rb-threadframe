@@ -90,6 +90,7 @@ class TestISeq < Test::Unit::TestCase
   # FIXME: killcache interface will probably change. Try make less sensitive
   # to compile sequence
   def test_iseq_killcache
+    skip "killcache doesn't work on 1.9.3" if '1.9.3' == RUBY_VERSION
     iseq = RubyVM::Frame.current.iseq
     count = iseq.killcache
     if 0 != count
