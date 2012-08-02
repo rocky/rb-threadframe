@@ -26,7 +26,8 @@ case $patchfile in
 	    246-frame.patch \
 	    247-c-argc.patch \
 	    300-os-startup.patch \
-	    400-disasm-insns.patch
+	    400-disasm-insns.patch \
+	    500-trace-func-mask.patch
 	do 
 	    patch_file=${dirname}/1.9.3/$file
 	    echo -- Applying patches in $patch_file ... | tee -a patches_applied.log

@@ -2071,6 +2071,19 @@ index f254d2c..0000000
 -  return insn_stack_push_num_info[(int)insn];
 -}
 -#endif
+diff --git a/internal.h b/internal.h
+index 5d0cff0..0692212 100644
+--- a/internal.h
++++ b/internal.h
+@@ -169,7 +169,7 @@ struct timeval rb_time_timeval(VALUE);
+ VALUE rb_obj_is_mutex(VALUE obj);
+ VALUE ruby_suppress_tracing(VALUE (*func)(VALUE, int), VALUE arg, int always);
+ void rb_thread_execute_interrupts(VALUE th);
+-void rb_clear_trace_func(void);
++VALUE rb_clear_trace_func(void);
+ VALUE rb_thread_backtrace(VALUE thval);
+ VALUE rb_get_coverages(void);
+ 
 diff --git a/iseq.c b/iseq.c
 index 28cc1e5..b4987c0 100644
 --- a/iseq.c
@@ -3808,12 +3821,146 @@ index 0000000..89afb5e
 +# We want to double-check we didn't mess up any pointers somewhere along
 +# the line.
 +at_exit { GC.start  }
+diff --git a/test/debugger-ext/test_tracemask.rb b/test/debugger-ext/test_tracemask.rb
+new file mode 100644
+index 0000000..2221729
+--- /dev/null
++++ b/test/debugger-ext/test_tracemask.rb
+@@ -0,0 +1,128 @@
++require 'test/unit'
++
++# tests set_trace_func with event bitmasks, clear_trace_func, 
++# Newer changes
++class TestSetTraceFuncAdds < Test::Unit::TestCase
++
++  # Some of the below setup is similar to what is in lib/trace_mod.rb of 
++  # rb-trace
++  @@NO_EVENT_MASK        = 0x0000
++  @@LINE_EVENT_MASK      = 0x0001
++  @@CLASS_EVENT_MASK     = 0x0002
++  @@END_EVENT_MASK       = 0x0004
++  @@CALL_EVENT_MASK      = 0x0008
++  @@RETURN_EVENT_MASK    = 0x0010
++  @@C_CALL_EVENT_MASK    = 0x0020
++  @@C_RETURN_EVENT_MASK  = 0x0040
++  @@RAISE_EVENT_MASK     = 0x0080
++  @@ALL_EVENTS_MASK      = 0x00ff
++  
++  @@EVENT2MASK = {
++    'line'     => @@LINE_EVENT_MASK,
++    'call'     => @@CALL_EVENT_MASK,
++    'return'   => @@RETURN_EVENT_MASK,
++    'c-call'   => @@C_CALL_EVENT_MASK,
++    'c-return' => @@C_RETURN_EVENT_MASK,
++    'c-raise'  => @@RAISE_EVENT_MASK
++  }
++
++  # Convert +events+ into a Fixnum bitmask used internally by Ruby.
++  # Parameter +events+ should be Enumerable and each element should
++  # either be a Fixnum mask value or something that can be converted
++  # to a symbol. If the latter, the case is not important as we'll
++  # downcase the string representation.
++  def events2bitmask(event_list)
++    bitmask = @@NO_EVENT_MASK
++    event_list.each do |event|
++      bitmask |= @@EVENT2MASK[event]
++    end
++    return bitmask
++  end
++
++  def setup
++    @original_compile_option = RubyVM::InstructionSequence.compile_option
++    RubyVM::InstructionSequence.compile_option = {
++      :trace_instruction => true,
++      :specialized_instruction => false
++    }
++    @proc_template = 'Proc.new { |event, file, lineno, mid, binding, klass|
++      %s << [event, lineno, mid, klass]}'
++  end
++
++  def teardown
++    clear_trace_func
++    RubyVM::InstructionSequence.compile_option = @original_compile_option
++  end
++
++  def test_eventmask
++    # In the below we leave out c-call and c-return because there
++    # is another useful patch which changes the order than these appear.
++    # We want this patch to be independent of that patch.
++    returned_tuples = 
++      [['line', 5, :test_eventmask, self.class],
++       ['class', 5, nil, nil],
++       ['end', 5, nil, nil],
++       ['line', 6, :test_eventmask, self.class],
++       ['call', 1, :five, self.class],
++       ['line', 1, :five, self.class],
++       ['return', 1, :five, self.class],
++       ['line', 6, :test_eventmask, self.class],
++       ['line', 7, :test_eventmask, self.class],
++      ]
++
++    [nil, %w(line), %w(call line)].each do |event_list|
++      tuples = []
++      event_mask = if event_list
++                     events2bitmask(event_list)
++                   else
++                     @@ALL_EVENTS_MASK
++                   end
++      cmd = <<-EOF.gsub(/^.*?: /, '')
++        1: def five; 5 end
++        2: p1 = #{@proc_template}
++        3: set_trace_func(p1, #{event_mask})
++        4: class Foo; end
++        5: [1,2,five].any? {|n| n}
++        6: clear_trace_func
++      EOF
++      eval(cmd % 'tuples')
++      if event_list
++        expected = returned_tuples.select{|x| !([x[0]] & event_list).empty?}
++      else
++        expected = returned_tuples
++        tuples = tuples.select { |x| !%w(c-call c-return).member?(x[0]) }
++      end
++      assert_equal(expected, tuples, 
++                   "Error filtering #{event_list}")
++     # p tuples
++    end
++  end
++
++  def test_chained_hook
++    skip "FIX add_trace_func"
++    tuples1 = []
++    tuples2 = []
++    cmd = <<-EOF.gsub(/^.*?: /, '')
++        1: def five; 5 end
++        2: p1 = #{@proc_template}
++        3: p2 = #{@proc_template}
++        4: add_trace_func(p1, @@LINE_EVENT_MASK)
++        5: add_trace_func(p2, @@CALL_EVENT_MASK)
++        6: class Foo; end
++        7: [1,2,five].any? {|n| n}
++      EOF
++    eval(cmd % %w(tuples1 tuples2))
++    clear_trace_func
++    assert_equal([
++                  ["line", 7, :test_chained_hook, self.class], 
++                  ["line", 8, :test_chained_hook, self.class], 
++                  ["line", 9, :test_chained_hook, self.class], 
++                  ["line", 1, :five, self.class], 
++                  ["line", 9, :test_chained_hook, self.class], 
++                 ], tuples1[0..-2],
++                 'line filtering')
++    assert_equal([["call", 1, :five, self.class]], tuples2, 
++                 'call filtering')
++  end
++
++end
 diff --git a/test/debugger-ext/testit.sh b/test/debugger-ext/testit.sh
 new file mode 100755
-index 0000000..14b5806
+index 0000000..bd3aa37
 --- /dev/null
 +++ b/test/debugger-ext/testit.sh
-@@ -0,0 +1,11 @@
+@@ -0,0 +1,12 @@
 +#!/bin/bash
 +if (( $# == 0 )) ; then
 +    args=test_*.rb
@@ -3823,10 +3970,11 @@ index 0000000..14b5806
 +for t in $args ; do 
 +    echo "===== $t ====="
 +    ../../miniruby -I../../lib -I../.. $t
++    # echo -I../../lib -I../.. $t
 +    # gdb ../../miniruby
 +done
 diff --git a/thread.c b/thread.c
-index 2cf1064..b5e1379 100644
+index 2cf1064..01c5f3f 100644
 --- a/thread.c
 +++ b/thread.c
 @@ -4108,7 +4108,7 @@ set_threads_event_flags_i(st_data_t key, st_data_t val, st_data_t flag)
@@ -3838,7 +3986,179 @@ index 2cf1064..b5e1379 100644
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -4465,6 +4465,8 @@ get_event_name(rb_event_flag_t event)
+@@ -4333,19 +4333,48 @@ clear_trace_func_i(st_data_t key, st_data_t val, st_data_t flag)
+     return ST_CONTINUE;
+ }
+ 
+-void
++VALUE
+ rb_clear_trace_func(void)
+ {
+     st_foreach(GET_VM()->living_threads, clear_trace_func_i, (st_data_t) 0);
+     rb_remove_event_hook(0);
++    return Qnil;
+ }
+ 
+ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALUE klass);
+ 
++static VALUE
++add_trace_func(int argc, VALUE *argv)
++{
++    VALUE vmask;
++    VALUE trace;
++    int mask=RUBY_EVENT_ALL;
++    if (2 == rb_scan_args(argc, argv, "11", &trace, &vmask)) {
++        mask = NUM2INT(vmask);
++    }
++
++    if (NIL_P(trace)) {
++	return Qnil;
++    }
++
++    if (!rb_obj_is_proc(trace)) {
++	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
++    }
++
++    {
++	rb_thread_t *th = GET_THREAD(); /* main thread */
++	th->tracing     = -1;
++	rb_add_event_hook(call_trace_func, mask, trace);
++    }
++    
++    return trace;
++}
++
+ /*
+  *  call-seq:
+- *     set_trace_func(proc)    -> proc
+- *     set_trace_func(nil)     -> nil
++ *     set_trace_func(proc)        -> proc
++ *     set_trace_func(proc, mask)  -> proc
++ *     set_trace_func(nil)         -> nil
+  *
+  *  Establishes _proc_ as the handler for tracing, or disables
+  *  tracing if the parameter is +nil+. _proc_ takes up
+@@ -4359,6 +4388,8 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
+  *  <code>line</code> (execute code on a new line), <code>raise</code>
+  *  (raise an exception), and <code>return</code> (return from a Ruby
+  *  method). Tracing is disabled within the context of _proc_.
++ *  _mask_ is an optional bitmask of events to trigger on, See ruby.h
++ *  for the integer values. If no mask is specified all events are triggered.
+  *
+  *      class Test
+  *	def test
+@@ -4383,13 +4414,29 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
+  *	  line prog.rb:3        test     Test
+  *	  line prog.rb:4        test     Test
+  *      return prog.rb:4        test     Test
++ *      set_trace_func(proc { |event, file, line, id, binding, classname|
++ *	   printf "%8s %s:%-2d %10s %8s\n", event, file, line, id, classname
++ *      }, 0x018) # 0x018 == calls and returns only
++ *      t = Test.new
++ *      t.test
++ *
++ *  	  call prog.rb:2        test     Test
++ *      return prog.rb:4        test     Test
+  */
+ 
+ static VALUE
+-set_trace_func(VALUE obj, VALUE trace)
++set_trace_func(int argc, VALUE *argv)
+ {
++    VALUE trace;
++    VALUE event_maskval;
++    rb_event_flag_t events=RUBY_EVENT_ALL;
++
+     rb_remove_event_hook(call_trace_func);
+ 
++    if (2 == rb_scan_args(argc, argv, "11", &trace, &event_maskval)) {
++        events = NUM2INT(event_maskval);
++    }
++
+     if (NIL_P(trace)) {
+ 	GET_THREAD()->tracing = EVENT_RUNNING_NOTHING;
+ 	return Qnil;
+@@ -4399,18 +4446,18 @@ set_trace_func(VALUE obj, VALUE trace)
+ 	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
+     }
+ 
+-    rb_add_event_hook(call_trace_func, RUBY_EVENT_ALL, trace);
++    rb_add_event_hook(call_trace_func, events, trace);
+     return trace;
+ }
+ 
+ static void
+-thread_add_trace_func(rb_thread_t *th, VALUE trace)
++thread_add_trace_func(rb_thread_t *th, VALUE trace, rb_event_flag_t events)
+ {
+     if (!rb_obj_is_proc(trace)) {
+ 	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
+     }
+ 
+-    rb_threadptr_add_event_hook(th, call_trace_func, RUBY_EVENT_ALL, trace);
++    rb_threadptr_add_event_hook(th, call_trace_func, events, trace);
+ }
+ 
+ /*
+@@ -4422,18 +4469,26 @@ thread_add_trace_func(rb_thread_t *th, VALUE trace)
+  */
+ 
+ static VALUE
+-thread_add_trace_func_m(VALUE obj, VALUE trace)
++thread_add_trace_func_m(int argc, VALUE *argv, VALUE obj)
+ {
++    VALUE trace;
++    VALUE event_maskval;
++    rb_event_flag_t events=RUBY_EVENT_ALL;
+     rb_thread_t *th;
++
++    if (2 == rb_scan_args(argc, argv, "11", &trace, &event_maskval)) {
++        events = NUM2INT(event_maskval);
++    }
++
+     GetThreadPtr(obj, th);
+-    thread_add_trace_func(th, trace);
++    thread_add_trace_func(th, trace, events);
+     return trace;
+ }
+ 
+ /*
+  *  call-seq:
+  *     thr.set_trace_func(proc)    -> proc
+- *     thr.set_trace_func(nil)     -> nil
++ *     thr.set_trace_func(proc, events=RB_EVENT_ALL)    -> proc
+  *
+  *  Establishes _proc_ on _thr_ as the handler for tracing, or
+  *  disables tracing if the parameter is +nil+.
+@@ -4441,9 +4496,17 @@ thread_add_trace_func_m(VALUE obj, VALUE trace)
+  */
+ 
+ static VALUE
+-thread_set_trace_func_m(VALUE obj, VALUE trace)
++thread_set_trace_func_m(int argc, VALUE *argv, VALUE obj)
+ {
++    VALUE trace;
++    VALUE event_maskval;
++    rb_event_flag_t events=RUBY_EVENT_ALL;
+     rb_thread_t *th;
++
++    if (2 == rb_scan_args(argc, argv, "11", &trace, &event_maskval)) {
++        events = NUM2INT(event_maskval);
++    }
++
+     GetThreadPtr(obj, th);
+     rb_threadptr_remove_event_hook(th, call_trace_func);
+ 
+@@ -4451,7 +4514,7 @@ thread_set_trace_func_m(VALUE obj, VALUE trace)
+ 	th->tracing = EVENT_RUNNING_NOTHING;
+ 	return Qnil;
+     }
+-    thread_add_trace_func(th, trace);
++    thread_add_trace_func(th, trace, events);
+     return trace;
+ }
+ 
+@@ -4465,6 +4528,8 @@ get_event_name(rb_event_flag_t event)
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -3847,7 +4167,7 @@ index 2cf1064..b5e1379 100644
        case RUBY_EVENT_CALL:
  	return "call";
        case RUBY_EVENT_RETURN:
-@@ -4579,6 +4581,37 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
+@@ -4579,6 +4644,37 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
      return result;
  }
  
@@ -3885,18 +4205,26 @@ index 2cf1064..b5e1379 100644
  /*
   *  call-seq:
   *     thr.backtrace    -> array
-@@ -4700,6 +4733,10 @@ Init_Thread(void)
-     rb_define_method(rb_cThread, "set_trace_func", thread_set_trace_func_m, 1);
-     rb_define_method(rb_cThread, "add_trace_func", thread_add_trace_func_m, 1);
+@@ -4696,9 +4792,15 @@ Init_Thread(void)
+     rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
+     /* trace */
+-    rb_define_global_function("set_trace_func", set_trace_func, 1);
+-    rb_define_method(rb_cThread, "set_trace_func", thread_set_trace_func_m, 1);
+-    rb_define_method(rb_cThread, "add_trace_func", thread_add_trace_func_m, 1);
++    rb_define_global_function("add_trace_func", add_trace_func, -1);
++    rb_define_global_function("set_trace_func", set_trace_func, -1);
++    rb_define_global_function("clear_trace_func", rb_clear_trace_func, 0);
++    rb_define_method(rb_cThread, "set_trace_func", thread_set_trace_func_m, -1);
++    rb_define_method(rb_cThread, "add_trace_func", thread_add_trace_func_m, -1);
++
 +    rb_define_method(rb_cThread, "tracing=",  rb_thread_tracing_set, 1);
 +    rb_define_method(rb_cThread, "tracing?",  rb_thread_tracing, 0);
 +
-+
+ 
      /* init thread core */
      {
- 	/* main thread setting */
-@@ -4832,4 +4869,3 @@ rb_reset_coverages(void)
+@@ -4832,4 +4934,3 @@ rb_reset_coverages(void)
      GET_VM()->coverages = Qfalse;
      rb_remove_event_hook(update_coverage);
  }
@@ -3999,10 +4327,17 @@ index b28a222..ead4380 100644
  #define VM_FRAME_FLAG_PASSED 0x0100
  
 diff --git a/vm_eval.c b/vm_eval.c
-index 65bec06..991c487 100644
+index 65bec06..29365a8 100644
 --- a/vm_eval.c
 +++ b/vm_eval.c
-@@ -75,6 +75,10 @@ vm_call0(rb_thread_t* th, VALUE recv, VALUE id, int argc, const VALUE *argv,
+@@ -68,22 +68,29 @@ vm_call0(rb_thread_t* th, VALUE recv, VALUE id, int argc, const VALUE *argv,
+       }
+       case VM_METHOD_TYPE_NOTIMPLEMENTED:
+       case VM_METHOD_TYPE_CFUNC: {
+-	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
+ 	{
+ 	    rb_control_frame_t *reg_cfp = th->cfp;
+ 	    rb_control_frame_t *cfp =
  		vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
  			      recv, (VALUE)blockptr, 0, reg_cfp->sp, 0, 1);
  
@@ -4010,10 +4345,24 @@ index 65bec06..991c487 100644
 +	       contains the prototype value.
 +	    */
 +	    me->def->body.cfunc.actual_argc = argc;
++
  	    cfp->me = me;
++	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
++
  	    val = call_cfunc(def->body.cfunc.func, recv, def->body.cfunc.argc, argc, argv);
  
-@@ -1041,6 +1045,7 @@ eval_string_with_cref(VALUE self, VALUE src, VALUE scope, NODE *cref, const char
+ 	    if (reg_cfp != th->cfp + 1) {
+ 		rb_bug("cfp consistency error - call0");
+ 	    }
++
++	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
+ 	    vm_pop_frame(th);
+ 	}
+-	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
+ 	break;
+       }
+       case VM_METHOD_TYPE_ATTRSET: {
+@@ -1041,6 +1048,7 @@ eval_string_with_cref(VALUE self, VALUE src, VALUE scope, NODE *cref, const char
  
  	/* save new env */
  	GetISeqPtr(iseqval, iseq);

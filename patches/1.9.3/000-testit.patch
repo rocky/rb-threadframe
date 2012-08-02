@@ -7,7 +7,7 @@ new file mode 100755
 index 0000000..3f1a94e
 --- /dev/null
 +++ b/test/debugger-ext/testit.sh
-@@ -0,0 +1,11 @@
+@@ -0,0 +1,12 @@
 +#!/bin/bash
 +if (( $# == 0 )) ; then
 +    args=test_*.rb
@@ -17,5 +17,6 @@ index 0000000..3f1a94e
 +for t in $args ; do 
 +    echo "===== $t ====="
 +    ../../miniruby -I../../lib -I../.. $t
++    # echo ../../miniruby -I../../lib -I../.. $t
 +    # gdb ../../miniruby
 +done
