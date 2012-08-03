@@ -23,7 +23,7 @@ Index: vm_core.h
 ===================================================================
 --- vm_core.h	(revision 28955)
 +++ vm_core.h	(working copy)
-@@ -390,6 +395,16 @@
+@@ -394,6 +394,16 @@
      /* passing state */
      int state;
  
@@ -40,7 +40,7 @@ Index: vm_core.h
      /* for rb_iterate */
      const rb_block_t *passed_block;
  
-@@ -412,6 +429,14 @@
+@@ -416,6 +429,14 @@
      int priority;
      int slice;
  
@@ -55,7 +55,7 @@ Index: vm_core.h
      native_thread_data_t native_thread_data;
      void *blocking_region_buffer;
  
-@@ -461,22 +486,7 @@
+@@ -461,22 +482,7 @@
      jmp_buf machine_regs;
      int mark_stack_len;
  
@@ -91,7 +91,7 @@ Index: proc.c
  static int rb_obj_is_method(VALUE m);
  rb_iseq_t *rb_method_get_iseq(VALUE method);
  
-@@ -1636,7 +1670,7 @@
+@@ -1630,7 +1630,7 @@
      return INT2FIX(n);
  }
  

@@ -2,7 +2,7 @@ Index: vm_core.h
 ===================================================================
 --- vm_core.h	(revision 29927)
 +++ vm_core.h	(working copy)
-@@ -254,6 +254,10 @@
+@@ -253,6 +253,10 @@
  
      /* used at compile time */
      struct iseq_compile_data *compile_data;
@@ -17,7 +17,7 @@ Index: iseq.c
 ===================================================================
 --- iseq.c	(revision 29927)
 +++ iseq.c	(working copy)
-@@ -731,6 +731,18 @@
+@@ -725,6 +725,18 @@
      return 0;
  }
  
@@ -36,7 +36,7 @@ Index: iseq.c
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -1510,6 +1522,7 @@
+@@ -1516,6 +1516,7 @@
      rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
      rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
      rb_define_method(rb_cISeq, "eval", iseq_eval, 0);

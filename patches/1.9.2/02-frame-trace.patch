@@ -41,7 +41,7 @@ Index: vm_core.h
 ===================================================================
 --- vm_core.h	(revision 28955)
 +++ vm_core.h	(working copy)
-@@ -330,6 +330,9 @@
+@@ -334,6 +334,9 @@
      rb_iseq_t *block_iseq;	/* cfp[8] / block[3] */
      VALUE proc;			/* cfp[9] / block[4] */
      const rb_method_entry_t *me;/* cfp[10] */
@@ -51,7 +51,7 @@ Index: vm_core.h
  } rb_control_frame_t;
  
  typedef struct rb_block_struct {
-@@ -567,6 +572,10 @@
+@@ -573,6 +575,10 @@
  
  #define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)
  
@@ -66,7 +66,7 @@ Index: thread.c
 ===================================================================
 --- thread.c	(revision 28955)
 +++ thread.c	(working copy)
-@@ -3793,22 +3801,34 @@
+@@ -3779,22 +3779,34 @@
  void
  rb_threadptr_exec_event_hooks(rb_thread_t *th, rb_event_flag_t flag, VALUE self, ID id, VALUE klass)
  {
