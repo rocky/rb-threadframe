@@ -40,7 +40,7 @@ Index: vm_core.h
      /* for rb_iterate */
      const rb_block_t *passed_block;
  
-@@ -416,6 +429,14 @@
+@@ -416,6 +426,14 @@
      int priority;
      int slice;
  
@@ -55,7 +55,7 @@ Index: vm_core.h
      native_thread_data_t native_thread_data;
      void *blocking_region_buffer;
  
-@@ -461,22 +482,7 @@
+@@ -464,22 +482,7 @@
      jmp_buf machine_regs;
      int mark_stack_len;
  

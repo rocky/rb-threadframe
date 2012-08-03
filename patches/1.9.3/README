@@ -220,3 +220,21 @@ have been using rb-trace to manage lists of trace hooks.
 Ideally I would have split out into different patches 1) and 2) from
 3) and 4) above.  But because both occur in close proximity in the
 source code, it was much easier to do the patching with them combined.
+
+-------------------
+510-raise-msg.patch:
+
+This patch provides a way to get the exception object on a "raise"
+event in a trace hook. The exeception object passed as the "klass"
+parameter in the hook callback.
+
+Note that in a hook one can get the class via a binding from the frame
+using eval('self.class', binding)
+
+Another small but unrelated change here is to fill in some of the
+missing event names in the case statement of routine get_event_name().
+
+The test in this patch depends on 500-trace_func-mask.patch as it uses
+clear_trace_func and set_trace_func with an event mask. The patch
+could probably be rewritten so it doesn't need this dependency.
+

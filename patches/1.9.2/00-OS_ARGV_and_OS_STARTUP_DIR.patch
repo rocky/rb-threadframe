@@ -3,7 +3,7 @@ Index: include/ruby/ruby.h
 --- include/ruby/ruby.h	(revision 29767)
 +++ include/ruby/ruby.h	(working copy)
 @@ -1449,6 +1449,12 @@
- #include "ruby/subst.h"
+ #define close ruby_close
  #endif
  
 +struct origarg {
@@ -82,7 +82,7 @@ Index: ruby.c
      }
  
      memcpy(origarg.argv[0], s, i);
-@@ -1747,8 +1747,8 @@
+@@ -1749,8 +1747,8 @@
  	char *t = origarg.argv[0] + i;
  	*t = '\0';
  
@@ -93,7 +93,7 @@ Index: ruby.c
  	}
  	for (j = 1; j < origarg.argc; j++) {
  	    origarg.argv[j] = t;
-@@ -1891,8 +1889,19 @@
+@@ -1877,8 +1875,19 @@
  #endif
      origarg.argc = *argc;
      origarg.argv = *argv;

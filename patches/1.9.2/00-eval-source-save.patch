@@ -36,14 +36,14 @@ Index: iseq.c
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -1516,6 +1516,7 @@
+@@ -1504,6 +1516,7 @@
      rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
      rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
      rb_define_method(rb_cISeq, "eval", iseq_eval, 0);
 +    rb_define_method(rb_cISeq, "source", rb_iseq_source, 0);
  
- #if 0 /* TBD */
-     rb_define_method(rb_cISeq, "marshal_dump", iseq_marshal_dump, 0);
+     /* disable this feature because there is no verifier. */
+     /* rb_define_singleton_method(rb_cISeq, "load", iseq_s_load, -1); */
 Index: vm_eval.c
 ===================================================================
 --- vm_eval.c	(revision 29927)

@@ -26,8 +26,9 @@ case $patchfile in
 	    246-frame.patch \
 	    247-c-argc.patch \
 	    300-os-startup.patch \
-	    400-disasm-insns.patch \
-	    500-trace-func-mask.patch
+ 	    400-disasm-insns.patch \
+	    500-trace-func-mask.patch \
+	    510-raise-msg.patch
 	do 
 	    patch_file=${dirname}/1.9.3/$file
 	    echo -- Applying patches in $patch_file ... | tee -a patches_applied.log
@@ -39,6 +40,31 @@ case $patchfile in
 	patch_file=${dirname}/$file
 	echo -- Applying patches in $patch_file
 	patch -p1 < $patch_file
+	;;
+    1.9.2-single )
+	# Up to 04-iseq-access.patch tested
+	for file in \
+	    00-eval-source-save.patch \
+	    00-extern-access.patch \
+	    00-OS_ARGV_and_OS_STARTUP_DIR.patch \
+	    01-get-sourceline.patch \
+	    02-frame-trace.patch \
+	    03-disasm-insns.patch \
+	    04-iseq-access.patch \
+	    05-iseq-create.patch \
+	    06-C-argc.patch \
+	    07-brkpt.patch \
+	    08-trace_func.patch \
+	    09-raise-msg.patch \
+	    10-iseq-top-name.patch \
+	    11-binding-arity.patch \
+	    12-insn-step.patch \
+	    13-hook-error-recover.patch 
+	do 
+	    patch_file=${dirname}/1.9.2/$file
+	    echo -- Applying patches in $patch_file ... | tee -a patches_applied.log
+	    patch -p0 < $patch_file
+	done
 	;;
     1.9.2 | * )
 	file=ruby-1.9.2-combined.patch

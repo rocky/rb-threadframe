@@ -17,7 +17,7 @@ Index: iseq.c
 ===================================================================
 --- iseq.c	(revision 28783)
 +++ iseq.c	(working copy)
-@@ -286,13 +335,17 @@
+@@ -313,13 +313,17 @@
  }
  
  static VALUE
@@ -39,14 +39,14 @@ Index: iseq.c
      if (RTEST(err)) {
  	rb_funcall2(err, rb_intern("set_backtrace"), 1, &iseq->filename);
  	rb_exc_raise(err);
-@@ -397,34 +450,84 @@
+@@ -424,7 +428,52 @@
      rb_thread_t *th = GET_THREAD();
      VALUE parent = th->base_block->iseq->self;
      return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), filename, filepath, INT2FIX(0),
 -				parent, ISEQ_TYPE_MAIN, &COMPILE_OPTION_DEFAULT);
-+				parent, ISEQ_TYPE_MAIN, Qnil, &COMPILE_OPTION_DEFAULT);
- }
- 
+++				parent, ISEQ_TYPE_MAIN, Qnil, &COMPILE_OPTION_DEFAULT);
++}
++
 +/* A debugger or similar introspection tool needs to be able to find
 + * all instruction sequences and access them. We facilitate this by
 + * adding the following behavior, analogous to SCRIPT_LINES__ for
@@ -59,7 +59,7 @@ Index: iseq.c
 + * Similarly, if ISEQS__ is defined and is a hash, then every time a
 + * new instruction sequence is added, it is accessible from ISEQS__
 + * using its iseq_name as a key.  
-+ */
++*/
 +static int
 +update_file_iseq(VALUE filename, VALUE iseq_name, VALUE iseq)
 +{
@@ -67,44 +67,37 @@ Index: iseq.c
 +    int rc = 0;
 +    CONST_ID(hash_id, "SCRIPT_ISEQS__");
 +    if (rb_const_defined_at(rb_cObject, hash_id)) {
-+	rc = 1;
-+	VALUE hash = rb_const_get_at(rb_cObject, hash_id);
-+	if (TYPE(hash) == T_HASH) {
-+	    VALUE iseqs = rb_hash_aref(hash, filename);
-+	    if (TYPE(iseqs) == T_ARRAY)
-+		rb_ary_push(iseqs, iseq);
-+	    else
-+		rb_hash_aset(hash, filename, rb_ary_new3(1, iseq));
-+	}
++        rc = 1;
++        VALUE hash = rb_const_get_at(rb_cObject, hash_id);
++        if (TYPE(hash) == T_HASH) {
++            VALUE iseqs = rb_hash_aref(hash, filename);
++            if (TYPE(iseqs) == T_ARRAY)
++                rb_ary_push(iseqs, iseq);
++            else
++                rb_hash_aset(hash, filename, rb_ary_new3(1, iseq));
++        }
 +    }
 +    CONST_ID(hash_id, "ISEQS__");
 +    if (rb_const_defined_at(rb_cObject, hash_id)) {
-+	rc = 1;
-+	VALUE hash = rb_const_get_at(rb_cObject, hash_id);
-+	if (TYPE(hash) == T_HASH) {
-+	    VALUE iseqs = rb_hash_aref(hash, iseq_name);
-+	    if (TYPE(iseqs) == T_ARRAY)
-+		rb_ary_push(iseqs, iseq);
-+	    else
-+		rb_hash_aset(hash, iseq_name, rb_ary_new3(1, iseq));
-+	}
++        rc = 1;
++        VALUE hash = rb_const_get_at(rb_cObject, hash_id);
++        if (TYPE(hash) == T_HASH) {
++            VALUE iseqs = rb_hash_aref(hash, iseq_name);
++            if (TYPE(iseqs) == T_ARRAY)
++                rb_ary_push(iseqs, iseq);
++            else
++                rb_hash_aset(hash, iseq_name, rb_ary_new3(1, iseq));
++        }
 +    }
 +    return rc;
-+}
-+
-+
+ }
+ 
  static VALUE
- rb_iseq_new_with_bopt_and_opt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
--				VALUE parent, enum iseq_type type, VALUE bopt,
--				const rb_compile_option_t *option)
-+			      VALUE parent, enum iseq_type type, VALUE bopt,
-+			      VALUE src,
-+			      const rb_compile_option_t *option)
+@@ -434,24 +483,26 @@
  {
      rb_iseq_t *iseq;
      VALUE self = iseq_alloc(rb_cISeq);
 +    int saving_iseq;
-+     
  
      GetISeqPtr(self, iseq);
      iseq->self = self;
@@ -119,7 +112,7 @@ Index: iseq.c
  
  VALUE
  rb_iseq_new_with_opt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
--		     VALUE parent, enum iseq_type type,
+-		     VALUE parent, VALUE type,
 +		     VALUE parent, enum iseq_type type, VALUE src,
  		     const rb_compile_option_t *option)
  {
@@ -129,14 +122,7 @@ Index: iseq.c
 +					 Qfalse, src, option);
  }
  
-@@ -443,5 +483,6 @@
-     prepare_iseq_build(iseq, name, filename, filepath, line_no, parent, type, bopt, option);
-     rb_iseq_compile_node(self, node);
-     cleanup_iseq_build(iseq);
-+    update_file_iseq(filename, name, self);
-     return self;
- }
-
+ VALUE
 Index: test/ruby/test_iseq.rb
 ===================================================================
 --- test/ruby/test_iseq.rb	(revision 28783)
