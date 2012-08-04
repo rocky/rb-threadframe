@@ -3,10 +3,10 @@ from eval, is the string of the source as a String. TODO: figure out how
 to have this "source" field filled out more often.
 
 diff --git a/iseq.c b/iseq.c
-index 28cc1e5..588e386 100644
+index 1e7a9e3..a6e6267 100644
 --- a/iseq.c
 +++ b/iseq.c
-@@ -727,6 +727,18 @@ find_prev_line_no(rb_iseq_t *iseqdat, unsigned long pos)
+@@ -744,6 +744,18 @@ find_prev_line_no(rb_iseq_t *iseqdat, unsigned long pos)
      return 0;
  }
  
@@ -25,7 +25,7 @@ index 28cc1e5..588e386 100644
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -1693,6 +1705,7 @@ Init_ISeq(void)
+@@ -1827,6 +1839,7 @@ Init_ISeq(void)
      rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
      rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
      rb_define_method(rb_cISeq, "eval", iseq_eval, 0);
@@ -34,10 +34,10 @@ index 28cc1e5..588e386 100644
  #if 0 /* TBD */
      rb_define_method(rb_cISeq, "marshal_dump", iseq_marshal_dump, 0);
 diff --git a/vm_core.h b/vm_core.h
-index b28a222..f6f42ca 100644
+index 1a1af10..0170eda 100644
 --- a/vm_core.h
 +++ b/vm_core.h
-@@ -258,6 +258,10 @@
+@@ -258,6 +258,10 @@ struct rb_iseq_struct {
  
      /* Used to set a breakpoint at a VM instruction */
      unsigned char *breakpoints; 

@@ -6,7 +6,7 @@ rb_child_iseqs (Ruby iseq#child_iseqs) returns and array of child instruction se
 Also adds access to an instruction's length, name, operand types. 
 
 diff --git a/iseq.c b/iseq.c
-index 427745b..9655a93 100644
+index a1a53e9..10b9814 100644
 --- a/iseq.c
 +++ b/iseq.c
 @@ -27,6 +27,38 @@ VALUE rb_cISeq;
@@ -226,7 +226,7 @@ index 427745b..9655a93 100644
  static VALUE
  iseq_s_disasm(VALUE klass, VALUE body)
  {
-@@ -1839,6 +2011,10 @@ Init_ISeq(void)
+@@ -1956,6 +2128,10 @@ Init_ISeq(void)
      rb_define_method(rb_cISeq, "arity",   rb_iseq_arity, 0);
      rb_define_method(rb_cISeq, "disasm", rb_iseq_disasm, 0);
      rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);

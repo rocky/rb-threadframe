@@ -5,10 +5,10 @@ The unit test added here uses ISEQS__ from
 test. Probably the unit test here could be rewritten to avoid this.
 
 diff --git a/iseq.c b/iseq.c
-index 8ab41e8..1ff6fc5 100644
+index 331d2d2..30d6ed4 100644
 --- a/iseq.c
 +++ b/iseq.c
-@@ -576,6 +576,22 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
+@@ -593,6 +593,22 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
      return iseqval;
  }
  
@@ -31,7 +31,7 @@ index 8ab41e8..1ff6fc5 100644
  static VALUE
  iseq_s_load(int argc, VALUE *argv, VALUE self)
  {
-@@ -1762,6 +1778,7 @@ Init_ISeq(void)
+@@ -1896,6 +1912,7 @@ Init_ISeq(void)
      rb_define_method(rb_cISeq, "type",             rb_iseq_type, 0) ;
      rb_define_method(rb_cISeq, "iseq_size",        rb_iseq_iseq_size, 0) ;
      rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
@@ -40,7 +40,7 @@ index 8ab41e8..1ff6fc5 100644
      rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
      rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
 diff --git a/iseq.h b/iseq.h
-index bb7d438..87cd3bb 100644
+index 8df190e..a7f2621 100644
 --- a/iseq.h
 +++ b/iseq.h
 @@ -30,6 +30,8 @@ struct st_table *ruby_insn_make_insn_table(void);
@@ -53,7 +53,7 @@ index bb7d438..87cd3bb 100644
  struct rb_compile_option_struct {
      int inline_const_cache;
 diff --git a/proc.c b/proc.c
-index 6aaf86f..80de893 100644
+index 11a2d3e..45998dd 100644
 --- a/proc.c
 +++ b/proc.c
 @@ -28,7 +28,6 @@ VALUE rb_cBinding;

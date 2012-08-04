@@ -27,10 +27,10 @@ index fb51053..8f7bc75 100644
      iseq_add_mark_object(iseq, ret);
      return ret;
 diff --git a/iseq.c b/iseq.c
-index 71cb7b2..15e32e7 100644
+index bfc075b..331d2d2 100644
 --- a/iseq.c
 +++ b/iseq.c
-@@ -282,13 +282,17 @@ prepare_iseq_build(rb_iseq_t *iseq,
+@@ -299,13 +299,17 @@ prepare_iseq_build(rb_iseq_t *iseq,
  }
  
  static VALUE
@@ -52,7 +52,7 @@ index 71cb7b2..15e32e7 100644
      if (RTEST(err)) {
  	rb_funcall2(err, rb_intern("set_backtrace"), 1, &iseq->filename);
  	rb_exc_raise(err);
-@@ -376,14 +380,14 @@ VALUE
+@@ -393,14 +397,14 @@ VALUE
  rb_iseq_new(NODE *node, VALUE name, VALUE filename, VALUE filepath,
  	    VALUE parent, enum iseq_type type)
  {
@@ -69,7 +69,7 @@ index 71cb7b2..15e32e7 100644
  				&COMPILE_OPTION_DEFAULT);
  }
  
-@@ -393,34 +397,85 @@ rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath)
+@@ -410,34 +414,85 @@ rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath)
      rb_thread_t *th = GET_THREAD();
      VALUE parent = th->base_block->iseq->self;
      return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), filename, filepath, INT2FIX(0),
@@ -161,7 +161,7 @@ index 71cb7b2..15e32e7 100644
  }
  
  VALUE
-@@ -429,7 +484,7 @@ rb_iseq_new_with_bopt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VA
+@@ -446,7 +501,7 @@ rb_iseq_new_with_bopt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VA
  {
      /* TODO: argument check */
      return rb_iseq_new_with_bopt_and_opt(node, name, filename, filepath, line_no, parent, type,
@@ -170,7 +170,7 @@ index 71cb7b2..15e32e7 100644
  }
  
  #define CHECK_ARRAY(v)   rb_convert_type((v), T_ARRAY, "Array", "to_ary")
-@@ -450,6 +503,7 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
+@@ -467,6 +522,7 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
      rb_iseq_t *iseq;
      rb_compile_option_t option;
      int i = 0;
@@ -178,7 +178,7 @@ index 71cb7b2..15e32e7 100644
  
      /* [magic, major_version, minor_version, format_type, misc,
       *  name, filename, line_no,
-@@ -514,8 +568,9 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
+@@ -531,8 +587,9 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
  		       parent, (enum iseq_type)iseq_type, 0, &option);
  
      rb_iseq_build_from_ary(iseq, locals, args, exception, body);
@@ -189,7 +189,7 @@ index 71cb7b2..15e32e7 100644
      return iseqval;
  }
  
-@@ -559,11 +614,11 @@ rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, V
+@@ -576,11 +633,11 @@ rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, V
      if (th->base_block && th->base_block->iseq) {
  	return rb_iseq_new_with_opt(node, th->base_block->iseq->name,
  				    file, filepath, line, th->base_block->iseq->self,
@@ -203,7 +203,7 @@ index 71cb7b2..15e32e7 100644
      }
  }
  
-@@ -609,7 +664,7 @@ iseq_s_compile_file(int argc, VALUE *argv, VALUE self)
+@@ -626,7 +683,7 @@ iseq_s_compile_file(int argc, VALUE *argv, VALUE self)
      make_compile_option(&option, opt);
      return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), file,
  				rb_realpath_internal(Qnil, file, 1), line, Qfalse,
@@ -213,7 +213,7 @@ index 71cb7b2..15e32e7 100644
  
  static VALUE
 diff --git a/vm_core.h b/vm_core.h
-index f6f42ca..1d90480 100644
+index 0170eda..18fbf1b 100644
 --- a/vm_core.h
 +++ b/vm_core.h
 @@ -510,7 +510,7 @@ VALUE rb_iseq_new(NODE*, VALUE, VALUE, VALUE, VALUE, enum iseq_type);

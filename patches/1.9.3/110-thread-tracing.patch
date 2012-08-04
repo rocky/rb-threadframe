@@ -1,3 +1,9 @@
+Adds per-thread tracing by adding methods Thread#tracing? and Thread#tracing=
+
+The basic mechanism of per-tracing thread was already inside. This
+just exposes the ability the set or query thread tracing individually
+by adding a couple of methods.
+
 diff --git a/thread.c b/thread.c
 index 2cf1064..69e6daa 100644
 --- a/thread.c

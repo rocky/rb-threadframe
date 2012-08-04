@@ -25,11 +25,11 @@ case $patchfile in
 	    245-method-arity.patch \
 	    246-frame.patch \
 	    247-c-argc.patch \
-	    300-os-startup.patch \
- 	    400-disasm-insns.patch \
-	    500-trace-func-mask.patch \
-	    510-raise-msg.patch \
-	    520-c-hook.patch
+	    310-os-startup.patch \
+ 	    320-disasm-insns.patch \
+	    340-trace-func-mask.patch \
+	    345-raise-msg.patch \
+	    410-c-hook.patch
 	do 
 	    patch_file=${dirname}/1.9.3/$file
 	    echo -- Applying patches in $patch_file ... | tee -a patches_applied.log

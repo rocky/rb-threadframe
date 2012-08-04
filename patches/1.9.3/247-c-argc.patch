@@ -11,10 +11,10 @@ to add to test_frame.rb. It could be split into a two parts. One part
 for the C runtime and another part for frame.c
 
 diff --git a/frame.c b/frame.c
-index 947a459..41a1f78 100644
+index 773b67d..7ca859b 100644
 --- a/frame.c
 +++ b/frame.c
-@@ -351,6 +351,49 @@
+@@ -351,6 +351,49 @@ FRAME_FIELD_METHOD(flag) ;
  
  /*
   *  call-seq:
@@ -64,7 +64,7 @@ index 947a459..41a1f78 100644
   *     RubyVM::Frame#binding   -> binding
   *
   *  Returns a binding for a given thread frame.
-@@ -973,6 +995,8 @@
+@@ -973,6 +1016,8 @@ Init_Frame(void)
  
      rb_define_method(rb_cFrame, "invalid?",     frame_invalid, 0);
  
@@ -74,7 +74,7 @@ index 947a459..41a1f78 100644
      rb_define_method(rb_cFrame, "flag",         frame_flag, 0);
      rb_define_method(rb_cFrame, "initialize",   frame_initialize, 1);
 diff --git a/iseq.h b/iseq.h
-index 56240e3..4507996 100644
+index 56240e3..964a826 100644
 --- a/iseq.h
 +++ b/iseq.h
 @@ -28,6 +28,8 @@ VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
@@ -104,10 +104,10 @@ index 896e309..aa7d861 100644
  
  typedef struct rb_method_attr_struct {
 diff --git a/test/debugger-ext/test_frame.rb b/test/debugger-ext/test_frame.rb
-index 37f0777..b8cf1c8 100644
+index 94b9d41..ac63ae3 100644
 --- a/test/debugger-ext/test_frame.rb
 +++ b/test/debugger-ext/test_frame.rb
-@@ -38,9 +38,8 @@ class TestThread < Test::Unit::TestCase
+@@ -38,9 +38,8 @@ class TestFrame < Test::Unit::TestCase
      assert(pc2 > pc1, 'PC offset should have changed (for the greater)')
      assert_equal('test_fields', tf.method)
      assert_equal(self, tf.self)
@@ -119,7 +119,7 @@ index 37f0777..b8cf1c8 100644
  
      # assert_raises IndexError do
      #   x = tf.lfp(tf.iseq.local_size+1)
-@@ -63,13 +62,11 @@ class TestThread < Test::Unit::TestCase
+@@ -63,13 +62,11 @@ class TestFrame < Test::Unit::TestCase
        assert_equal('CFUNC', tf.prev.type)
        assert_equal('times', tf.prev.method) 
        assert_equal(self, tf.self)
@@ -137,7 +137,7 @@ index 37f0777..b8cf1c8 100644
      end
  
      # 1.upto also creates a C frame.
-@@ -78,8 +75,8 @@ class TestThread < Test::Unit::TestCase
+@@ -78,8 +75,8 @@ class TestFrame < Test::Unit::TestCase
        # may as well test current.prev.
        tf = RubyVM::Frame::current.prev  
        assert_equal('CFUNC', tf.type)
@@ -148,7 +148,7 @@ index 37f0777..b8cf1c8 100644
      end
  
      x  = lambda do |x,y| 
-@@ -87,9 +84,8 @@ class TestThread < Test::Unit::TestCase
+@@ -87,9 +84,8 @@ class TestFrame < Test::Unit::TestCase
        assert_equal('block in test_fields', frame.method)
        assert_equal('LAMBDA', frame.type)
        assert_equal(x, tf.self)
@@ -176,7 +176,7 @@ index 6957aa2..991c487 100644
  	    val = call_cfunc(def->body.cfunc.func, recv, def->body.cfunc.argc, argc, argv);
  
 diff --git a/vm_insnhelper.c b/vm_insnhelper.c
-index 8e7fe94..33bb45c 100644
+index 4c96402..07bca00 100644
 --- a/vm_insnhelper.c
 +++ b/vm_insnhelper.c
 @@ -402,6 +402,10 @@ vm_call_cfunc(rb_thread_t *th, rb_control_frame_t *reg_cfp,

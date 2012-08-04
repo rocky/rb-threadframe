@@ -103,6 +103,10 @@ overhead is negligible.
 Previous RubyVM::InstructionSequence patches facilitate getting access
 to instruction sequences
 
+Depends on frame-tracing.patch only because of proximity to changes
+(i.e. patch context) in in vm_insnhelper.c. Could be reworked to not
+need that patch.
+
 -------------------
 210-iseq-field-access.patch
 
@@ -114,10 +118,10 @@ arg_simple
 215-iseq-field-access.patch
 
 More InstructionSequence methods: 
-InstructionSequence#local_iseq - creates a copy of the instruction sequence
-InstructionSequence#local_name(i) returns String name for local entry i
+   compile_options, equal? line_range, local_iseq, local_name, parent
 
-Depends on 210. The two could be combined.
+Depends on 210. The two could be combined. Testing depends on
+RubyVM::Frame in frame.patch
 
 -------------------
 220-iseq-eval-source-save.patch:
@@ -129,11 +133,13 @@ make use of these names in specifying locations.
 -------------------
 230-top-name.patch:
 
-Adds: "source" method to iseq which if this instruction sequence came
-from eval, is the string of the source as a String. TODO: figure out how
-to have this "source" field filled out more often.
--------------------
-240-iseq-SCRIPT_ISEQS__.patch
+Adds Instruction#source method. If this instruction sequence came from
+eval(), the string of the source is returned from this method.
+
+TODO: figure out how to have this "source" field filled out more
+often.
+
+------------------- 240-iseq-SCRIPT_ISEQS__.patch
 
 A debugger or similar introspection tool needs to be able to find all
 instruction sequences and access them. This patch facilitates this by
@@ -160,14 +166,25 @@ The unit test added here uses ISEQS__ from
 test. Probably the unit test here could be rewritten to avoid this.
 
 -------------------
-300-os-startup.patch
+246-os-startup.patch
+
+Add RubyVM::Frame - a class for a run-time call frame object. It from this we
+can get a binding, and instruction sequence. 
+
+Some care is take to ensure that the frame is still active using a
+"signature" and other checks. 
+
+This patch depends on lots of a number of prior patches.
+
+-------------------
+310-os-startup.patch
 
 RubyVM::OS_ARGV and RubyVM::OS_STARTUP_DIR captures the initial @ARGV
 and current working directory to make this happen. (Inside a Ruby
 program, one can change @ARGV and cwd)
 
 -------------------
-400-disasm-insns.patch
+320-disasm-insns.patch
 
 Add more access to VM opcodes and finer control of disassembly.
 
@@ -177,7 +194,7 @@ rb_child_iseqs (Ruby iseq#child_iseqs) returns and array of child instruction se
 Also adds access to an instruction's length, name, operand types. 
 
 -------------------
-500-trace-func-mask.patch
+340-trace-func-mask.patch
 
 1. adds the ability to set filter trace events inside Ruby using an
 optional FIXNUM bitmask of event bits.
@@ -214,7 +231,7 @@ Ideally I would have split out into different patches 1) and 2) from
 source code, it was much easier to do the patching with them combined.
 
 -------------------
-510-raise-msg.patch:
+345-raise-msg.patch:
 
 This patch provides a way to get the exception object on a "raise"
 event in a trace hook. The exeception object passed as the "klass"
@@ -226,12 +243,12 @@ using eval('self.class', binding)
 Another small but unrelated change here is to fill in some of the
 missing event names in the case statement of routine get_event_name().
 
-The test in this patch depends on 500-trace_func-mask.patch as it uses
+The test in this patch depends on trace-func-mask.patch as it uses
 clear_trace_func and set_trace_func with an event mask. The patch
 could probably be rewritten so it doesn't need this dependency.
 
 -------------------
-520-c-hook.patch
+410-c-hook.patch
 
 Adjusts the location of trace hook events for C calls and C returns
 so that the hook has access to the call stack. The stack contains the

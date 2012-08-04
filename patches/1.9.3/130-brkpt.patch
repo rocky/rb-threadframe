@@ -14,6 +14,10 @@ overhead is negligible.
 Previous RubyVM::InstructionSequence patches facilitate getting access
 to instruction sequences
 
+Depends on frame-tracing.patch only because of proximity to changes
+(i.e. patch context) in in vm_insnhelper.c. Could be reworked to not
+need that patch.
+
 diff --git a/brkpt.c b/brkpt.c
 --- a/vm_core.h
 +++ b/vm_core.h

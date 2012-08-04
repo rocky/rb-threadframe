@@ -6,9 +6,8 @@ Some care is take to ensure that the frame is still active using a
 
 This patch depends on lots of a number of prior patches.
 
-
 diff --git a/common.mk b/common.mk
-index eb89a2b..cb32293 100644
+index 48ff6cc..ad3769b 100644
 --- a/common.mk
 +++ b/common.mk
 @@ -93,6 +93,7 @@ COMMONOBJS    = array.$(OBJEXT) \
@@ -21,7 +20,7 @@ index eb89a2b..cb32293 100644
  		$(BUILTIN_TRANSOBJS) \
 diff --git a/frame.c b/frame.c
 new file mode 100644
-index 0000000..9a99740
+index 0000000..773b67d
 --- /dev/null
 +++ b/frame.c
 @@ -0,0 +1,1014 @@
@@ -1040,7 +1039,7 @@ index 0000000..9a99740
 +    rb_define_singleton_method(rb_cFrame, "current", frame_s_current, 0);
 +}
 diff --git a/inits.c b/inits.c
-index 73b9eb4..c0a415e 100644
+index a6f63f0..0a28805 100644
 --- a/inits.c
 +++ b/inits.c
 @@ -56,6 +56,7 @@ rb_call_inits(void)
@@ -1052,7 +1051,7 @@ index 73b9eb4..c0a415e 100644
      CALL(Rational);
      CALL(Complex);
 diff --git a/iseq.c b/iseq.c
-index 1ff6fc5..78fba90 100644
+index 30d6ed4..a1a53e9 100644
 --- a/iseq.c
 +++ b/iseq.c
 @@ -90,7 +90,7 @@ iseq_free(void *ptr)
@@ -1064,31 +1063,7 @@ index 1ff6fc5..78fba90 100644
  iseq_mark(void *ptr)
  {
      RUBY_MARK_ENTER("iseq");
-@@ -122,6 +122,23 @@ iseq_mark(void *ptr)
-     RUBY_MARK_LEAVE("iseq");
- }
- 
-+/* 
-+ * This routine is here to allow an external C extension to create a
-+ * RubyVM::InstructionSequence object sequence from its own C pointer
-+ * of type rb_iseq_t *. For example, the rb-threadframe uses this
-+ * routine to implement Method#iseq and Proc#iseq.
-+ */
-+VALUE
-+iseq_alloc_shared(VALUE klass)
-+{
-+    VALUE volatile obj;
-+    rb_iseq_t *iseq;
-+
-+    obj = Data_Make_Struct(klass, rb_iseq_t, iseq_mark, NULL, iseq);
-+    MEMZERO(iseq, rb_iseq_t, 1);
-+    return obj;
-+}
-+
- static size_t
- iseq_memsize(const void *ptr)
- {
-@@ -816,6 +833,47 @@
+@@ -833,6 +833,47 @@ rb_iseq_source(VALUE self)
      return iseq->source;
  }
  
@@ -1136,7 +1111,7 @@ index 1ff6fc5..78fba90 100644
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -1784,6 +1842,7 @@
+@@ -1918,6 +1959,7 @@ Init_ISeq(void)
      rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
      rb_define_method(rb_cISeq, "eval", iseq_eval, 0);
      rb_define_method(rb_cISeq, "source", rb_iseq_source, 0);
@@ -1145,7 +1120,7 @@ index 1ff6fc5..78fba90 100644
  #if 0 /* TBD */
      rb_define_method(rb_cISeq, "marshal_dump", iseq_marshal_dump, 0);
 diff --git a/iseq.h b/iseq.h
-index 87cd3bb..ae710c2 100644
+index a7f2621..56240e3 100644
 --- a/iseq.h
 +++ b/iseq.h
 @@ -26,12 +26,15 @@ VALUE rb_iseq_build_from_ary(rb_iseq_t *iseq, VALUE locals, VALUE args,
@@ -1164,29 +1139,8 @@ index 87cd3bb..ae710c2 100644
  
  struct rb_compile_option_struct {
      int inline_const_cache;
-diff --git a/vm_core.h b/vm_core.h
-index aef7195..f11aeef 100644
---- a/vm_core.h
-+++ b/vm_core.h
-@@ -262,6 +262,16 @@ struct rb_iseq_struct {
-     /* If this instruction sequence came from eval, the string of the
-        source as a String. */
-     VALUE source;
-+
-+    /* If we are saving tree nodes (a compile option), then tree_node
-+       is the internal parse tree node representation for this
-+       instruction sequence.
-+    */
-+    NODE *tree_node;
-+    int in_use;  /* Reference count of number of times and instruction
-+		    sequence is in use such as via thread_frame object
-+		    access or is stored in ISEQS__ or SCRIPT_ISEQS.
-+		  */
- };
- 
- enum ruby_special_exceptions {
 diff --git a/proc.c b/proc.c
-index 80de893..6083923 100644
+index 45998dd..8963247 100644
 --- a/proc.c
 +++ b/proc.c
 @@ -725,6 +725,23 @@ rb_proc_get_iseq(VALUE self, int *is_proc)
@@ -1221,9 +1175,58 @@ index 80de893..6083923 100644
      rb_define_method(rb_mKernel, "method", rb_obj_method, 1);
      rb_define_method(rb_mKernel, "public_method", rb_obj_public_method, 1);
  
+diff --git a/test/debugger-ext/test_binding.rb b/test/debugger-ext/test_binding.rb
+new file mode 100644
+index 0000000..61a4dee
+--- /dev/null
++++ b/test/debugger-ext/test_binding.rb
+@@ -0,0 +1,43 @@
++require 'test/unit'
++
++def outside(a)
++    return eval('a', RubyVM::Frame.new(Thread::current).binding)
++end
++
++$a = 10
++
++class TestBinding < Test::Unit::TestCase
++  def test_basic
++    a = 1
++    c = 0
++    assert_equal(5, outside(5))
++    tf = RubyVM::Frame.new(Thread::current)
++    b  = tf.binding
++    assert_equal(1, eval('a', b))
++    assert_equal(10, eval('$a', b))
++    assert_equal(self, tf.self)
++    1.times do |i;a| 
++      tf2 = Thread::current.frame()
++      b2  = tf2.binding
++      a = 2
++      assert_equal(2, eval('a', b2))
++      assert_equal(0, eval('c', b2))
++
++      # Times is C inline so prev we can't get a binding for it
++      # But we can for use the instruction sequence before that.
++      assert_equal(1, eval('a', tf2.prev(2).binding))
++    end
++    def inner(a)
++      tf3 = Thread::current.frame()
++      b3  = tf3.binding
++      if a == 4
++        assert_equal(4, eval('a', b3))
++        inner(a-1)
++      else
++        assert_equal(3, eval('a', b3))
++        assert_equal(4, eval('a', tf3.prev.binding))
++      end
++    end
++    inner(4)
++  end
++end
 diff --git a/test/debugger-ext/test_frame.rb b/test/debugger-ext/test_frame.rb
 new file mode 100644
-index 0000000..37f0777
+index 0000000..94b9d41
 --- /dev/null
 +++ b/test/debugger-ext/test_frame.rb
 @@ -0,0 +1,121 @@
@@ -1348,6 +1351,51 @@ index 0000000..37f0777
 +# We want to double-check we didn't mess up any pointers somewhere along
 +# the line.
 +at_exit { GC.start  }
+diff --git a/test/debugger-ext/test_invalid.rb b/test/debugger-ext/test_invalid.rb
+new file mode 100644
+index 0000000..dd7bfd7
+--- /dev/null
++++ b/test/debugger-ext/test_invalid.rb
+@@ -0,0 +1,39 @@
++require 'test/unit'
++
++class TestInvalid < Test::Unit::TestCase
++  def test_basic
++    @tf = RubyVM::Frame::current
++    assert_equal(false, @tf.invalid?, 
++                 'Frame should be valid right after RubyVM::Frame::current')
++    def notgood(test_tf=nil)
++      # FIXME
++      # if test_tf
++      #   assert_equal(test_tf != @tf, test_tf.invalid?)
++      # end
++      return RubyVM::Frame::current
++    end
++
++    def inner_fn(tf)
++      tf.invalid?
++    end
++      
++    invalid_tf = notgood
++    # FIXME:
++    # assert_equal(true, invalid_tf.invalid?,
++    #             'current thread frame should not be returned from a fn')
++    # begin
++    #   b = invalid_tf.binding
++    #   assert false, 'Should have raised an ThreadFrameError'
++    # rescue ThreadFrameError
++    #   assert true
++    # end
++    # Add a new local variable
++    x = 5
++    assert_equal(false, @tf.invalid?, 
++                 'Frame should still be valid after adding more locals')
++    assert_equal(false, inner_fn(@tf),
++                 'outer thread frame should ok inside a called fn')
++    notgood(invalid_tf)
++    notgood(@tf)
++  end
++end
 diff --git a/test/debugger-ext/test_source.rb b/test/debugger-ext/test_source.rb
 new file mode 100644
 index 0000000..47b8041
@@ -1455,55 +1503,6 @@ index 0000000..47b8041
 +# We want to double-check we didn't mess up any pointers somewhere along
 +# the line.
 +at_exit { GC.start  }
-diff --git a/test/debugger-ext/test_binding.rb b/test/debugger-ext/test_binding.rb
-new file mode 100644
-index 0000000..d437e94
---- /dev/null
-+++ b/test/debugger-ext/test_binding.rb
-@@ -0,0 +1,43 @@
-+require 'test/unit'
-+
-+def outside(a)
-+    return eval('a', RubyVM::Frame.new(Thread::current).binding)
-+end
-+
-+$a = 10
-+
-+class TestBinding < Test::Unit::TestCase
-+  def test_basic
-+    a = 1
-+    c = 0
-+    assert_equal(5, outside(5))
-+    tf = RubyVM::Frame.new(Thread::current)
-+    b  = tf.binding
-+    assert_equal(1, eval('a', b))
-+    assert_equal(10, eval('$a', b))
-+    assert_equal(self, tf.self)
-+    1.times do |i;a| 
-+      tf2 = Thread::current.frame()
-+      b2  = tf2.binding
-+      a = 2
-+      assert_equal(2, eval('a', b2))
-+      assert_equal(0, eval('c', b2))
-+
-+      # Times is C inline so prev we can't get a binding for it
-+      # But we can for use the instruction sequence before that.
-+      assert_equal(1, eval('a', tf2.prev(2).binding))
-+    end
-+    def inner(a)
-+      tf3 = Thread::current.frame()
-+      b3  = tf3.binding
-+      if a == 4
-+        assert_equal(4, eval('a', b3))
-+        inner(a-1)
-+      else
-+        assert_equal(3, eval('a', b3))
-+        assert_equal(4, eval('a', tf3.prev.binding))
-+      end
-+    end
-+    inner(4)
-+  end
-+end
 diff --git a/test/debugger-ext/test_sp_size.rb b/test/debugger-ext/test_sp_size.rb
 new file mode 100644
 index 0000000..4ebc33f
@@ -1552,47 +1551,24 @@ index 0000000..4ebc33f
 +  end
 +
 +end
-new file mode 100644
-index 0000000..dd7bfd7
---- /dev/null
-+++ b/test/debugger-ext/test_invalid.rb
-@@ -0,0 +1,39 @@
-+require 'test/unit'
+diff --git a/vm_core.h b/vm_core.h
+index 18fbf1b..26a2637 100644
+--- a/vm_core.h
++++ b/vm_core.h
+@@ -262,6 +262,16 @@ struct rb_iseq_struct {
+     /* If this instruction sequence came from eval, the string of the
+        source as a String. */
+     VALUE source;
 +
-+class TestInvalid < Test::Unit::TestCase
-+  def test_basic
-+    @tf = RubyVM::Frame::current
-+    assert_equal(false, @tf.invalid?, 
-+                 'Frame should be valid right after RubyVM::Frame::current')
-+    def notgood(test_tf=nil)
-+      # FIXME
-+      # if test_tf
-+      #   assert_equal(test_tf != @tf, test_tf.invalid?)
-+      # end
-+      return RubyVM::Frame::current
-+    end
-+
-+    def inner_fn(tf)
-+      tf.invalid?
-+    end
-+      
-+    invalid_tf = notgood
-+    # FIXME:
-+    # assert_equal(true, invalid_tf.invalid?,
-+    #             'current thread frame should not be returned from a fn')
-+    # begin
-+    #   b = invalid_tf.binding
-+    #   assert false, 'Should have raised an ThreadFrameError'
-+    # rescue ThreadFrameError
-+    #   assert true
-+    # end
-+    # Add a new local variable
-+    x = 5
-+    assert_equal(false, @tf.invalid?, 
-+                 'Frame should still be valid after adding more locals')
-+    assert_equal(false, inner_fn(@tf),
-+                 'outer thread frame should ok inside a called fn')
-+    notgood(invalid_tf)
-+    notgood(@tf)
-+  end
-+end
++    /* If we are saving tree nodes (a compile option), then tree_node
++       is the internal parse tree node representation for this
++       instruction sequence.
++    */
++    NODE *tree_node;
++    int in_use;  /* Reference count of number of times and instruction
++		    sequence is in use such as via thread_frame object
++		    access or is stored in ISEQS__ or SCRIPT_ISEQS.
++		  */
+ };
+ 
+ enum ruby_special_exceptions {
