@@ -1,7 +1,7 @@
-More InstructionSequence methods: compile_options, equal? line_range, local_iseq, local_name, parent
+More InstructionSequence methods: compile_options, encoded, equal? line_range, local_iseq, local_name, parent
 
 diff --git a/iseq.c b/iseq.c
-index b096d05..1e7a9e3 100644
+index b096d05..ec66a69 100644
 --- a/iseq.c
 +++ b/iseq.c
 @@ -122,6 +122,23 @@ iseq_mark(void *ptr)
@@ -134,7 +134,7 @@ index b096d05..1e7a9e3 100644
   * call-seq:
   *     RubyVM::InstructionSequence#offsetlines -> Hash[Fixnum] -> [Fixnum]
   * 
-@@ -1604,6 +1720,76 @@ ISEQ_INT_FIELD_METHOD(line_no) ;
+@@ -1604,6 +1720,95 @@ ISEQ_INT_FIELD_METHOD(line_no) ;
  ISEQ_INT_FIELD_METHOD(local_size) ;
  ISEQ_INT_FIELD_METHOD(local_table_size) ;
  
@@ -208,10 +208,29 @@ index b096d05..1e7a9e3 100644
 +    }
 +}
 +
++/* 
++ *  Document-method: RubyVM::InstructionSequence::encoded
++ * 
++ *  call-seq:
++ *     RubyVM::InstructionSequence#iseq_encoded -> String
++ *
++ *  Returns a string of the encoded bytes of the instruction
++ *  sequence. Note that this is probably not usable as is, may be useful in
++ *  decoding instructions (using other info) or for getting a sha1
++ *  checksum.
++ */
++VALUE 
++rb_iseq_iseq_encoded(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    GetISeqPtr(iseqval, iseq);
++    return rb_str_new((char *) iseq->iseq_encoded, iseq->iseq_size);
++}
++
  void
  Init_ISeq(void)
  {
-@@ -1615,14 +1801,15 @@ Init_ISeq(void)
+@@ -1615,14 +1820,16 @@ Init_ISeq(void)
      rb_define_method(rb_cISeq, "arg_post_len",     rb_iseq_arg_post_len, 0) ;
      rb_define_method(rb_cISeq, "arg_rest",         rb_iseq_arg_rest, 0) ;
      rb_define_method(rb_cISeq, "arg_simple",       rb_iseq_arg_simple, 0) ;
@@ -226,6 +245,7 @@ index b096d05..1e7a9e3 100644
 +    rb_define_method(rb_cISeq, "argc",             rb_iseq_argc, 0) ;
 +
 +    rb_define_method(rb_cISeq, "compile_options",  rb_iseq_compile_options, 0) ;
++    rb_define_method(rb_cISeq, "encoded",          rb_iseq_iseq_encoded, 0) ;
 +    rb_define_method(rb_cISeq, "equal?",           rb_iseq_equal, 1) ;
 +    rb_define_method(rb_cISeq, "line_range",       rb_iseq_line_range, 0) ;
 +    rb_define_method(rb_cISeq, "local_iseq",       rb_iseq_local_iseq, 0) ;
@@ -237,10 +257,10 @@ index b096d05..1e7a9e3 100644
      rb_define_method(rb_cISeq, "lineno",           rb_iseq_line_no, 0) ;
 diff --git a/test/debugger-ext/test_iseq.rb b/test/debugger-ext/test_iseq.rb
 new file mode 100644
-index 0000000..24d507c
+index 0000000..7c961c0
 --- /dev/null
 +++ b/test/debugger-ext/test_iseq.rb
-@@ -0,0 +1,129 @@
+@@ -0,0 +1,126 @@
 +require 'test/unit'
 +
 +class TestISeq < Test::Unit::TestCase
@@ -258,7 +278,7 @@ index 0000000..24d507c
 +  def test_fields
 +    skip "RubyVM::Frame patch needs to be done for this to work" unless
 +      defined?(RubyVM::Frame)
-+    start_lineno = __LINE__ - 1;
++    start_lineno = __LINE__ - 3
 +    iseq = RubyVM::Frame::current.iseq
 +    assert iseq
 +    assert_equal('test_fields', iseq.name)
@@ -309,9 +329,8 @@ index 0000000..24d507c
 +    x.call(1,2)
 +    C.new(self, 5)
 +    end_lineno = __LINE__ + 3
-+    # FIXME:
-+    # assert_equal((start_lineno..end_lineno), 
-+    #              method(:test_fields).iseq.line_range, 'line range')
++    assert_equal((start_lineno..end_lineno), 
++                 method(:test_fields).iseq.line_range, 'line range')
 +  end
 +
 +  def test_iseq_equal
@@ -324,16 +343,14 @@ index 0000000..24d507c
 +      tf2 = tf2.prev
 +    end
 +    assert_equal(false, tf.iseq.equal?(nil))
-+    ## FIXME:
-+    ## assert_equal(true,  tf.iseq.equal?(tf.iseq))
-+    ## assert_equal(true,  tf.iseq.equal?(tf2.iseq))
++    assert_equal(true,  tf.iseq.equal?(tf.iseq))
++    assert_equal(true,  tf.iseq.equal?(tf2.iseq))
 +    tf2 = tf2.prev 
 +    while !tf2.iseq do tf2 = tf2.prev end
 +    assert_equal(false, tf.iseq.equal?(tf2.iseq))
-+    ## FIXME
-+    # assert_raises TypeError do
-+    #   tf.iseq.equal?(tf)
-+    # end
++    assert_raises TypeError do
++      tf.iseq.equal?(tf)
++    end
 +  end
 +
 +  # # FIXME: killcache interface will probably change. Try make less sensitive

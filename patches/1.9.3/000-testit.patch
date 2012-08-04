@@ -7,12 +7,16 @@ new file mode 100755
 index 0000000..3f1a94e
 --- /dev/null
 +++ b/test/debugger-ext/testit.sh
-@@ -0,0 +1,12 @@
+@@ -0,0 +1,16 @@
 +#!/bin/bash
 +if (( $# == 0 )) ; then
 +    args=test_*.rb
++elif [[ $1 == 'shortest' ]] ; then
++    exec $SHELL $0 | grep 'failure'
++elif [[ $1 == 'short' ]] ; then
++    exec $SHELL $0 | egrep 'failure|=='
 +else
-+    args=$*
++    args=$@
 +fi
 +for t in $args ; do 
 +    echo "===== $t ====="

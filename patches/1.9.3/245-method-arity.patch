@@ -5,7 +5,7 @@ The unit test added here uses ISEQS__ from
 test. Probably the unit test here could be rewritten to avoid this.
 
 diff --git a/iseq.c b/iseq.c
-index 331d2d2..30d6ed4 100644
+index f36bae1..570d825 100644
 --- a/iseq.c
 +++ b/iseq.c
 @@ -593,6 +593,22 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
@@ -31,7 +31,7 @@ index 331d2d2..30d6ed4 100644
  static VALUE
  iseq_s_load(int argc, VALUE *argv, VALUE self)
  {
-@@ -1896,6 +1912,7 @@ Init_ISeq(void)
+@@ -1916,6 +1932,7 @@ Init_ISeq(void)
      rb_define_method(rb_cISeq, "type",             rb_iseq_type, 0) ;
      rb_define_method(rb_cISeq, "iseq_size",        rb_iseq_iseq_size, 0) ;
      rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);

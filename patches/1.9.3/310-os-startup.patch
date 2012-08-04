@@ -1,6 +1,6 @@
 Some programs like a debugger may want a way to reliably restart the program.
 
-RubyVM::OS_ARGV and RubyVM::OS_STARTUP_DIR captures the initial @ARGV
+RubyVM::OS_ARGV and RubyVM::OS_STARTUP_DIR get the initial @ARGV
 and current working directory to make this happen. (Inside a Ruby
 program, one can change @ARGV and cwd)
 

@@ -27,7 +27,7 @@ index fb51053..8f7bc75 100644
      iseq_add_mark_object(iseq, ret);
      return ret;
 diff --git a/iseq.c b/iseq.c
-index bfc075b..331d2d2 100644
+index 5639c52..f36bae1 100644
 --- a/iseq.c
 +++ b/iseq.c
 @@ -299,13 +299,17 @@ prepare_iseq_build(rb_iseq_t *iseq,
@@ -212,22 +212,9 @@ index bfc075b..331d2d2 100644
  }
  
  static VALUE
-diff --git a/vm_core.h b/vm_core.h
-index 0170eda..18fbf1b 100644
---- a/vm_core.h
-+++ b/vm_core.h
-@@ -510,7 +510,7 @@ VALUE rb_iseq_new(NODE*, VALUE, VALUE, VALUE, VALUE, enum iseq_type);
- VALUE rb_iseq_new_top(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE parent);
- VALUE rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath);
- VALUE rb_iseq_new_with_bopt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, VALUE);
--VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, const rb_compile_option_t*);
-+VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, VALUE, const rb_compile_option_t*);
- VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
- VALUE rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, VALUE opt);
- VALUE rb_iseq_disasm(VALUE self);
 diff --git a/test/debugger-ext/test_iseq_hash.rb b/test/debugger-ext/test_iseq_hash.rb
 new file mode 100644
-index 0000000..1f573f9
+index 0000000..4854600
 --- /dev/null
 +++ b/test/debugger-ext/test_iseq_hash.rb
 @@ -0,0 +1,47 @@
@@ -278,3 +265,16 @@ index 0000000..1f573f9
 +end
 +# We want to double-check we didn't mess up any pointers somewhere.
 +at_exit { GC.start  }
+diff --git a/vm_core.h b/vm_core.h
+index 0170eda..18fbf1b 100644
+--- a/vm_core.h
++++ b/vm_core.h
+@@ -510,7 +510,7 @@ VALUE rb_iseq_new(NODE*, VALUE, VALUE, VALUE, VALUE, enum iseq_type);
+ VALUE rb_iseq_new_top(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE parent);
+ VALUE rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath);
+ VALUE rb_iseq_new_with_bopt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, VALUE);
+-VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, const rb_compile_option_t*);
++VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, VALUE, const rb_compile_option_t*);
+ VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
+ VALUE rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, VALUE opt);
+ VALUE rb_iseq_disasm(VALUE self);

@@ -1,5 +1,5 @@
-Add RubyVM::Frame - a class for a run-time call frame object. It from this we
-can get a binding, and instruction sequence. 
+Add RubyVM::Frame - a class for a run-time call frame object. From this we
+can get a binding, and an instruction sequence. 
 
 Some care is take to ensure that the frame is still active using a
 "signature" and other checks. 
@@ -1051,7 +1051,7 @@ index a6f63f0..0a28805 100644
      CALL(Rational);
      CALL(Complex);
 diff --git a/iseq.c b/iseq.c
-index 30d6ed4..a1a53e9 100644
+index 570d825..accc6b9 100644
 --- a/iseq.c
 +++ b/iseq.c
 @@ -90,7 +90,7 @@ iseq_free(void *ptr)
@@ -1111,7 +1111,7 @@ index 30d6ed4..a1a53e9 100644
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -1918,6 +1959,7 @@ Init_ISeq(void)
+@@ -1938,6 +1979,7 @@ Init_ISeq(void)
      rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
      rb_define_method(rb_cISeq, "eval", iseq_eval, 0);
      rb_define_method(rb_cISeq, "source", rb_iseq_source, 0);

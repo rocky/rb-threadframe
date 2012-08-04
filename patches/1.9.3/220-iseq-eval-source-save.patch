@@ -1,9 +1,11 @@
-Adds: "source" method to iseq which if this instruction sequence came
-from eval, is the string of the source as a String. TODO: figure out how
-to have this "source" field filled out more often.
+Adds Instruction#source method. If this instruction sequence came from
+eval(), the string of the source is returned from this method.
+
+TODO: figure out how to have this "source" field filled out more
+often.
 
 diff --git a/iseq.c b/iseq.c
-index 1e7a9e3..a6e6267 100644
+index ec66a69..a51a19e 100644
 --- a/iseq.c
 +++ b/iseq.c
 @@ -744,6 +744,18 @@ find_prev_line_no(rb_iseq_t *iseqdat, unsigned long pos)
@@ -25,7 +27,7 @@ index 1e7a9e3..a6e6267 100644
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -1827,6 +1839,7 @@ Init_ISeq(void)
+@@ -1847,6 +1859,7 @@ Init_ISeq(void)
      rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
      rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
      rb_define_method(rb_cISeq, "eval", iseq_eval, 0);

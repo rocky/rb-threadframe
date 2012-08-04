@@ -126,18 +126,31 @@ RubyVM::Frame in frame.patch
 -------------------
 220-iseq-eval-source-save.patch:
 
-Give name for top instruction sequences (those that don't have a
-parent) a more uniqe and descriptive name. In a debugger we show and
-make use of these names in specifying locations.
+Adds iseq#source method if this instruction sequence came
+from eval(). This is the eval string. 
+
+TODO: figure out how to have this "source" field filled out more
+often.
 
 -------------------
 230-top-name.patch:
 
-Adds Instruction#source method. If this instruction sequence came from
-eval(), the string of the source is returned from this method.
+Changes the instruction sequence name slightly for the top-most
+instruction-sequence container (ISEQ_TYPE_TOP). The name <top
+(required)> isn't very instructive and it is not unique. So we replace
+(required) with a file name. For example:
 
-TODO: figure out how to have this "source" field filled out more
-often.
+ <top /tmp/l.rb> vs <top (required)> 
+
+and also
+ 
+ <RubyVM::InstructionSequence:<compiled>> vs.
+ <RubyVM::InstructionSequence:<compiled>@<compiled>>
+
+Motivation: Instruction sequence names become important the more one
+needs to access them.  In a debugger we use instruction sequences in
+describing where to stop or in showing disassembly, so making things
+look more descriptive is helpful.
 
 ------------------- 240-iseq-SCRIPT_ISEQS__.patch
 
@@ -168,8 +181,8 @@ test. Probably the unit test here could be rewritten to avoid this.
 -------------------
 246-os-startup.patch
 
-Add RubyVM::Frame - a class for a run-time call frame object. It from this we
-can get a binding, and instruction sequence. 
+Add RubyVM::Frame - a class for a run-time call frame object. From this we
+can get a binding, and an instruction sequence. 
 
 Some care is take to ensure that the frame is still active using a
 "signature" and other checks. 
