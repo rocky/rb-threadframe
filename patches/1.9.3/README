@@ -185,14 +185,6 @@ optional FIXNUM bitmask of event bits.
 2. allows thread trace hooks to be chained. (NOT WORKING YET, 
 PROBABLY REQUIRES per-frame tracing)
 
-3. adjusts the location of trace hook events for C calls and C returns
-so that the hook has access to the call stack. The stack contains the
-parameters and return value. Note that this also has a good effect in my
-opinion of not running the hook for the c-return of the set_trace_func
-call.  (SOME CODE THERE, BUT NOT COMPLETELY WORKING - should be moved out)
-
-4. Adds provision to allow the trace hook change the return value.
-
 The underlying mechanism for filtering by an event mask was already in
 the code base, just not previously user-accessible. It had been used
 internally to separate "profiling" hooks versus "debugging" hooks. I'm
@@ -237,4 +229,16 @@ missing event names in the case statement of routine get_event_name().
 The test in this patch depends on 500-trace_func-mask.patch as it uses
 clear_trace_func and set_trace_func with an event mask. The patch
 could probably be rewritten so it doesn't need this dependency.
+
+-------------------
+520-c-hook.patch
+
+Adjusts the location of trace hook events for C calls and C returns
+so that the hook has access to the call stack. The stack contains the
+parameters and return value. Note that this also has a good effect in my
+opinion of not running the hook for the c-return of the set_trace_func
+call.  
+
+Also, the patch allows the trace hook change the return value of in a
+C return.
 

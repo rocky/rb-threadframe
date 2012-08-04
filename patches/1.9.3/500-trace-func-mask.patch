@@ -6,14 +6,6 @@ optional FIXNUM bitmask of event bits.
 2. allows thread trace hooks to be chained. (NOT WORKING YET, 
 PROBABLY REQUIRES per-frame tracing)
 
-3. adjusts the location of trace hook events for C calls and C returns
-so that the hook has access to the call stack. The stack contains the
-parameters and return value. Note that this also has a good effect in my
-opinion of not running the hook for the c-return of the set_trace_func
-call.  (SOME CODE THERE, BUT NOT COMPLETELY WORKING - should be moved out)
-
-4. Adds provision to allow the trace hook change the return value.
-
 The underlying mechanism for filtering by an event mask was already in
 the code base, just not previously user-accessible. It had been used
 internally to separate "profiling" hooks versus "debugging" hooks. I'm
@@ -380,36 +372,3 @@ index b5e1379..01c5f3f 100644
  
      rb_define_method(rb_cThread, "tracing=",  rb_thread_tracing_set, 1);
      rb_define_method(rb_cThread, "tracing?",  rb_thread_tracing, 0);
-diff --git a/vm_eval.c b/vm_eval.c
-index 991c487..29365a8 100644
---- a/vm_eval.c
-+++ b/vm_eval.c
-@@ -68,7 +68,6 @@ vm_call0(rb_thread_t* th, VALUE recv, VALUE id, int argc, const VALUE *argv,
-       }
-       case VM_METHOD_TYPE_NOTIMPLEMENTED:
-       case VM_METHOD_TYPE_CFUNC: {
--	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
- 	{
- 	    rb_control_frame_t *reg_cfp = th->cfp;
- 	    rb_control_frame_t *cfp =
-@@ -79,15 +78,19 @@ vm_call0(rb_thread_t* th, VALUE recv, VALUE id, int argc, const VALUE *argv,
- 	       contains the prototype value.
- 	    */
- 	    me->def->body.cfunc.actual_argc = argc;
-+
- 	    cfp->me = me;
-+	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
-+
- 	    val = call_cfunc(def->body.cfunc.func, recv, def->body.cfunc.argc, argc, argv);
- 
- 	    if (reg_cfp != th->cfp + 1) {
- 		rb_bug("cfp consistency error - call0");
- 	    }
-+
-+	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
- 	    vm_pop_frame(th);
- 	}
--	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
- 	break;
-       }
-       case VM_METHOD_TYPE_ATTRSET: {

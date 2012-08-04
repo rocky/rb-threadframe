@@ -28,7 +28,8 @@ case $patchfile in
 	    300-os-startup.patch \
  	    400-disasm-insns.patch \
 	    500-trace-func-mask.patch \
-	    510-raise-msg.patch
+	    510-raise-msg.patch \
+	    520-c-hook.patch
 	do 
 	    patch_file=${dirname}/1.9.3/$file
 	    echo -- Applying patches in $patch_file ... | tee -a patches_applied.log

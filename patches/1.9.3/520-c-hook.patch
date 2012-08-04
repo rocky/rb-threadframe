@@ -1,0 +1,140 @@
+This patch adjusts the location of trace hook events for C calls and C
+returns so that the hook has access to the call stack. The stack
+contains the parameters and return value. Note that this also has a
+good effect in my opinion of not running the hook for the c-return of
+the set_trace_func call.
+
+Also, the patch allows the trace hook change the return value of in a
+C return.
+
+diff --git a/vm_eval.c b/vm_eval.c
+--- a/vm_eval.c
++++ b/vm_eval.c
+@@ -68,7 +68,6 @@
+       }
+       case VM_METHOD_TYPE_NOTIMPLEMENTED:
+       case VM_METHOD_TYPE_CFUNC: {
+-	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
+ 	{
+ 	    rb_control_frame_t *reg_cfp = th->cfp;
+ 	    rb_control_frame_t *cfp =
+@@ -79,15 +78,22 @@
+ 	       contains the prototype value.
+ 	    */
+ 	    me->def->body.cfunc.actual_argc = argc;
++
+ 	    cfp->me = me;
++	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
++
+ 	    val = call_cfunc(def->body.cfunc.func, recv, def->body.cfunc.argc, argc, argv);
+ 
+ 	    if (reg_cfp != th->cfp + 1) {
+ 		rb_bug("cfp consistency error - call0");
+ 	    }
++
++	    PUSH(val);
++	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
++	    val = reg_cfp->sp[-1];    /* Allow for hook to change value */
++	    reg_cfp->sp--; /*  for above push */
+ 	    vm_pop_frame(th);
+ 	}
+-	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
+ 	break;
+       }
+       case VM_METHOD_TYPE_ATTRSET: {
+diff --git a/vm_insnhelper.c b/vm_insnhelper.c
+index 07bca00..77b7f11 100644
+--- a/vm_insnhelper.c
++++ b/vm_insnhelper.c
+@@ -398,8 +398,6 @@ vm_call_cfunc(rb_thread_t *th, rb_control_frame_t *reg_cfp,
+     const rb_method_definition_t *def = me->def;
+     rb_control_frame_t *cfp;
+ 
+-    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, me->called_id, me->klass);
+-
+     cfp = vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
+ 			recv, (VALUE) blockptr, 0, reg_cfp->sp, 0, 1);
+     /* Store actual argument count. Note that cfunc.argc contains the
+@@ -407,6 +405,8 @@ vm_call_cfunc(rb_thread_t *th, rb_control_frame_t *reg_cfp,
+     */
+     me->def->body.cfunc.actual_argc = num;
+     cfp->me = me;
++    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, me->called_id, me->klass);
++
+     reg_cfp->sp -= num + 1;
+ 
+     val = call_cfunc(def->body.cfunc.func, recv, (int)def->body.cfunc.argc, num, reg_cfp->sp + 1);
+@@ -419,9 +419,19 @@ vm_call_cfunc(rb_thread_t *th, rb_control_frame_t *reg_cfp,
+     RB_LLVM_GUARD(reg_cfp);
+ #endif
+ 
+-    vm_pop_frame(th);
++    if (0 == th->tracing) {
++	rb_event_flag_t wait_event__ = th->event_flags;			
++	if (UNLIKELY(wait_event__)) {
++	    PUSH(val);
++	    rb_threadptr_exec_event_hooks(th, RUBY_EVENT_C_RETURN, recv, 
++					  me->called_id, me->klass);
++	    val = reg_cfp->sp[-1];    /* Allow for hook to change value */
++	    reg_cfp->sp--; /* for above push */
++	}
++    } else if (th->tracing < 0)
++	th->tracing++;
+ 
+-    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, me->called_id, me->klass);
++    vm_pop_frame(th);
+ 
+     return val;
+ }
+diff --git a/test/debugger-ext/test_argc.rb b/test/debugger-ext/test_argc.rb
+new file mode 100644
+index 0000000..8c787ae
+--- /dev/null
++++ b/test/debugger-ext/test_argc.rb
+@@ -0,0 +1,46 @@
++require 'test/unit'
++
++require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
++
++class TestARGC < Test::Unit::TestCase
++
++  def setup
++    @original_compile_option = RubyVM::InstructionSequence.compile_option
++    RubyVM::InstructionSequence.compile_option = {
++      :trace_instruction => false,
++      :specialized_instruction => false
++    }
++  end
++
++  def teardown
++    set_trace_func(nil)
++    RubyVM::InstructionSequence.compile_option = @original_compile_option
++  end
++
++  def test_C_argc
++    cmd='File.basename("/tmp/foo.rb");File.basename("/tmp/foo.rb",".rb")'
++    iseq = RubyVM::InstructionSequence.compile(cmd)
++    events = []
++    all_events = []
++    eval <<-EOF.gsub(/^.*?: /, "")
++     1: set_trace_func(Proc.new { |event, file, lineno, mid, binding, klass|
++     2:   tf = RubyVM::Frame.prev
++     3:   all_events << [tf.argc, tf.arity, tf.type, mid]
++     4:   if :basename == mid 
++     5:     events << [tf.argc, tf.arity, tf.type, mid]
++     6:   end
++     7: })
++     8: iseq.eval
++     9: set_trace_func(nil)
++    EOF
++    # p all_events
++    assert_equal([[1, -1, "CFUNC", :basename],  # 1-arg c-call
++                  [1, -1, "CFUNC", :basename],  # 1-arg c-return
++                  [2, -1, "CFUNC", :basename],  # 2-arg c-call
++                  [2, -1, "CFUNC", :basename]   # 2-arg c-return
++                 ], events)
++  end
++end
++
++# We want to double-check we didn't mess up any pointers somewhere.
++at_exit { GC.start  }
