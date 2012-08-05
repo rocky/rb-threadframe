@@ -29,7 +29,8 @@ case $patchfile in
  	    320-disasm-insns.patch \
 	    340-trace-func-mask.patch \
 	    345-raise-msg.patch \
-	    410-c-hook.patch
+	    350-c-hook.patch \
+	    360-save-compile-opts.patch
 	do 
 	    patch_file=${dirname}/1.9.3/$file
 	    echo -- Applying patches in $patch_file ... | tee -a patches_applied.log

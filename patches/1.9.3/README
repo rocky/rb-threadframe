@@ -26,7 +26,6 @@ likely though some hunks of the patch may be rejected.
 I have not put a lot of effort into ensuring arbitrary intermediate
 patches can be skipped. 
 
-
 -------------------
 000-testit.patch:
 
@@ -261,7 +260,7 @@ clear_trace_func and set_trace_func with an event mask. The patch
 could probably be rewritten so it doesn't need this dependency.
 
 -------------------
-410-c-hook.patch
+350-c-hook.patch
 
 Adjusts the location of trace hook events for C calls and C returns
 so that the hook has access to the call stack. The stack contains the
@@ -271,4 +270,16 @@ call.
 
 Also, the patch allows the trace hook change the return value of in a
 C return.
+
+-------------------
+360-save-compile-opts.patch
+
+Saves compile options used to create instruction sequence as well as
+the internal tree node. The internal tree node could be used by
+something like parsetree. Whether or not this is done controlled by
+two compile options.
+
+Depends on iseq-field-access-patch accidentally because it has #ifdef
+FINISHED and code which belogs here. The two patches could be reworked to
+eliminate this artificial dependency.
 

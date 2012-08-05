@@ -1,0 +1,129 @@
+Saves compile options used to create instruction sequence as well as
+the internal tree node. The internal tree node could be used by
+something like parsetree. Whether or not this is done controlled by
+two compile options.
+
+Depends on iseq-field-access-patch accidentally because it has #ifdef
+FINISHED and code which belogs here. The two patches could be reworked to
+eliminate this artificial dependency.
+
+diff --git a/iseq.c b/iseq.c
+index 39f8d74..fb6f052 100644
+--- a/iseq.c
++++ b/iseq.c
+@@ -271,7 +271,7 @@ static VALUE
+ prepare_iseq_build(rb_iseq_t *iseq,
+ 		   VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
+ 		   VALUE parent, enum iseq_type type, VALUE block_opt,
+-		   const rb_compile_option_t *option)
++		   rb_compile_option_t *option)
+ {
+     OBJ_FREEZE(name);
+     OBJ_FREEZE(filename);
+@@ -358,6 +358,8 @@ static rb_compile_option_t COMPILE_OPTION_DEFAULT = {
+     OPT_INSTRUCTIONS_UNIFICATION, /* int instructions_unification; */
+     OPT_STACK_CACHING, /* int stack_caching; */
+     OPT_TRACE_INSTRUCTION, /* int trace_instruction */
++    OPT_SAVE_TREE_NODE,    /* save parse tree nodes */
++    OPT_SAVE_COMPILE_OPTS, /* save compile options */
+ };
+ static const rb_compile_option_t COMPILE_OPTION_FALSE = {0};
+ 
+@@ -393,6 +395,8 @@ make_compile_option(rb_compile_option_t *option, VALUE opt)
+ 	SET_COMPILE_OPTION(option, opt, instructions_unification);
+ 	SET_COMPILE_OPTION(option, opt, stack_caching);
+ 	SET_COMPILE_OPTION(option, opt, trace_instruction);
++	SET_COMPILE_OPTION(option, opt, save_tree_node);
++	SET_COMPILE_OPTION(option, opt, save_compile_opts);
+ 	SET_COMPILE_OPTION_NUM(option, opt, debug_level);
+ #undef SET_COMPILE_OPTION
+ #undef SET_COMPILE_OPTION_NUM
+@@ -501,7 +505,7 @@ static VALUE
+ rb_iseq_new_with_bopt_and_opt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
+ 			      VALUE parent, enum iseq_type type, VALUE bopt,
+ 			      VALUE src,
+-			      const rb_compile_option_t *option)
++			      rb_compile_option_t *option)
+ {
+     rb_iseq_t *iseq;
+     VALUE self = iseq_alloc(rb_cISeq);
+@@ -512,7 +516,11 @@ rb_iseq_new_with_bopt_and_opt(NODE *node, VALUE name, VALUE filename, VALUE file
+ 
+     prepare_iseq_build(iseq, name, filename, filepath, line_no, parent, type, bopt, option);
+     rb_iseq_compile_node(self, node);
++    if (option && option->save_tree_node) {
++	iseq->tree_node = node;
++    }
+     saving_iseq = update_file_iseq(filename, name, self);
++    option->save_compile_opts = option->save_compile_opts || saving_iseq;
+     cleanup_iseq_build(iseq, type, src, saving_iseq);
+     return self;
+ }
+@@ -520,7 +528,7 @@ rb_iseq_new_with_bopt_and_opt(NODE *node, VALUE name, VALUE filename, VALUE file
+ VALUE
+ rb_iseq_new_with_opt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
+ 		     VALUE parent, enum iseq_type type, VALUE src,
+-		     const rb_compile_option_t *option)
++		     rb_compile_option_t *option)
+ {
+     /* TODO: argument check */
+     return rb_iseq_new_with_bopt_and_opt(node, name, filename, filepath, line_no, parent, type,
+@@ -2084,10 +2092,8 @@ rb_iseq_compile_options(VALUE iseqval)
+ 	COMPILE_OPTS_BOOL_SET_HASH(stack_caching);
+ 	COMPILE_OPTS_BOOL_SET_HASH(trace_instruction);
+ 	COMPILE_OPTS_BOOL_SET_HASH(debug_level);
+-#ifdef FINISHED
+ 	COMPILE_OPTS_BOOL_SET_HASH(save_tree_node);
+ 	COMPILE_OPTS_BOOL_SET_HASH(save_compile_opts);
+-#endif
+ 	return hash_opts;
+     }
+ }
+diff --git a/iseq.h b/iseq.h
+index be0e38c..e4cdd5f 100644
+--- a/iseq.h
++++ b/iseq.h
+@@ -48,6 +48,8 @@ struct rb_compile_option_struct {
+     int stack_caching;
+     int trace_instruction;
+     int debug_level;
++    int save_tree_node;
++    int save_compile_opts;
+ };
+ 
+ struct iseq_insn_info_entry {
+@@ -104,7 +106,7 @@ struct iseq_compile_data {
+     int flip_cnt;
+     int label_no;
+     int node_level;
+-    const rb_compile_option_t *option;
++    rb_compile_option_t *option;
+ #if SUPPORT_JOKE
+     st_table *labels_table;
+ #endif
+diff --git a/vm_core.h b/vm_core.h
+index ead4380..fd2f2e0 100644
+--- a/vm_core.h
++++ b/vm_core.h
+@@ -520,7 +520,7 @@ VALUE rb_iseq_new(NODE*, VALUE, VALUE, VALUE, VALUE, enum iseq_type);
+ VALUE rb_iseq_new_top(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE parent);
+ VALUE rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath);
+ VALUE rb_iseq_new_with_bopt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, VALUE);
+-VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, VALUE, const rb_compile_option_t*);
++VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, VALUE, rb_compile_option_t*);
+ VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
+ VALUE rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, VALUE opt);
+ VALUE rb_iseq_disasm(VALUE self);
+diff --git a/vm_opts.h b/vm_opts.h
+index d153d56..07b6105 100644
+--- a/vm_opts.h
++++ b/vm_opts.h
+@@ -23,6 +23,8 @@
+ #define OPT_PEEPHOLE_OPTIMIZATION    1
+ #define OPT_SPECIALISED_INSTRUCTION  1
+ #define OPT_INLINE_CONST_CACHE       1
++#define OPT_SAVE_TREE_NODE           1
++#define OPT_SAVE_COMPILE_OPTS        1
+ 
+ 
+ /* Build Options.
