@@ -2413,7 +2413,7 @@ index 896e309..aa7d861 100644
  
  typedef struct rb_method_attr_struct {
 diff --git a/proc.c b/proc.c
-index 11a2d3e..8963247 100644
+index 11a2d3e..eb6c731 100644
 --- a/proc.c
 +++ b/proc.c
 @@ -28,7 +28,6 @@ VALUE rb_cBinding;
@@ -2516,7 +2516,116 @@ index 11a2d3e..8963247 100644
  method_arity(VALUE method)
  {
      struct METHOD *data;
-@@ -2174,6 +2235,7 @@ Init_Proc(void)
+@@ -2042,6 +2103,100 @@ proc_curry(int argc, VALUE *argv, VALUE self)
+     return make_curry_proc(self, rb_ary_new(), arity);
+ }
+ 
++/* 
++ *  call-seq:
++ *  Proc#iseq -> RubyVM::InstructionSequence
++ *
++ *  Returns the instruction sequence for a Proc object.
++ */
++VALUE
++rb_proc_iseq(VALUE self)
++{
++    rb_proc_t *proc;
++    rb_iseq_t *iseq;
++    VALUE rb_iseq;
++    GetProcPtr(self, proc);
++    iseq = proc->block.iseq;
++    if (!iseq || !RUBY_VM_NORMAL_ISEQ_P(iseq->self))
++	return Qnil;
++    rb_iseq = iseq_alloc_shared(rb_cISeq);
++    RDATA(rb_iseq)->data = iseq;
++    return rb_iseq;
++}
++
++/* 
++ *  call-seq:
++ *  Method#alias_count -> Fixnum
++ *
++ *  number of aliases a method has
++ */
++VALUE
++rb_method_alias_count(VALUE self)
++{
++  struct METHOD *m1 = (struct METHOD *)DATA_PTR(self);
++  return INT2FIX(m1->me->def->alias_count);
++}
++
++/* 
++ *  call-seq:
++ *  Method#original_id - Original name of method
++ */
++VALUE
++rb_method_original_id(VALUE self)
++{
++  struct METHOD *m1 = (struct METHOD *)DATA_PTR(self);
++  return ID2SYM(m1->me->def->original_id);
++}
++
++/* 
++ *  call-seq:
++ *  Method#type -> String
++ * 
++ *  Returns the Method object.
++ */
++VALUE
++rb_method_type(VALUE self)
++{
++    rb_method_definition_t *def = method_get_def(self);
++    const char *type_str;
++    switch (def->type) {
++      case VM_METHOD_TYPE_ISEQ: 
++	type_str = "instruction sequence";
++	break;
++      case VM_METHOD_TYPE_CFUNC: 
++	type_str = "C function";
++	break;
++      case VM_METHOD_TYPE_ATTRSET:
++	type_str = "attrset";
++	break;
++      case VM_METHOD_TYPE_IVAR:
++	type_str = "ivar";
++	break;
++      case VM_METHOD_TYPE_BMETHOD:
++	type_str = "bmethod";
++	break;
++      case VM_METHOD_TYPE_ZSUPER:
++	type_str = "zsuper";
++	break;
++      case VM_METHOD_TYPE_UNDEF:
++	type_str = "undefined";
++	break;
++      case VM_METHOD_TYPE_NOTIMPLEMENTED:
++	type_str = "not implemented";
++	break;
++      case VM_METHOD_TYPE_OPTIMIZED: /* Kernel#send, Proc#call, etc */
++	type_str = "optimized";
++	break;
++      case VM_METHOD_TYPE_MISSING: /* wrapper for method_missing(id) */
++	type_str = "type missing";
++	break;
++      default:
++	type_str = "unknown";
++	break;
++    }
++    return rb_str_new2(type_str);
++}
++
+ /*
+  *  Document-class: LocalJumpError
+  *
+@@ -2133,6 +2288,7 @@ Init_Proc(void)
+     rb_define_method(rb_cProc, "==", proc_eq, 1);
+     rb_define_method(rb_cProc, "eql?", proc_eq, 1);
+     rb_define_method(rb_cProc, "hash", proc_hash, 0);
++    rb_define_method(rb_cProc, "iseq", rb_proc_iseq, 0);
+     rb_define_method(rb_cProc, "to_s", proc_to_s, 0);
+     rb_define_method(rb_cProc, "lambda?", rb_proc_lambda_p, 0);
+     rb_define_method(rb_cProc, "binding", proc_binding, 0);
+@@ -2174,9 +2330,14 @@ Init_Proc(void)
      rb_define_method(rb_cMethod, "unbind", method_unbind, 0);
      rb_define_method(rb_cMethod, "source_location", rb_method_location, 0);
      rb_define_method(rb_cMethod, "parameters", rb_method_parameters, 0);
@@ -2524,6 +2633,24 @@ index 11a2d3e..8963247 100644
      rb_define_method(rb_mKernel, "method", rb_obj_method, 1);
      rb_define_method(rb_mKernel, "public_method", rb_obj_public_method, 1);
  
++    rb_define_method(rb_cMethod, "alias_count",  rb_method_alias_count, 0);
++    rb_define_method(rb_cMethod, "original_id",  rb_method_original_id, 0);
++    rb_define_method(rb_cMethod, "type",         rb_method_type, 0);
++
+     /* UnboundMethod */
+     rb_cUnboundMethod = rb_define_class("UnboundMethod", rb_cObject);
+     rb_undef_alloc_func(rb_cUnboundMethod);
+@@ -2194,6 +2355,10 @@ Init_Proc(void)
+     rb_define_method(rb_cUnboundMethod, "source_location", rb_method_location, 0);
+     rb_define_method(rb_cUnboundMethod, "parameters", rb_method_parameters, 0);
+ 
++    rb_define_method(rb_cUnboundMethod, "alias_count", rb_method_alias_count, 0);
++    rb_define_method(rb_cUnboundMethod, "original_id", rb_method_original_id, 0);
++    rb_define_method(rb_cUnboundMethod, "type",        rb_method_type, 0);
++
+     /* Module#*_method */
+     rb_define_method(rb_cModule, "instance_method", rb_mod_instance_method, 1);
+     rb_define_method(rb_cModule, "public_instance_method", rb_mod_public_instance_method, 1);
 diff --git a/ruby.c b/ruby.c
 index ed39f44..57bda3b 100644
 --- a/ruby.c
@@ -2603,13 +2730,11 @@ index 99e4b7b..985736a 100644
  insn_ret_num(VALUE insn)
 diff --git a/test/debugger-ext/test_argc.rb b/test/debugger-ext/test_argc.rb
 new file mode 100644
-index 0000000..8c787ae
+index 0000000..bf64df6
 --- /dev/null
 +++ b/test/debugger-ext/test_argc.rb
-@@ -0,0 +1,46 @@
+@@ -0,0 +1,44 @@
 +require 'test/unit'
-+
-+require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
 +
 +class TestARGC < Test::Unit::TestCase
 +
@@ -3186,6 +3311,34 @@ index 0000000..07a7e1f
 +  end
 +
 +end
+diff --git a/test/debugger-ext/test_method.rb b/test/debugger-ext/test_method.rb
+new file mode 100644
+index 0000000..000ad2f
+--- /dev/null
++++ b/test/debugger-ext/test_method.rb
+@@ -0,0 +1,22 @@
++# Test of additional methods in Method
++require 'test/unit'
++
++class TestMethod < Test::Unit::TestCase
++  def test_method
++    m = self.method :test_method
++    assert_equal(1, m.alias_count)
++    assert_equal(:test_method, m.original_id)
++    self.instance_eval { assert_equal(1, m.alias_count) }
++    assert_equal(1, m.alias_count)
++    self.instance_eval { alias :two :test_method }
++    assert_equal(2, m.alias_count)
++    assert_equal(3, self.method(:test_method).alias_count)
++    assert_equal(3, m.alias_count)
++    assert_equal(4, self.method(:two).alias_count)
++    assert_equal(:test_method, self.method(:two).original_id)
++    assert_equal("instruction sequence", method(:test_method).type)
++    assert_equal("C function", File.method(:basename).type)
++    # Array.map is an unbound method
++    assert_equal("C function", Array.instance_method(:map).type)
++  end
++end
 diff --git a/test/debugger-ext/test_os_startup.rb b/test/debugger-ext/test_os_startup.rb
 new file mode 100644
 index 0000000..5851c9a
@@ -3202,6 +3355,19 @@ index 0000000..5851c9a
 +                    "RubyVM::OS_ARGV should contain at least the Ruby interpeter and the program name")
 +    assert RubyVM::OS_STARTUP_DIR
 +  end    
++end
+diff --git a/test/debugger-ext/test_proc.rb b/test/debugger-ext/test_proc.rb
+new file mode 100644
+index 0000000..7737aef
+--- /dev/null
++++ b/test/debugger-ext/test_proc.rb
+@@ -0,0 +1,7 @@
++require 'test/unit'
++
++class TestProc < Test::Unit::TestCase
++  def test_sha1
++    assert proc{ 5}.iseq.kind_of?(RubyVM::InstructionSequence)
++  end
 +end
 diff --git a/test/debugger-ext/test_source.rb b/test/debugger-ext/test_source.rb
 new file mode 100644

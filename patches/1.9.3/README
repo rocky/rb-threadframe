@@ -283,3 +283,12 @@ Depends on iseq-field-access-patch accidentally because it has #ifdef
 FINISHED and code which belogs here. The two patches could be reworked to
 eliminate this artificial dependency.
 
+-------------------
+370-proc-iseq.patch
+
+Adds Proc#iseq
+
+-------------------
+380-method-extra.patch
+
+Add methods alias_count, original_id, and type to Method and UnboundMethod

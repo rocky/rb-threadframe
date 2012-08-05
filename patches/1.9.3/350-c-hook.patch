@@ -12,10 +12,8 @@ new file mode 100644
 index 0000000..8c787ae
 --- /dev/null
 +++ b/test/debugger-ext/test_argc.rb
-@@ -0,0 +1,46 @@
+@@ -0,0 +1,44 @@
 +require 'test/unit'
-+
-+require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
 +
 +class TestARGC < Test::Unit::TestCase
 +

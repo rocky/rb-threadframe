@@ -30,7 +30,9 @@ case $patchfile in
 	    340-trace-func-mask.patch \
 	    345-raise-msg.patch \
 	    350-c-hook.patch \
-	    360-save-compile-opts.patch
+	    360-save-compile-opts.patch \
+	    370-proc-iseq.patch \
+	    380-method-extra.patch
 	do 
 	    patch_file=${dirname}/1.9.3/$file
 	    echo -- Applying patches in $patch_file ... | tee -a patches_applied.log
