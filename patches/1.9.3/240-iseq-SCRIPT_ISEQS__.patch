@@ -1,3 +1,5 @@
+Adds SCRIPT_ISEQS__ and ISEQS__
+
 A debugger or similar introspection tool needs to be able to find all
 instruction sequences and access them. This patch facilitates this by
 adding the following behavior, analogous to SCRIPT_LINES__ for

@@ -1,4 +1,4 @@
-This patch adjusts the location of trace hook events for C calls and C
+Adjust the location of trace hook events for C calls and C
 returns so that the hook has access to the call stack. The stack
 contains the parameters and return value. Note that this also has a
 good effect in my opinion of not running the hook for the c-return of

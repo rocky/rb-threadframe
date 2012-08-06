@@ -182,10 +182,10 @@ index 0000000..2221729
 +
 +end
 diff --git a/thread.c b/thread.c
-index b5e1379..01c5f3f 100644
+index 216e158..16a94af 100644
 --- a/thread.c
 +++ b/thread.c
-@@ -4333,19 +4333,48 @@ clear_trace_func_i(st_data_t key, st_data_t val, st_data_t flag)
+@@ -4342,19 +4342,48 @@ clear_trace_func_i(st_data_t key, st_data_t val, st_data_t flag)
      return ST_CONTINUE;
  }
  
@@ -237,7 +237,7 @@ index b5e1379..01c5f3f 100644
   *
   *  Establishes _proc_ as the handler for tracing, or disables
   *  tracing if the parameter is +nil+. _proc_ takes up
-@@ -4359,6 +4388,8 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
+@@ -4368,6 +4397,8 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
   *  <code>line</code> (execute code on a new line), <code>raise</code>
   *  (raise an exception), and <code>return</code> (return from a Ruby
   *  method). Tracing is disabled within the context of _proc_.
@@ -246,7 +246,7 @@ index b5e1379..01c5f3f 100644
   *
   *      class Test
   *	def test
-@@ -4383,13 +4414,29 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
+@@ -4392,13 +4423,29 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
   *	  line prog.rb:3        test     Test
   *	  line prog.rb:4        test     Test
   *      return prog.rb:4        test     Test
@@ -277,7 +277,7 @@ index b5e1379..01c5f3f 100644
      if (NIL_P(trace)) {
  	GET_THREAD()->tracing = EVENT_RUNNING_NOTHING;
  	return Qnil;
-@@ -4399,18 +4446,18 @@ set_trace_func(VALUE obj, VALUE trace)
+@@ -4408,18 +4455,18 @@ set_trace_func(VALUE obj, VALUE trace)
  	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
      }
  
@@ -299,7 +299,7 @@ index b5e1379..01c5f3f 100644
  }
  
  /*
-@@ -4422,18 +4469,26 @@ thread_add_trace_func(rb_thread_t *th, VALUE trace)
+@@ -4431,18 +4478,26 @@ thread_add_trace_func(rb_thread_t *th, VALUE trace)
   */
  
  static VALUE
@@ -329,7 +329,7 @@ index b5e1379..01c5f3f 100644
   *
   *  Establishes _proc_ on _thr_ as the handler for tracing, or
   *  disables tracing if the parameter is +nil+.
-@@ -4441,9 +4496,17 @@ thread_add_trace_func_m(VALUE obj, VALUE trace)
+@@ -4450,9 +4505,17 @@ thread_add_trace_func_m(VALUE obj, VALUE trace)
   */
  
  static VALUE
@@ -348,7 +348,7 @@ index b5e1379..01c5f3f 100644
      GetThreadPtr(obj, th);
      rb_threadptr_remove_event_hook(th, call_trace_func);
  
-@@ -4451,7 +4514,7 @@ thread_set_trace_func_m(VALUE obj, VALUE trace)
+@@ -4460,7 +4523,7 @@ thread_set_trace_func_m(VALUE obj, VALUE trace)
  	th->tracing = EVENT_RUNNING_NOTHING;
  	return Qnil;
      }
@@ -357,7 +357,7 @@ index b5e1379..01c5f3f 100644
      return trace;
  }
  
-@@ -4729,9 +4792,11 @@ Init_Thread(void)
+@@ -4738,9 +4801,11 @@ Init_Thread(void)
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */

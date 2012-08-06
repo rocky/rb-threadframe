@@ -1,8 +1,8 @@
-Some programs like a debugger may want a way to reliably restart the program.
+Add RubyVM::OS_ARGV and RubyVM::OS_STARTUP_DIR to get the initial @ARGV
+and current working directory 
 
-RubyVM::OS_ARGV and RubyVM::OS_STARTUP_DIR get the initial @ARGV
-and current working directory to make this happen. (Inside a Ruby
-program, one can change @ARGV and cwd)
+Some programs like a debugger may want a way to reliably restart the program.
+(Inside a Ruby program, one can change @ARGV and cwd)
 
 diff --git a/include/ruby/ruby.h b/include/ruby/ruby.h
 index 26e876e..5eca96f 100644

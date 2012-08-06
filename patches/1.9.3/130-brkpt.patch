@@ -19,19 +19,6 @@ Depends on frame-tracing.patch only because of proximity to changes
 need that patch.
 
 diff --git a/brkpt.c b/brkpt.c
---- a/vm_core.h
-+++ b/vm_core.h
-@@ -255,6 +255,9 @@
- 
-     /* used at compile time */
-     struct iseq_compile_data *compile_data;
-+
-+    /* Used to set a breakpoint at a VM instruction */
-+    unsigned char *breakpoints; 
- };
- 
- enum ruby_special_exceptions {
-diff --git a/brkpt.c b/brkpt.c
 new file mode 100644
 index 0000000..8e55325
 --- /dev/null
@@ -270,7 +257,7 @@ index 0000000..8e55325
 +    rb_define_method(rb_cISeq, "brkpts",           iseq_brkpts, 0);
 +}
 diff --git a/common.mk b/common.mk
-index cb32293..ad3769b 100644
+index eb89a2b..48ff6cc 100644
 --- a/common.mk
 +++ b/common.mk
 @@ -40,6 +40,7 @@ ENC_MK        = enc.mk
@@ -282,7 +269,7 @@ index cb32293..ad3769b 100644
  		compar.$(OBJEXT) \
  		complex.$(OBJEXT) \
 diff --git a/include/ruby/ruby.h b/include/ruby/ruby.h
-index c94214b..5eca96f 100644
+index 3b72f8c..26e876e 100644
 --- a/include/ruby/ruby.h
 +++ b/include/ruby/ruby.h
 @@ -1407,6 +1407,7 @@ int ruby_native_thread_p(void);
@@ -294,10 +281,10 @@ index c94214b..5eca96f 100644
  #define RUBY_EVENT_VM       0x10000
  #define RUBY_EVENT_SWITCH   0x20000
 diff --git a/iseq.c b/iseq.c
-index 9655a93..b4987c0 100644
+index 28cc1e5..5effad2 100644
 --- a/iseq.c
 +++ b/iseq.c
-@@ -1493,6 +1493,8 @@
+@@ -1493,6 +1493,8 @@ rb_iseq_build_for_ruby2cext(
      return iseqval;
  }
  
@@ -381,7 +368,7 @@ index 0000000..71fd471
 +# We want to double-check we didn't mess up any pointers somewhere.
 +at_exit { GC.start  }
 diff --git a/thread.c b/thread.c
-index 69e6daa..b5e1379 100644
+index fc6b152..216e158 100644
 --- a/thread.c
 +++ b/thread.c
 @@ -4108,7 +4108,7 @@ set_threads_event_flags_i(st_data_t key, st_data_t val, st_data_t flag)
@@ -393,7 +380,7 @@ index 69e6daa..b5e1379 100644
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -4465,6 +4465,8 @@ get_event_name(rb_event_flag_t event)
+@@ -4474,6 +4474,8 @@ get_event_name(rb_event_flag_t event)
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -402,6 +389,20 @@ index 69e6daa..b5e1379 100644
        case RUBY_EVENT_CALL:
  	return "call";
        case RUBY_EVENT_RETURN:
+diff --git a/vm_core.h b/vm_core.h
+index 8abccf3..1a1af10 100644
+--- a/vm_core.h
++++ b/vm_core.h
+@@ -255,6 +255,9 @@ struct rb_iseq_struct {
+ 
+     /* used at compile time */
+     struct iseq_compile_data *compile_data;
++
++    /* Used to set a breakpoint at a VM instruction */
++    unsigned char *breakpoints; 
+ };
+ 
+ enum ruby_special_exceptions {
 diff --git a/vm_exec.h b/vm_exec.h
 index 57ed474..7d4b540 100644
 --- a/vm_exec.h
@@ -430,10 +431,10 @@ index 57ed474..7d4b540 100644
  #if VMDEBUG > 0
  #define debugs printf
 diff --git a/vm_insnhelper.c b/vm_insnhelper.c
-index 47f130c..07bca00 100644
+index 17ed868..4c96402 100644
 --- a/vm_insnhelper.c
 +++ b/vm_insnhelper.c
-@@ -492,6 +492,12 @@ vm_setup_method(rb_thread_t *th, rb_control_frame_t *cfp,w
+@@ -492,6 +492,12 @@ vm_setup_method(rb_thread_t *th, rb_control_frame_t *cfp,
  		      iseq->iseq_encoded + opt_pc, sp, 0, 0);
  
  	cfp->sp = rsp - 1 /* recv */;

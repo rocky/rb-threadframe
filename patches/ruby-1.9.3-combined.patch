@@ -269,24 +269,6 @@ index fb51053..8f7bc75 100644
      debugs("[new_child_iseq]< ---------------------------------------\n");
      iseq_add_mark_object(iseq, ret);
      return ret;
-diff --git a/eval.c b/eval.c
-index 3999ea5..b2c8aae 100644
---- a/eval.c
-+++ b/eval.c
-@@ -441,7 +441,12 @@ setup_exception(rb_thread_t *th, int tag, volatile VALUE mesg)
-     rb_trap_restore_mask();
- 
-     if (tag != TAG_FATAL) {
--	EXEC_EVENT_HOOK(th, RUBY_EVENT_RAISE, th->cfp->self, 0, 0);
-+        /* In a RAISE event, we store as the "class" parameter the
-+           the optional message parameter which is likely to be of more
-+           use. Given a binding, a trace hook can get the class via 
-+           eval('self.class', binding)
-+	 */
-+        EXEC_EVENT_HOOK(th, RUBY_EVENT_RAISE, th->cfp->self, 0, mesg);
-     }
- }
- 
 diff --git a/frame.c b/frame.c
 new file mode 100644
 index 0000000..7ca859b
@@ -3545,38 +3527,6 @@ index 0000000..89afb5e
 +# We want to double-check we didn't mess up any pointers somewhere along
 +# the line.
 +at_exit { GC.start  }
-diff --git a/test/debugger-ext/test_tracefunc_raise.rb b/test/debugger-ext/test_tracefunc_raise.rb
-new file mode 100644
-index 0000000..d22674a
---- /dev/null
-+++ b/test/debugger-ext/test_tracefunc_raise.rb
-@@ -0,0 +1,26 @@
-+require 'test/unit'
-+
-+# tests that we a trace hook has access to the runtime exception Object
-+# when it is called through a raise event
-+
-+class TestTracefuncRaise < Test::Unit::TestCase
-+
-+  def test_basic
-+    tuples = []
-+    p = Proc.new { 
-+      |event, file, lineno, mid, binding, klass|
-+      tuples << klass
-+    }
-+    msg = 'this is a message'
-+    set_trace_func(p, 0x0080)
-+    begin ; x = 1/0; rescue; end
-+    begin ; raise RuntimeError, msg; rescue; end
-+    clear_trace_func
-+    assert_equal(2, tuples.size, 
-+                 "Wrong number of tuples captured #{tuples.inspect}")
-+    assert_equal msg, tuples[1].message
-+    assert_equal([ZeroDivisionError, RuntimeError], tuples.map{|t| t.class},
-+                 "Mismatched tuples classes in #{tuples.inspect}")
-+    
-+  end
-+end
 diff --git a/test/debugger-ext/test_tracemask.rb b/test/debugger-ext/test_tracemask.rb
 new file mode 100644
 index 0000000..2221729
@@ -3733,31 +3683,8 @@ index 0000000..ab610a2
 +    # echo ../../miniruby -I../../lib -I../.. $t
 +    # gdb ../../miniruby
 +done
-diff --git a/test/ruby/test_settracefunc.rb b/test/ruby/test_settracefunc.rb
-index d6c6d06..fd4a75c 100644
---- a/test/ruby/test_settracefunc.rb
-+++ b/test/ruby/test_settracefunc.rb
-@@ -220,7 +220,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
-      3: })
-      4: begin
-      5:   raise TypeError, "error"
--     6: rescue TypeError
-+     6: rescue TypeError => $e
-      7: end
-      8: set_trace_func(nil)
-     EOF
-@@ -248,8 +248,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
-                  events.shift)
-     assert_equal(["c-return", 5, :set_backtrace, Exception],
-                  events.shift)
--    assert_equal(["raise", 5, :test_raise, TestSetTraceFunc],
--                 events.shift)
-+    assert_equal(["raise", 5, :test_raise, $e], events.shift)
-     assert_equal(["c-return", 5, :raise, Kernel],
-                  events.shift)
-     assert_equal(["c-call", 6, :===, Module],
 diff --git a/thread.c b/thread.c
-index 2cf1064..5ee10b8 100644
+index 2cf1064..16a94af 100644
 --- a/thread.c
 +++ b/thread.c
 @@ -4108,7 +4108,7 @@ set_threads_event_flags_i(st_data_t key, st_data_t val, st_data_t flag)
@@ -3769,7 +3696,69 @@ index 2cf1064..5ee10b8 100644
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -4333,19 +4333,48 @@ clear_trace_func_i(st_data_t key, st_data_t val, st_data_t flag)
+@@ -4147,31 +4147,40 @@ thread_exec_event_hooks(VALUE args, int running)
+     rb_thread_t *th = argp->th;
+     rb_event_flag_t flag = argp->event;
+     VALUE self = argp->self;
+-    ID id = argp->id;
+-    VALUE klass = argp->klass;
+-    const rb_event_flag_t wait_event = th->event_flags;
+-    int removed;
++    int do_tracing;
+ 
+     if (self == rb_mRubyVMFrozenCore) return 0;
+ 
+-    if ((wait_event & flag) && !(running & EVENT_RUNNING_THREAD)) {
+-	th->tracing |= EVENT_RUNNING_THREAD;
+-	removed = exec_event_hooks(th->event_hooks, flag, self, id, klass);
+-	th->tracing &= ~EVENT_RUNNING_THREAD;
+-	if (removed) {
+-	    remove_defered_event_hook(&th->event_hooks);
+-	}
+-    }
+-    if (wait_event & RUBY_EVENT_VM) {
+-	if (th->vm->event_hooks == NULL) {
+-	    th->event_flags &= (~RUBY_EVENT_VM);
+-	}
+-	else if (!(running & EVENT_RUNNING_VM)) {
+-	    th->tracing |= EVENT_RUNNING_VM;
+-	    removed = exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
+-	    th->tracing &= ~EVENT_RUNNING_VM;
++    /* Either we haven't turned off tracing via the thread mechanism
++       or we set a return trace and the event is a some kind of return. */
++    do_tracing = UNLIKELY( !(th->cfp->tracing & VM_FRAME_TRACE_OFF) ||
++			   ((flag & (RUBY_EVENT_C_RETURN | RUBY_EVENT_RETURN))
++			    && th->cfp->tracing & VM_FRAME_TRACE_RETURN) );
++
++    if (do_tracing) {
++	const rb_event_flag_t wait_event = th->event_flags;
++	ID id = argp->id;
++	int removed;
++	VALUE klass = argp->klass;
++	if ((wait_event & flag) && !(running & EVENT_RUNNING_THREAD)) {
++	    th->tracing |= EVENT_RUNNING_THREAD;
++	    removed = exec_event_hooks(th->event_hooks, flag, self, id, klass);
++	    th->tracing &= ~EVENT_RUNNING_THREAD;
+ 	    if (removed) {
+-		remove_defered_event_hook(&th->vm->event_hooks);
++		remove_defered_event_hook(&th->event_hooks);
++	    }
++	}
++	if (wait_event & RUBY_EVENT_VM) {
++	    if (th->vm->event_hooks == NULL) {
++		th->event_flags &= (~RUBY_EVENT_VM);
++	    }
++	    else if (!(running & EVENT_RUNNING_VM)) {
++		th->tracing |= EVENT_RUNNING_VM;
++		removed = exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
++		th->tracing &= ~EVENT_RUNNING_VM;
++		if (removed) {
++		    remove_defered_event_hook(&th->vm->event_hooks);
++		}
+ 	    }
+ 	}
+     }
+@@ -4333,19 +4342,48 @@ clear_trace_func_i(st_data_t key, st_data_t val, st_data_t flag)
      return ST_CONTINUE;
  }
  
@@ -3821,7 +3810,7 @@ index 2cf1064..5ee10b8 100644
   *
   *  Establishes _proc_ as the handler for tracing, or disables
   *  tracing if the parameter is +nil+. _proc_ takes up
-@@ -4359,6 +4388,8 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
+@@ -4359,6 +4397,8 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
   *  <code>line</code> (execute code on a new line), <code>raise</code>
   *  (raise an exception), and <code>return</code> (return from a Ruby
   *  method). Tracing is disabled within the context of _proc_.
@@ -3830,7 +3819,7 @@ index 2cf1064..5ee10b8 100644
   *
   *      class Test
   *	def test
-@@ -4383,13 +4414,29 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
+@@ -4383,13 +4423,29 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
   *	  line prog.rb:3        test     Test
   *	  line prog.rb:4        test     Test
   *      return prog.rb:4        test     Test
@@ -3861,7 +3850,7 @@ index 2cf1064..5ee10b8 100644
      if (NIL_P(trace)) {
  	GET_THREAD()->tracing = EVENT_RUNNING_NOTHING;
  	return Qnil;
-@@ -4399,18 +4446,18 @@ set_trace_func(VALUE obj, VALUE trace)
+@@ -4399,18 +4455,18 @@ set_trace_func(VALUE obj, VALUE trace)
  	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
      }
  
@@ -3883,7 +3872,7 @@ index 2cf1064..5ee10b8 100644
  }
  
  /*
-@@ -4422,18 +4469,26 @@ thread_add_trace_func(rb_thread_t *th, VALUE trace)
+@@ -4422,18 +4478,26 @@ thread_add_trace_func(rb_thread_t *th, VALUE trace)
   */
  
  static VALUE
@@ -3913,7 +3902,7 @@ index 2cf1064..5ee10b8 100644
   *
   *  Establishes _proc_ on _thr_ as the handler for tracing, or
   *  disables tracing if the parameter is +nil+.
-@@ -4441,9 +4496,17 @@ thread_add_trace_func_m(VALUE obj, VALUE trace)
+@@ -4441,9 +4505,17 @@ thread_add_trace_func_m(VALUE obj, VALUE trace)
   */
  
  static VALUE
@@ -3932,7 +3921,7 @@ index 2cf1064..5ee10b8 100644
      GetThreadPtr(obj, th);
      rb_threadptr_remove_event_hook(th, call_trace_func);
  
-@@ -4451,7 +4514,7 @@ thread_set_trace_func_m(VALUE obj, VALUE trace)
+@@ -4451,7 +4523,7 @@ thread_set_trace_func_m(VALUE obj, VALUE trace)
  	th->tracing = EVENT_RUNNING_NOTHING;
  	return Qnil;
      }
@@ -3941,7 +3930,7 @@ index 2cf1064..5ee10b8 100644
      return trace;
  }
  
-@@ -4465,6 +4528,8 @@ get_event_name(rb_event_flag_t event)
+@@ -4465,6 +4537,8 @@ get_event_name(rb_event_flag_t event)
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -3950,42 +3939,7 @@ index 2cf1064..5ee10b8 100644
        case RUBY_EVENT_CALL:
  	return "call";
        case RUBY_EVENT_RETURN:
-@@ -4475,6 +4540,12 @@ get_event_name(rb_event_flag_t event)
- 	return "c-return";
-       case RUBY_EVENT_RAISE:
- 	return "raise";
-+      case RUBY_EVENT_SWITCH:
-+        return "switch";
-+      case RUBY_EVENT_COVERAGE:
-+        return "coverage";
-+      case RUBY_EVENT_VM:
-+        return "vm";
-       default:
- 	return "unknown";
-     }
-@@ -4492,11 +4563,18 @@ call_trace_proc(VALUE args, int tracing)
-     ID id = 0;
-     VALUE klass = 0;
- 
--    if (p->klass != 0) {
-+    if (p->event == RUBY_EVENT_RAISE) {
-+        /* rb_thread_method_and_id() wants a place to store a klass
-+	   value which subsequently we will not use.  */
-+        VALUE junk_klass; 
-+	rb_thread_method_id_and_class(GET_THREAD(), &id, &junk_klass);
-+	/* When the event is RUBY_EVENT_RAISE, we have stored the raise
-+	   message as the trace-hook klass parameter. */ 
-+	klass = p->klass;
-+    } else if (p->klass != 0) {
- 	id = p->id;
- 	klass = p->klass;
--    }
--    else {
-+    } else {
- 	rb_thread_method_id_and_class(p->th, &id, &klass);
-     }
-     if (id == ID_ALLOCATOR)
-@@ -4579,6 +4657,37 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
+@@ -4579,6 +4653,37 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
      return result;
  }
  
@@ -4023,7 +3977,7 @@ index 2cf1064..5ee10b8 100644
  /*
   *  call-seq:
   *     thr.backtrace    -> array
-@@ -4696,9 +4805,15 @@ Init_Thread(void)
+@@ -4696,9 +4801,15 @@ Init_Thread(void)
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -4042,7 +3996,7 @@ index 2cf1064..5ee10b8 100644
  
      /* init thread core */
      {
-@@ -4832,4 +4947,3 @@ rb_reset_coverages(void)
+@@ -4832,4 +4943,3 @@ rb_reset_coverages(void)
      GET_VM()->coverages = Qfalse;
      rb_remove_event_hook(update_coverage);
  }
