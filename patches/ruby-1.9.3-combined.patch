@@ -1,0 +1,4265 @@
+diff --git a/brkpt.c b/brkpt.c
+new file mode 100644
+index 0000000..8e55325
+--- /dev/null
++++ b/brkpt.c
+@@ -0,0 +1,232 @@
++/**********************************************************************
++  brkpt.c - VM-assisted Breakpoint support 
++
++**********************************************************************/
++
++#include "ruby/ruby.h"
++
++#include "vm_core.h"
++#include "iseq.h"
++
++VALUE rb_cISeq;
++
++/* 
++ *  call-seq:
++ *  RubyVM::InstructionSequence#brkpt_alloc -> bool
++ *
++ *  Allocates a breakpoint byte vector of zeros for each 
++ *  instruction in the instruction sequence. True is returned if 
++ *  a vector was allocated, false if there already was one allocated,
++ *  and nil if there was some problem.
++ */
++
++VALUE
++iseq_brkpt_alloc(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    if (Qnil == iseqval) return Qnil;
++    else {
++	GetISeqPtr(iseqval, iseq);
++	if (iseq->breakpoints) {
++	    return Qfalse;
++	}
++	iseq->breakpoints = calloc( iseq->iseq_size, sizeof(unsigned char));
++	return Qtrue;
++    }
++}
++
++/* 
++ *  Document-method: RubyVM::InstructionSequence::brkpt_dealloc -> bool
++ *
++ *  call-seq:
++ *     RubyVM::InstructionSequence#dealloc -> bool
++ *
++ *  Deallocates a breakpoint byte vector of zeros for each 
++ *  instruction in the instruction sequence. True is returned if 
++ *  a vector was allocated, false if there already was one allocated,
++ *  and nil if there was some problem.
++ */
++VALUE
++iseq_brkpt_dealloc(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    if (Qnil == iseqval) return Qnil;
++    else {
++	GetISeqPtr(iseqval, iseq);
++	if (!iseq->breakpoints) {
++	    return Qfalse;
++	}
++	free(iseq->breakpoints);
++	iseq->breakpoints = NULL;
++	return Qtrue;
++    }
++}
++
++/* 
++ *  Checks that offsetval is in range and converts it to a positive
++ *  integer. An exception is raised if offsetval is invalid.
++ */
++static long unsigned int
++iseq_get_offset_internal(rb_iseq_t *iseq, VALUE offsetval)
++{
++    if (FIXNUM_P(offsetval)) {
++	long int offset = FIX2INT(offsetval);
++	unsigned long int uoffset;
++	unsigned long int size = iseq->iseq_size;
++
++	uoffset = (offset < 0) ? 
++	    (unsigned long int) size + offset :
++	    (unsigned long int) offset;
++	
++	/* FIXME: check that offset is at a valid instruction offset */
++	if (uoffset >= size) {
++	    rb_raise(rb_eTypeError, 
++		     "instruction sequence offset %lu should be in the range -%lu .. %lu",
++		     uoffset, size, size-1);
++	}
++	return uoffset;
++    } else {
++	rb_raise(rb_eTypeError, "type mismatch: %s given, Fixnum expected", 
++		 rb_class2name(CLASS_OF(offsetval)));
++	return 0; /* NOT REACHED */
++    }
++    
++}
++
++/* 
++ *  Document-method: RubyVM::InstructionSequence::brkpt_get(offset)
++ *
++ *  call-seq:
++ *     RubyVM::InstructionSequence#brkpt_get(offset) -> bool
++ *
++ *  Get a value of breakpoint of byte vector at +offset+.
++ *
++ *  True is returned if there is a breakpoint previously set, false
++ *  if not, and nil if there was some problem. Negative values of
++ *  <i>offset</i> count from the end of the instruction sequence.
++ */
++VALUE
++iseq_brkpt_get(VALUE iseqval, VALUE offsetval)
++{
++    if (Qnil != iseqval) {
++	rb_iseq_t *iseq;
++	unsigned long int uoffset;
++	
++	GetISeqPtr(iseqval, iseq);
++	if (!iseq->breakpoints) return Qfalse;
++
++	uoffset = iseq_get_offset_internal(iseq, offsetval);
++	      
++	/* FIXME: check that offset is at a valid instruction offset */
++	return (0 != iseq->breakpoints[uoffset]) ? Qtrue : Qfalse;
++    }
++    return Qnil;
++}
++
++static VALUE
++iseq_brkpt_set_unset(VALUE iseqval, VALUE offsetval, char val)
++{
++    if (Qnil != iseqval) {
++	rb_iseq_t *iseq;
++	unsigned long int uoffset;
++
++	GetISeqPtr(iseqval, iseq);
++	if (!iseq->breakpoints) {
++	    if (val) {
++		/* Set breakpoint requested */
++		VALUE alloc_ret = iseq_brkpt_alloc(iseqval);
++		if (!iseq->breakpoints) return alloc_ret;
++	    } else 
++		/* Unset breakpoint requested. */
++		return Qtrue;
++	}
++	uoffset = iseq_get_offset_internal(iseq, offsetval);
++
++	/* FIXME: check that offset is at a valid instruction offset */
++	iseq->breakpoints[uoffset] = val;
++	return Qtrue;
++    }
++    return Qnil;
++}
++
++/* 
++ *  Document-method: RubyVM::InstructionSequence::brkpt_set(offset) -> bool
++ *
++ *  call-seq:
++ *     RubyVM::InstructionSequence#brkpt_set(offset) -> bool
++ *
++ *  Set a breakpoint of byte vector at +offset+.
++ *
++ * +true+ is returned if the breakpoint is now set. An IndexError can or a
++ * TypeError can be raised if values are invalid.  Negative values of
++ * +offset+ count from the end of the instruction sequence.
++ */
++VALUE
++iseq_brkpt_set(VALUE iseqval, VALUE offsetval)
++{
++    return iseq_brkpt_set_unset(iseqval, offsetval, '\001');
++}
++
++/* 
++ *  Document-method: RubyVM::InstructionSequence::brkpt_unset
++ *
++ *  call-seq:
++ *     RubyVM::InstructionSequence#brkpt_unset(offset) -> bool
++ *
++ *  Unsets breakpoint of byte vector at +offset+.
++ * 
++ *  True is returned if the breakpoint is now unset. An IndexError can or
++ *  a TypeError can be raised if values are invalid.  However if the
++ *  instruction sequence does not have any breakpoints allocated, we
++ *  will not check whether the offset is valid in any way.
++ * 
++ *  Negative values of <i>offset</i> count from the end of the
++ *  instruction sequence. 
++ */
++VALUE
++iseq_brkpt_unset(VALUE iseqval, VALUE offsetval)
++{
++    return iseq_brkpt_set_unset(iseqval, offsetval, '\000');
++}
++
++/* 
++ *  Document-method: RubyVM::InstructionSequence::brkpts
++ *
++ *  call-seq:
++ *     RubyVM::InstructionSequence#brkpts -> Array
++ *
++ *  Returns a list of breakpoints in effect for this instruction sequence.
++ *  If no breakpoints have been allocated nil is returned. If breakpoints
++ *  were allocated but none are set then the empty array is returned.
++ */
++VALUE
++iseq_brkpts(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    if (Qnil == iseqval) return Qnil;
++    else {
++	GetISeqPtr(iseqval, iseq);
++	if (iseq->breakpoints) {
++	    unsigned int offset;
++	    VALUE ary = rb_ary_new();
++	    for (offset = 0; offset < iseq->iseq_size; offset++) {
++		if (iseq->breakpoints[offset])
++		    rb_ary_push(ary, INT2FIX(offset));
++	    }
++	    return ary;
++	} else {
++	    return Qnil;
++	}
++    }
++}
++
++void
++Init_Brkpt(void)
++{
++    rb_define_method(rb_cISeq, "brkpt_alloc",      iseq_brkpt_alloc, 0);
++    rb_define_method(rb_cISeq, "brkpt_dealloc",    iseq_brkpt_dealloc, 0);
++    rb_define_method(rb_cISeq, "brkpt_get",        iseq_brkpt_get, 1);
++    rb_define_method(rb_cISeq, "brkpt_set",        iseq_brkpt_set, 1);
++    rb_define_method(rb_cISeq, "brkpt_unset",      iseq_brkpt_unset, 1);
++    rb_define_method(rb_cISeq, "brkpts",           iseq_brkpts, 0);
++}
+diff --git a/common.mk b/common.mk
+index eb89a2b..ad3769b 100644
+--- a/common.mk
++++ b/common.mk
+@@ -40,6 +40,7 @@ ENC_MK        = enc.mk
+ 
+ COMMONOBJS    = array.$(OBJEXT) \
+ 		bignum.$(OBJEXT) \
++		brkpt.$(OBJEXT) \
+ 		class.$(OBJEXT) \
+ 		compar.$(OBJEXT) \
+ 		complex.$(OBJEXT) \
+@@ -92,6 +93,7 @@ COMMONOBJS    = array.$(OBJEXT) \
+ 		vm.$(OBJEXT) \
+ 		vm_dump.$(OBJEXT) \
+ 		thread.$(OBJEXT) \
++		frame.$(OBJEXT) \
+ 		cont.$(OBJEXT) \
+ 		$(BUILTIN_ENCOBJS) \
+ 		$(BUILTIN_TRANSOBJS) \
+diff --git a/compile.c b/compile.c
+index fb51053..8f7bc75 100644
+--- a/compile.c
++++ b/compile.c
+@@ -960,7 +960,7 @@ new_child_iseq(rb_iseq_t *iseq, NODE *node,
+ 
+     debugs("[new_child_iseq]> ---------------------------------------\n");
+     ret = rb_iseq_new_with_opt(node, name, iseq_filename(iseq->self), iseq_filepath(iseq->self), INT2FIX(line_no),
+-			       parent, type, iseq->compile_data->option);
++			       parent, type, Qnil, iseq->compile_data->option);
+     debugs("[new_child_iseq]< ---------------------------------------\n");
+     iseq_add_mark_object(iseq, ret);
+     return ret;
+diff --git a/frame.c b/frame.c
+new file mode 100644
+index 0000000..7ca859b
+--- /dev/null
++++ b/frame.c
+@@ -0,0 +1,1059 @@
++/* 
++ * Copyright (C) 2012 Rocky Bernstein
++ *
++ *  Access to Ruby's rb_control_frame_t and methods for working with that.
++ *  Things like getting a binding for a control frame. In Ruby 1.9.2 this code 
++ *  was in extension rb-threadframe
++ */
++
++#include <string.h>
++#include <signal.h>
++
++#include <ruby.h>
++#include "thread_pthread.h"
++#include "vm_core.h"
++#include "node.h"
++#include "gc.h"
++#include "iseq.h"
++
++/* From Ruby 1.9.2 thread.c: */
++rb_control_frame_t *
++thread_control_frame(rb_thread_t *th) 
++{
++  if (th == NULL || ((VALUE) th) == Qnil)
++    th = GET_THREAD(); /* main thread */
++  return rb_vm_get_ruby_level_next_cfp(th, th->cfp);
++}
++
++
++/* Frames can't be detached from the control frame they live in.
++   So we create a structure to contain the pair. 
++
++   The signature fields are used to weakly verify the validity of cfp.
++   it stores to contents of fields in cfp on allocation.  This, the
++   validity of "th" pointing to a valid thread, and cfp pointing to valid
++   location inside the frame area we use to check that this structure
++   is valid. */
++
++typedef struct 
++{
++    rb_thread_t *th;
++    rb_control_frame_t *cfp;
++    VALUE *signature1[3]; /* iseq, flag, self */
++    VALUE *signature2[1]; /* proc */
++} thread_frame_t;
++
++VALUE rb_cFrame;       /* RubyVM::Frame class */
++VALUE rb_eFrameError;  /* Error raised on invalid frames. */
++
++/* Static forward declarations */
++VALUE rb_frame_iseq(VALUE klass);
++static VALUE frame_prev_internal(rb_control_frame_t *prev_cfp, 
++					rb_thread_t *th, int n);
++static int   frame_stack_size_internal(rb_control_frame_t *cfp, 
++					      rb_thread_t *th);
++static VALUE frame_type(VALUE klass);
++
++
++extern void iseq_mark(void *ptr); /* in iseq.c */
++
++/* 
++  FIXME: I've never seen the following routine get called.
++  Why? 
++ */
++static void
++frame_mark(void *ptr)
++{
++    RUBY_MARK_ENTER("thread_frame");
++    if (ptr) {
++	thread_frame_t *tf = ptr;
++	if (tf && tf->cfp && RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
++	    iseq_mark(tf->cfp->iseq);
++	}
++    }
++}
++
++static void
++tf_free(void *ptr) 
++{
++    thread_frame_t *tf;
++    if (ptr) {
++	tf = ptr;
++	/* All valid frame types have 0x1 set so we will use this.
++	   Warning: this is an undocumented assumption which may someday
++	   be wrong. */
++	if (tf->cfp && ((tf->cfp->flag & 0x1) == 0) && 
++	    RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) 
++	    tf->cfp->iseq->in_use--;
++	xfree(ptr);
++    }
++}
++
++/* 
++   Allocate a RubyVM::Frame used by new. Less common than
++   thread_frame_t_alloc(). The caller is responsible for filling in
++   the C struct data. Below we wrap NULL.
++ */
++static VALUE
++frame_alloc(VALUE klass)
++{
++    return Data_Wrap_Struct(klass, frame_mark, tf_free, NULL);
++}
++
++/* 
++   Allocate a RubyVM::Frame and set its threadframe structure.
++   This is the more common allocate routine since one normally doesn't
++   create a threadframe without <i>first</i> having something to put in it.
++ */
++static thread_frame_t *
++frame_t_alloc(VALUE tfval)
++{
++    thread_frame_t *tf = ALLOC(thread_frame_t);
++    memset(tf, 0, sizeof(thread_frame_t));
++    DATA_PTR(tfval) = tf;
++    return tf;
++}
++
++/* 
++   Check to see if tf is valid. +true+ is returned if we can't prove
++   the frame is invalide. +nil+ or +false+ is returned if something is not
++   right. In those cases where we don't know that we have a valid frame,
++   we also NULL out the cfp if that hasn't been done already. This will
++   keep garbage collection from marking bad data.
++ */
++static VALUE
++frame_invalid_internal(thread_frame_t *tf)
++{
++    int cmp;
++
++    /* All valid frame types have 0x1 set so we will use this.
++       Warning: this is an undocumented assumption which may someday
++       be wrong. */
++    if (!tf->cfp) return Qtrue;
++    if ((tf->cfp->flag & 0x1) == 0) {
++	tf->cfp = NULL;
++	return Qtrue;
++    }
++
++    if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, tf->cfp)) {
++	tf->cfp = NULL;
++	return Qtrue;
++    }
++    if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
++	cmp = (0 == memcmp(tf->signature1, &(tf->cfp->iseq), 
++			   sizeof(tf->signature1)) &&
++	       0 == memcmp(tf->signature2, &(tf->cfp->proc), 
++			   sizeof(tf->signature2)));
++	if (cmp) return Qfalse;
++	tf->cfp = NULL;
++	return Qtrue;
++    } else {
++	/* FIXME: figure out what to do here. Probably more work is
++	 * needed in frame_prev_internal.
++	 */
++	return Qnil;
++    }
++}
++
++/* 
++   COPY_SIGNATURE saves some invariant data from the frame for
++   comparison later when the frame is used again.
++
++   Even though fields like iseq may not be valid for things C function
++   frames, nevertheless all we care about is whether they could change
++   or not over the course of evaluation. Hving more data to compare
++   against to verify whether a frame is valid is helpful. If the data
++   is random unitialized data, that's even better. Again just so long as
++   that random data doesn't change in the course of normal use.
++
++   FIXME: There are probably more fields which could be saved.  */
++#define COPY_SIGNATURE(tf, cfp)					  \
++    memcpy(tf->signature1, &(cfp->iseq), sizeof(tf->signature1)); \
++    memcpy(tf->signature2, &(cfp->proc), sizeof(tf->signature2)) 
++    
++#define SAVE_FRAME(TF, TH)						\
++    tf->th = TH;							\
++    tf->cfp = thread_control_frame(tf->th);				\
++    tf->cfp->iseq->in_use++;						\
++    COPY_SIGNATURE(tf, tf->cfp);					\
++
++#define GET_THREAD_PTR \
++    rb_thread_t *th; \
++    GetThreadPtr(thval, th)
++
++
++/*
++ *  call-seq:
++ *     RubyVM::Frame#threadframe  -> frame_object
++ * 
++ *  Returns a RubyVM::Frame object for the given thread.
++ */
++static VALUE
++frame_threadframe(VALUE thval)
++{
++    thread_frame_t *tf = ALLOC(thread_frame_t);
++    GET_THREAD_PTR;
++    memset(tf, 0, sizeof(thread_frame_t));
++    SAVE_FRAME(tf, th) ;
++    return Data_Wrap_Struct(rb_cFrame, frame_mark, tf_free, tf);
++}
++
++#define FRAME_SETUP \
++    thread_frame_t *tf; \
++    Data_Get_Struct(klass, thread_frame_t, tf)
++
++#define FRAME_SETUP_WITH_ERROR			    \
++    FRAME_SETUP;				    \
++    if (Qtrue == frame_invalid_internal(tf)) \
++	rb_raise(rb_eFrameError, "invalid frame")
++
++#define FRAME_FIELD_METHOD(FIELD)	\
++static VALUE					\
++frame_##FIELD(VALUE klass)		\
++{						\
++    FRAME_SETUP ;			\
++    return tf->cfp->FIELD;			\
++}
++
++#define FRAME_FP_METHOD(REG)				\
++VALUE						                \
++frame_##REG(VALUE klass, VALUE index)			\
++{								\
++    if (!FIXNUM_P(index)) {					\
++	rb_raise(rb_eTypeError, "integer argument expected");	\
++    } else {							\
++        long int i = FIX2INT(index);				\
++	FRAME_SETUP_WITH_ERROR ;					\
++	/* FIXME: check index is within range. */		\
++	return tf->cfp->REG[-i]; /* stack  grows "down" */	\
++    }								\
++}
++
++#if 0
++/*
++ *  call-seq:
++ *     RubyVM::Frame#sp(n)  -> object
++ * 
++ * Returns a RubyVM object stored at stack position <i>i</i>. The top object
++ * is position 0. 1 is the next object.
++ */
++VALUE 
++thread_frame_sp(VALUE klass, VALUE index) 
++{
++    /* handled by THREAD_FRAME_FP_METHOD macro;  */
++}
++#endif
++/* The above declaration is to make RDOC happy. 
++   FIXME: Figure out a way to check if "index" is valid!
++*/
++FRAME_FP_METHOD(sp)
++
++static long int
++frame_sp_size_internal(thread_frame_t *tf) 
++{
++    rb_control_frame_t *prev_cfp;
++    long int ret_val;
++    prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(tf->cfp);
++    if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(tf->th, prev_cfp))
++	return Qnil;
++    ret_val = tf->cfp->sp - prev_cfp->sp - 1;
++    /* FIXME: Why For C Functions we tack on 2 for this RubyVM::ENV? */
++    if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) ret_val += 2;
++    return ret_val;
++}
++
++/*
++ *  call-seq:
++ *     RubyVM::Frame#sp_size  -> FixNum
++ * 
++ * Returns the number of stack or sp entries in the current
++ * frame. That is the, number values that have been pushed onto the
++ * stack since the current call.  This is different than
++ * RubyVM::Frame#stack_size which counts the number of frames in
++ * the call stack. +nil+ is returned if there is an error.
++ */
++VALUE 
++frame_sp_size(VALUE klass) 
++{
++    FRAME_SETUP_WITH_ERROR ;
++    return INT2FIX(frame_sp_size_internal(tf));
++}
++
++/*
++ *  call-seq:
++ *     RubyVM::Frame#sp_set(n, newvalue)  -> object
++ * 
++ * Sets VM stack position <i>n</i> to <i>newvalue</i>. The top object
++ * is position 0. 1 is the next object.
++ */
++static VALUE 
++frame_sp_set(VALUE klass, VALUE index, VALUE newvalue)
++{
++    if (!FIXNUM_P(index)) {
++	rb_raise(rb_eTypeError, "integer argument expected");
++    } else {
++        long int i = FIX2INT(index);
++	FRAME_SETUP_WITH_ERROR ;
++	if (i <= frame_sp_size_internal(tf)) {
++	    /* stack  grows "down" */
++	    tf->cfp->sp[-i] = newvalue;
++	} else {
++	    rb_raise(rb_eArgError, "argument too big");
++	}
++	return newvalue;
++    }
++}
++
++#ifndef NO_reg_pc
++/*
++ *  call-seq:
++ *     RubyVM::Frame#pc_offset=
++ * 
++ * Sets pc to the offset given. 
++ * WARNING, this is pretty dangerous. You need to set this to a valid
++ * instruction offset since little checking is done.
++ */
++VALUE
++rb_frame_set_pc_offset(VALUE klass, VALUE offset_val)
++{
++    int offset;
++    FRAME_SETUP_WITH_ERROR ;
++
++    if (!FIXNUM_P(offset_val)) {
++	rb_raise(rb_eTypeError, "integer argument expected");
++    } else {
++        offset = FIX2INT(offset_val);
++	if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq) && 
++	    (tf->cfp->pc != 0 && tf->cfp->iseq != 0)) {
++            tf->cfp->pc = tf->cfp->iseq->iseq_encoded + offset;
++	}
++    }
++    return Qtrue;
++}
++#endif
++
++#if 0
++/*
++ *  call-seq:
++ *     RubyVM::Frame#flag -> Fixnum
++ *
++ *  Returns the frame flags, a FIXNUM which should be interpreted as a
++ *  bitmask.
++ *
++ */
++static VALUE frame_flag(VALUE klass) 
++{ 
++    /* handled by FRAME_FIELD_METHOD macro;  */
++}
++/* The above declaration is to make RDOC happy. */
++#endif
++FRAME_FIELD_METHOD(flag) ;
++
++/*
++ *  call-seq:
++ *     RubyVM::Frame#argc -> Fixnum
++ *
++ *  Returns the number of arguments that were actually passed 
++ *  in the call to this frame. This differs from arity when
++ *  arity can take optional or "splat"ted parameters.
++ *
++ */
++VALUE
++rb_frame_argc(VALUE klass)
++{
++    FRAME_SETUP_WITH_ERROR;
++
++    if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
++	return INT2FIX(tf->cfp->me->def->body.cfunc.actual_argc);
++    } else if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
++	return rb_iseq_argc(rb_frame_iseq(klass));
++    } else
++	return Qnil;
++}
++
++/*
++ *  call-seq:
++ *     RubyVM::Frame#arity -> Fixnum
++ *
++ *  Returns the number of arguments that would not be ignored.
++ *  See Ruby 1.9 proc_arity of proc.c
++ *
++ */
++static VALUE
++rb_frame_arity(VALUE klass)
++{
++    FRAME_SETUP_WITH_ERROR ;
++
++    if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) {
++	return rb_iseq_arity(rb_frame_iseq(klass));
++    } else if (RUBYVM_CFUNC_FRAME_P(tf->cfp)) {
++	return INT2FIX(tf->cfp->me->def->body.cfunc.argc);
++    } else
++	return Qnil;
++}
++
++/*
++ *  call-seq:
++ *     RubyVM::Frame#binding   -> binding
++ *
++ *  Returns a binding for a given thread frame.
++ */
++VALUE
++rb_frame_binding(VALUE klass)
++{
++    FRAME_SETUP_WITH_ERROR ;
++
++    {
++	rb_binding_t *bind = 0;
++	VALUE bindval = rb_binding_frame_new(tf->th, tf->cfp);
++	GetBindingPtr(bindval, bind);
++	bind->line_no = rb_vm_get_sourceline(tf->cfp);
++	if (tf->cfp->iseq) {
++	    bind->filename = tf->cfp->iseq->filename;
++	} else {
++	    bind->filename = tf->th->vm->progname;
++	}
++	return bindval;
++    }    
++    /* NOTREACHED */
++    return Qnil;
++}
++
++/*
++ *  call-seq:
++ *     RubyVM::Frame#equal(tf)   -> bool
++ *
++ *  Returns true if two thread frames are equal.
++ */
++static VALUE
++frame_equal(VALUE klass, VALUE tfval2)
++{
++    FRAME_SETUP_WITH_ERROR ;
++
++    {
++	thread_frame_t *tf2;
++	if (!rb_obj_is_kind_of(tfval2, rb_cFrame)) {
++	rb_raise(rb_eTypeError, 
++		 "comparison argument must be an instance of %s (is %s)",
++		 rb_obj_classname(klass), rb_obj_classname(tfval2));
++	}
++	Data_Get_Struct(tfval2, thread_frame_t, tf2);
++	if (Qtrue == frame_invalid_internal(tf2))
++	    rb_raise(rb_eFrameError, "invalid frame");
++
++	/* And just when you thought I'd never get around to the
++	   actual comparison... 
++
++	   Comparing cfp's should be enough, but we'll throw in the thread
++	   for good measure.
++	*/
++	return (tf->th == tf2->th && tf->cfp == tf2->cfp) 
++	    ? Qtrue : Qfalse;
++    }
++    /* NOTREACHED */
++    return Qnil;
++}
++
++/*
++ *  call-seq:
++ *     RubyVM::Frame.new(thread)          -> frame_object
++ *
++ *  Returns an RubyVM::Frame object which can contains dynamic frame
++ *  information. Don't use this directly. Instead use one of the 
++ *  class methods.
++ *
++ *    RubyVM::Frame::current.flag          => 72
++ *    RubyVM::Frame::current.proc          => false
++ *    RubyVM::Frame::current.self          => 'main'
++ */
++static VALUE
++frame_initialize(VALUE tfval, VALUE thval)
++{
++    thread_frame_t *tf = frame_t_alloc(tfval);
++    GET_THREAD_PTR ;
++    memset(tf, 0, sizeof(thread_frame_t));
++    DATA_PTR(tfval) = tf;
++    SAVE_FRAME(tf, th) ;
++    return tfval;
++}
++
++/*
++ * call-seq:
++ *    RubyVM::Frame#invalid? -> Boolean
++ *
++ * Returns true if the frame is no longer valid. On the other hand,
++ * since the test we use is weak, returning false might not mean the
++ * frame is valid, just that we can't disprove that it is not invalid.
++ * 
++ * It is suggested that frames are used in a way that ensures they will
++ * be valid. In particular frames should have local scope and frames to 
++ * threads other than the running one should be stopped while the frame 
++ * variable is active.
++ */
++static VALUE
++frame_invalid(VALUE klass)
++{
++    FRAME_SETUP ;
++    return frame_invalid_internal(tf);
++}
++
++static VALUE
++frame_is_return_stop(VALUE klass)
++{
++    FRAME_SETUP ;
++    return (tf->cfp->tracing & VM_FRAME_TRACE_RETURN) ? Qtrue : Qfalse;
++}
++
++static VALUE
++frame_is_trace_off(VALUE klass)
++{
++    FRAME_SETUP ;
++    return (tf->cfp->tracing & VM_FRAME_TRACE_OFF) ? Qtrue : Qfalse;
++}
++
++/*
++ *  call-seq:
++ *     RubyVM::Frame#method  -> String or nil
++ * 
++ * Returns the method associated with the frame or nil of none.
++ * FrameError can be raised if the threadframe
++ * object is no longer valid.
++ */
++VALUE
++rb_frame_method(VALUE klass)
++{
++    FRAME_SETUP_WITH_ERROR ;			\
++
++    switch (VM_FRAME_TYPE(tf->cfp)) {
++      case VM_FRAME_MAGIC_BLOCK:
++      case VM_FRAME_MAGIC_EVAL:
++      case VM_FRAME_MAGIC_LAMBDA:
++      case VM_FRAME_MAGIC_METHOD:
++      case VM_FRAME_MAGIC_TOP:
++	if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq)) 
++	    return tf->cfp->iseq->name;
++	else
++	    return Qnil; /* unknown */
++    case VM_FRAME_MAGIC_CFUNC: {
++          const char *method_name = rb_id2name(tf->cfp->me->def->original_id);
++	  return rb_str_new2((NULL == method_name) ? "" : method_name );
++        }
++      default:
++	/* FIXME */
++	return frame_type(klass);
++    }
++    /* NOTREACHED */
++    return Qnil;
++}
++
++/*
++ *  call-seq:
++ *     RubyVM::Frame#pc_offset  -> Fixnum
++ * 
++ * Returns the offset inside the iseq or "program-counter offset" or -1
++ * If invalid/unstarted. FrameError can be raised if the threadframe
++ * object is no longer valid.
++ */
++VALUE
++rb_frame_pc_offset(VALUE klass)
++{
++    unsigned long pc;
++    FRAME_SETUP_WITH_ERROR ;
++
++    if (RUBY_VM_NORMAL_ISEQ_P(tf->cfp->iseq) && 
++	(tf->cfp->pc != 0 && tf->cfp->iseq != 0)) {
++	pc = tf->cfp->pc - tf->cfp->iseq->iseq_encoded;
++	return INT2FIX(pc);
++    } else {
++        return INT2FIX(-1);
++    }
++}
++
++
++/*
++ *  call-seq:
++ *     RubyVM::Frame#iseq           -> ISeq
++ *
++ *  Returns an instruction sequence object from the instruction sequence
++ *  found inside the ThreadFrame object or nil if there is none.
++ *
++ */
++VALUE
++rb_frame_iseq(VALUE klass)
++{
++    rb_iseq_t *iseq;
++    VALUE rb_iseq;
++    FRAME_SETUP_WITH_ERROR ;
++    iseq = tf->cfp->iseq;
++    if (!iseq) return Qnil;
++    rb_iseq = iseq_alloc_shared(rb_cISeq);
++    RDATA(rb_iseq)->data = iseq;
++    return rb_iseq;
++}
++
++/* 
++   See the above frame_prev comment for what's going on here.
++*/
++VALUE
++rb_frame_next(VALUE klass)
++{
++    rb_control_frame_t *cfp = NULL;
++    FRAME_SETUP_WITH_ERROR ;
++    cfp = RUBY_VM_NEXT_CONTROL_FRAME(tf->cfp);
++
++    if ((void *)(cfp) <= (void *)(tf->th->stack))
++        return Qnil;
++    else {
++        thread_frame_t *next_tf;
++        VALUE next = frame_alloc(rb_cFrame);
++	frame_t_alloc(next);
++	Data_Get_Struct(next, thread_frame_t, next_tf);
++	next_tf->th  = tf->th;
++	next_tf->cfp = cfp;
++	COPY_SIGNATURE(tf, cfp);
++	return next;
++    }
++}
++
++/*
++ *  call-seq:
++ *     RubyVM::Frame#prev(n=1) -> frame_object
++ *
++ *  Returns a RubyVM::Frame object for the frame prior to the
++ *  ThreadFrame object or +nil+ if there is none. Setting n=0 just
++ *  returns the object passed.  A negative starts from the end. So
++ *  prev(-1) is the top frame.  Counts outside of the range
++ *  -stack_size .. stack_size-1 exceed the the range of the stack and
++ *  return nil.
++ *
++ */
++VALUE
++frame_prev(int argc, VALUE *argv, VALUE klass)
++{
++    VALUE nv;
++    int n;
++
++    FRAME_SETUP_WITH_ERROR ;
++
++    rb_scan_args(argc, argv, "01", &nv);
++
++    if (Qnil == nv)
++	n = 1;
++    else if (!FIXNUM_P(nv)) {
++	rb_raise(rb_eTypeError, "integer argument expected");
++    } else
++	n = FIX2INT(nv);
++    
++    if (n < 0) {
++      int stack_size = frame_stack_size_internal(tf->cfp, tf->th);
++      if (-n > stack_size) return Qnil;
++      n = stack_size + n;
++    }
++    if (n == 0) return klass;
++    return frame_prev_internal(tf->cfp, tf->th, n);
++}
++
++/* 
++   See the above frame_prev comment for what's going on here.
++*/
++static VALUE
++frame_prev_internal(rb_control_frame_t *prev_cfp, rb_thread_t *th, 
++			   int n)
++{
++  thread_frame_t *tf;
++  VALUE prev;
++  rb_control_frame_t *cfp = NULL;
++
++  for (; n > 0; n--) {
++    cfp = prev_cfp;
++    prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
++    if (VM_FRAME_TYPE(prev_cfp) == VM_FRAME_MAGIC_FINISH) {
++	prev_cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(prev_cfp);
++    }
++    if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, prev_cfp))
++	return Qnil;
++  }
++  if (!cfp) return Qnil;
++
++  prev = frame_alloc(rb_cFrame);
++  frame_t_alloc(prev);
++  Data_Get_Struct(prev, thread_frame_t, tf);
++  tf->th  = th;
++  tf->cfp = prev_cfp;
++  COPY_SIGNATURE(tf, tf->cfp);
++  return prev;
++}
++
++FRAME_FIELD_METHOD(proc) ;
++FRAME_FIELD_METHOD(self) ;
++
++static VALUE
++frame_return_stop_set(VALUE klass, VALUE boolval)
++{
++    short int boolmask = !(NIL_P(boolval) || Qfalse == boolval);
++    FRAME_SETUP ;
++    
++    if (boolmask)
++	tf->cfp->tracing |=  VM_FRAME_TRACE_RETURN;
++    else
++	tf->cfp->tracing &= ~VM_FRAME_TRACE_RETURN;
++    return boolval;
++}
++
++static VALUE
++frame_trace_off_set(VALUE klass, VALUE boolval)
++{
++    short int boolmask = !(NIL_P(boolval) || Qfalse == boolval);
++    FRAME_SETUP ;
++    
++    if (boolmask)
++	tf->cfp->tracing |=  VM_FRAME_TRACE_OFF;
++    else
++	tf->cfp->tracing &= ~VM_FRAME_TRACE_OFF;
++    return boolval;
++}
++
++/*
++ *  call-seq:
++ *     RubyVM::Frame::current  -> frame_object
++ * 
++ *  Returns a ThreadFrame object for the currently executing thread.
++ *  Same as: RubyVM::Frame.new(Thread::current)
++ */
++static VALUE
++frame_s_current(VALUE klass)
++{
++    thread_frame_t *tf = frame_t_alloc(klass);
++    SAVE_FRAME(tf, ruby_current_thread) ;
++    return Data_Wrap_Struct(klass, frame_mark, tf_free, tf);
++}
++
++/*
++ *  call-seq:
++ *     RubyVM::Frame::prev(thread)     -> threadframe_object
++ *     RubyVM::Frame::prev(thread, n)  -> threadframe_object
++ *     RubyVM::Frame::prev             -> threadframe_object
++ *     RubyVM::Frame::prev(n)          -> threadframe_object
++ *
++ *  In the first form, we return a RubyVM::Frame prior to the
++ *  Thread object passed. That is we go back one frame from the
++ *  current frame.
++ *
++ *  In the second form we try to go back that many thread frames. 
++ *
++ *  In the the third form, the current thread is assumed, and like the
++ *  first form we go back one frame.
++ * 
++ *  The fourth form, like the third form, we assume the current
++ *  thread.  And like the first form we go back we try to back a
++ *  FixNum number of entries.
++ *
++ *  When count +n+ is given 1 is synonymous with the previous frame
++ *  and 0 is invalid. If the +n+ is negative, we count from the bottom
++ *  of the frame stack.
++ *
++ *  In all cases we return a RubyVM::Frame or nil if we can't 
++ *  go back (or forward for a negative +n+) that many frames. 
++ *
++ */
++static VALUE
++frame_s_prev(int argc, VALUE *argv, VALUE klass)
++{
++    VALUE first_val;
++    VALUE second_val;
++    VALUE thval = Qnil;
++    int   prev_count = 0;
++    rb_thread_t *th = NULL;
++
++    /* Such complicated options processing. But we do want this
++       routine to be convenient. */
++    rb_scan_args(argc, argv, "02", &first_val, &second_val);
++    switch (argc) {
++      case 0:
++	th = ruby_current_thread;
++        /* Don't count the RubyVM::Frame.prev call */
++	prev_count = 2; 
++	break;
++      case 1:
++	if (FIXNUM_P(first_val)) {
++	    prev_count = FIX2INT(first_val);
++	    if (prev_count > 0) prev_count++ ;
++	    th = ruby_current_thread;
++	} else 
++	    if (Qtrue == rb_obj_is_kind_of(first_val, rb_cThread)) {
++		GetThreadPtr(first_val, th);
++               /* Don't count the RubyVM::Frame.prev call */
++		prev_count = 1; 
++	    } else {
++		rb_raise(rb_eTypeError, 
++			 "FixNum or ThreadFrame object expected for first argument");
++	    }
++	break;
++      case 2: 
++	if (Qtrue == rb_obj_is_kind_of(first_val, rb_cThread)) {
++	    GetThreadPtr(first_val, th);
++	} else {
++	    rb_raise(rb_eTypeError, 
++		     "ThreadFrame object expected for first argument");
++	}
++	if (FIXNUM_P(second_val)) {
++	    prev_count = FIX2INT(second_val);
++	} else 
++	    rb_raise(rb_eTypeError, 
++		     "FixNum previous count expected for second argument");
++	break;
++      default:
++	rb_raise(rb_eArgError, "wrong number of arguments (%d for 1..2)", argc);
++    }
++    
++    if (0 == prev_count) {
++	rb_raise(rb_eArgError, 
++		 "previous count can not be 0. Use current instead of prev");
++    }
++
++    if (0 > prev_count) {
++      int stack_size = frame_stack_size_internal(th->cfp, th);
++      if (-prev_count > stack_size) return Qnil;
++      prev_count = stack_size + prev_count;
++    }
++
++    return frame_prev_internal(th->cfp, th, prev_count);
++}
++
++
++/*
++ * call-seq:
++ *    RubyVM::Frame#source_container() -> [Type, String]
++ *
++ * Returns a tuple representing kind of container, e.g. file
++ * eval'd string object, and the name of the container. If file,
++ * it would be a file name. If an eval'd string it might be the string.
++ */
++static VALUE
++frame_source_container(VALUE klass)
++{
++    VALUE filename = Qnil;
++    const char *contain_type;
++    rb_control_frame_t *cfp;
++    int is_eval = 0;
++
++    FRAME_SETUP ;
++
++    for ( cfp = tf->cfp; cfp && !cfp->iseq && RUBYVM_CFUNC_FRAME_P(cfp); 
++	  cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp) ) ;
++
++
++    if (cfp->iseq) 
++	filename = cfp->iseq->filename;
++    else {
++	if (tf->th->vm->progname) 
++	    filename = tf->th->vm->progname;
++	else 
++	    return Qnil;
++    }
++    
++    contain_type = source_container_type(filename);
++
++    is_eval = ( 0 == strcmp("string", contain_type)
++		&& VM_FRAME_MAGIC_EVAL == VM_FRAME_TYPE(tf->cfp) );
++
++    if ( is_eval ) {
++	/* Try to pick up string from stack. */
++	VALUE prev = frame_prev_internal(tf->cfp, tf->th, 1);
++	thread_frame_t *prev_tf;
++	Data_Get_Struct(prev, thread_frame_t, prev_tf);
++	
++	if (RUBYVM_CFUNC_FRAME_P(prev_tf->cfp) && 
++	    frame_stack_size_internal(prev_tf->cfp, prev_tf->th) >= 3)
++	    filename = frame_sp(prev, INT2FIX(3));
++    }
++
++    return rb_ary_new3(2, rb_str_new2(contain_type), filename);
++}
++
++/*
++ * call-seq:
++ *    RubyVM::Frame#source_location() -> Array 
++ *
++ * Returns an array of source location positions that match
++ * +tf.instruction_offset+. A source location position is left
++ * implementation dependent. It could be line number, a line number
++ * and start and end column, or a start line number, start column, end
++ * line number, end column.
++ */
++VALUE
++rb_frame_source_location(VALUE klass)
++{
++    rb_control_frame_t *cfp;
++    FRAME_SETUP ;
++
++    /* For now, it appears like we have line numbers only when there
++       is an instruction sequence. The heuristic that is used by
++       vm_backtrace_each of vm.c seems to be to use the line number of
++       the closest control frame that has an instruction sequence.
++       FIXME: investigate whether this is always the most accurate location. If
++       not, improve.
++    */
++    for ( cfp = tf->cfp; cfp && !cfp->iseq && RUBYVM_CFUNC_FRAME_P(cfp); 
++	  cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp) ) ;
++    
++    return (cfp->iseq)
++	/* NOTE: for now sourceline returns a single int. In the
++	   future it might return an array of ints.
++	*/
++	? rb_ary_new3(1, INT2FIX(rb_vm_get_sourceline(cfp)))
++	: Qnil;
++}
++
++/*
++ *  call-seq:
++ *     RubyVM::Frame#stack_size  -> Fixnum;
++ *
++ *  Returns a count of the number of frames including the current one. 
++ *  ThreadFrame#prev(ThreadFrame#stack_size) = nil
++ *  ThreadFrame#prev(ThreadFrame#stack_size-1) = top frame
++ *  
++ * 
++ */
++static VALUE
++frame_stack_size(VALUE klass)
++{
++    FRAME_SETUP ;
++    return INT2FIX(frame_stack_size_internal(tf->cfp, tf->th));
++}
++
++/* 
++   See the above frame_stack_size comment for what's going on here.
++*/
++static int
++frame_stack_size_internal(rb_control_frame_t *cfp, rb_thread_t *th)
++{
++    int n;
++    for ( n = 0; 
++	  !RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, cfp);
++	  cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp)) {
++	n++;
++	if (VM_FRAME_TYPE(cfp) == VM_FRAME_MAGIC_FINISH) {
++	    cfp = RUBY_VM_PREVIOUS_CONTROL_FRAME(cfp);
++	    if (RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, cfp))
++		break;
++	}
++    }
++    return n;
++}
++
++/*
++ *  call-seq:
++ *     RubyVM::Frame#thread   -> thread
++ *
++ *  Returns the thread object for the thread frame.
++ */
++static VALUE
++frame_thread(VALUE klass)
++{
++    FRAME_SETUP ;
++    return tf->th->self;
++}
++
++/* Extracted from vm_dump.c. Would be nice to have this routine put there
++   and used in both places. */
++static const char *
++frame_magic2str(rb_control_frame_t *cfp) 
++{
++    switch (VM_FRAME_TYPE(cfp)) {
++      case VM_FRAME_MAGIC_TOP:
++	return "TOP";
++      case VM_FRAME_MAGIC_METHOD:
++	return "METHOD";
++      case VM_FRAME_MAGIC_CLASS:
++	return "CLASS";
++      case VM_FRAME_MAGIC_BLOCK:
++	return "BLOCK";
++      case VM_FRAME_MAGIC_FINISH:
++	return "FINISH";
++      case VM_FRAME_MAGIC_CFUNC:
++	return "CFUNC";
++      case VM_FRAME_MAGIC_PROC:
++	return "PROC";
++      case VM_FRAME_MAGIC_LAMBDA:
++	return "LAMBDA";
++      case VM_FRAME_MAGIC_IFUNC:
++	return "IFUNC";
++      case VM_FRAME_MAGIC_EVAL:
++	return "EVAL";
++      case 0:
++	return "------";
++      default:
++	return "(none)";
++    }
++    /* NOTREACHED */
++    return "?";
++}
++
++/*
++ *  call-seq:
++ *     ThreadFrame#type  -> String 
++ * 
++ * Returns the kind of frame. Basically interprets VM_FRAME_MAGIC for
++ * tf->cfp->flag
++ */
++static VALUE
++frame_type(VALUE klass)
++{
++    FRAME_SETUP ;			
++    return rb_str_new2(frame_magic2str(tf->cfp));
++}
++
++void
++Init_Frame(void)
++{
++    /* Additions to RubyVM */
++    rb_cFrame = rb_define_class_under(rb_cRubyVM, "Frame", rb_cObject);
++    rb_define_method(rb_cThread, "frame", frame_threadframe, 0);
++
++    /* RubyVM::Frame */
++    rb_define_alloc_func(rb_cFrame, frame_alloc);
++
++    rb_define_method(rb_cFrame, "invalid?",     frame_invalid, 0);
++
++    rb_define_method(rb_cFrame, "argc",         rb_frame_argc, 0);
++    rb_define_method(rb_cFrame, "arity",        rb_frame_arity, 0);
++    rb_define_method(rb_cFrame, "binding",      rb_frame_binding, 0);
++    rb_define_method(rb_cFrame, "flag",         frame_flag, 0);
++    rb_define_method(rb_cFrame, "initialize",   frame_initialize, 1);
++    rb_define_method(rb_cFrame, "iseq",         rb_frame_iseq, 0);
++    rb_define_method(rb_cFrame, "method",       rb_frame_method, 0);
++    rb_define_method(rb_cFrame, "next",         rb_frame_next, 0);
++    rb_define_method(rb_cFrame, "pc_offset",    rb_frame_pc_offset, 0);
++    rb_define_method(rb_cFrame, "prev",         frame_prev, -1);
++    rb_define_method(rb_cFrame, "proc",         frame_proc, 0);
++    rb_define_method(rb_cFrame, "return_stop=", frame_return_stop_set, 1);
++    rb_define_method(rb_cFrame, "return_stop?", frame_is_return_stop, 0);
++    rb_define_method(rb_cFrame, "self", frame_self, 0);
++    rb_define_method(rb_cFrame, "source_container", 
++		     frame_source_container, 0);
++    rb_define_method(rb_cFrame, "source_location", rb_frame_source_location, 0);
++
++    /* sp[] and sp[]= would be neater, but that would require making sp an
++       object which I am not sure I want to do.
++     */
++    rb_define_method(rb_cFrame, "sp",     frame_sp, 1);
++    rb_define_method(rb_cFrame, "sp_set", frame_sp_set, 2);
++    rb_define_method(rb_cFrame, "sp_size", frame_sp_size, 0);
++
++    /* I think I like the more explicit stack_size over size or length. */
++    rb_define_method(rb_cFrame, "stack_size", 
++		     frame_stack_size, 0);
++
++    rb_define_method(rb_cFrame, "thread", frame_thread, 0);
++    rb_define_method(rb_cFrame, "trace_off?", frame_is_trace_off, 0);
++    rb_define_method(rb_cFrame, "trace_off=", frame_trace_off_set, 1);
++    rb_define_method(rb_cFrame, "type", frame_type, 0);
++
++    rb_define_method(rb_cFrame, "equal?", frame_equal, 1);
++
++    rb_eFrameError = rb_define_class("FrameError", rb_eStandardError);
++
++    rb_define_singleton_method(rb_cFrame, "prev", frame_s_prev, -1);
++    rb_define_singleton_method(rb_cFrame, "current", frame_s_current, 0);
++}
+diff --git a/include/ruby/ruby.h b/include/ruby/ruby.h
+index 3b72f8c..5eca96f 100644
+--- a/include/ruby/ruby.h
++++ b/include/ruby/ruby.h
+@@ -1407,6 +1407,7 @@ int ruby_native_thread_p(void);
+ #define RUBY_EVENT_C_CALL    0x0020
+ #define RUBY_EVENT_C_RETURN  0x0040
+ #define RUBY_EVENT_RAISE     0x0080
++#define RUBY_EVENT_BRKPT     0x0200
+ #define RUBY_EVENT_ALL       0xffff
+ #define RUBY_EVENT_VM       0x10000
+ #define RUBY_EVENT_SWITCH   0x20000
+@@ -1481,6 +1482,12 @@ int ruby_vsnprintf(char *str, size_t n, char const *fmt, va_list ap);
+ #include "ruby/subst.h"
+ #endif
+ 
++struct origarg {
++    int argc;
++    char **argv;
++    char *os_startup_dir;
++};
++
+ #if defined(__cplusplus)
+ #if 0
+ { /* satisfy cc-mode */
+diff --git a/inits.c b/inits.c
+index a6f63f0..0a28805 100644
+--- a/inits.c
++++ b/inits.c
+@@ -56,6 +56,7 @@ rb_call_inits(void)
+     CALL(VM);
+     CALL(ISeq);
+     CALL(Thread);
++    CALL(Frame);
+     CALL(Cont);
+     CALL(Rational);
+     CALL(Complex);
+diff --git a/internal.h b/internal.h
+index 5d0cff0..0692212 100644
+--- a/internal.h
++++ b/internal.h
+@@ -169,7 +169,7 @@ struct timeval rb_time_timeval(VALUE);
+ VALUE rb_obj_is_mutex(VALUE obj);
+ VALUE ruby_suppress_tracing(VALUE (*func)(VALUE, int), VALUE arg, int always);
+ void rb_thread_execute_interrupts(VALUE th);
+-void rb_clear_trace_func(void);
++VALUE rb_clear_trace_func(void);
+ VALUE rb_thread_backtrace(VALUE thval);
+ VALUE rb_get_coverages(void);
+ 
+diff --git a/iseq.c b/iseq.c
+index 28cc1e5..fb6f052 100644
+--- a/iseq.c
++++ b/iseq.c
+@@ -27,6 +27,38 @@ VALUE rb_cISeq;
+ 
+ #define hidden_obj_p(obj) (!SPECIAL_CONST_P(obj) && !RBASIC(obj)->klass)
+ 
++/* some utilities */
++
++int
++insn_len(VALUE insn)
++{
++  return insn_len_info[(int)insn];
++}
++
++const char *
++insn_name(VALUE insn)
++{
++  return insn_name_info[(int)insn];
++}
++
++const char *
++insn_op_types(VALUE insn)
++{
++  return insn_operand_info[(int)insn];
++}
++
++int
++insn_op_type(VALUE insn, long pos)
++{
++  int len = insn_len(insn) - 1;
++  if(pos < len){
++    return insn_operand_info[(int)insn][pos];
++  }
++  else{
++    return 0;
++  }
++}
++
+ static inline VALUE
+ obj_resurrect(VALUE obj)
+ {
+@@ -90,7 +122,7 @@ iseq_free(void *ptr)
+     RUBY_FREE_LEAVE("iseq");
+ }
+ 
+-static void
++void
+ iseq_mark(void *ptr)
+ {
+     RUBY_MARK_ENTER("iseq");
+@@ -122,6 +154,23 @@ iseq_mark(void *ptr)
+     RUBY_MARK_LEAVE("iseq");
+ }
+ 
++/* 
++ * This routine is here to allow an external C extension to create a
++ * RubyVM::InstructionSequence object sequence from its own C pointer
++ * of type rb_iseq_t *. For example, the rb-threadframe uses this
++ * routine to implement Method#iseq and Proc#iseq.
++ */
++VALUE
++iseq_alloc_shared(VALUE klass)
++{
++    VALUE volatile obj;
++    rb_iseq_t *iseq;
++
++    obj = Data_Make_Struct(klass, rb_iseq_t, iseq_mark, NULL, iseq);
++    MEMZERO(iseq, rb_iseq_t, 1);
++    return obj;
++}
++
+ static size_t
+ iseq_memsize(const void *ptr)
+ {
+@@ -222,7 +271,7 @@ static VALUE
+ prepare_iseq_build(rb_iseq_t *iseq,
+ 		   VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
+ 		   VALUE parent, enum iseq_type type, VALUE block_opt,
+-		   const rb_compile_option_t *option)
++		   rb_compile_option_t *option)
+ {
+     OBJ_FREEZE(name);
+     OBJ_FREEZE(filename);
+@@ -282,13 +331,17 @@ prepare_iseq_build(rb_iseq_t *iseq,
+ }
+ 
+ static VALUE
+-cleanup_iseq_build(rb_iseq_t *iseq)
++cleanup_iseq_build(rb_iseq_t *iseq, VALUE type, VALUE src, int saving_iseq)
+ {
+     struct iseq_compile_data *data = iseq->compile_data;
+     VALUE err = data->err_info;
+-    iseq->compile_data = 0;
+-    compile_data_free(data);
+-
++    if (0 == saving_iseq) {
++	iseq->compile_data = 0;
++	compile_data_free(data);
++    } else if (ISEQ_TYPE_EVAL == type) {
++	iseq->source = src;
++    }
++    
+     if (RTEST(err)) {
+ 	rb_funcall2(err, rb_intern("set_backtrace"), 1, &iseq->filename);
+ 	rb_exc_raise(err);
+@@ -305,6 +358,8 @@ static rb_compile_option_t COMPILE_OPTION_DEFAULT = {
+     OPT_INSTRUCTIONS_UNIFICATION, /* int instructions_unification; */
+     OPT_STACK_CACHING, /* int stack_caching; */
+     OPT_TRACE_INSTRUCTION, /* int trace_instruction */
++    OPT_SAVE_TREE_NODE,    /* save parse tree nodes */
++    OPT_SAVE_COMPILE_OPTS, /* save compile options */
+ };
+ static const rb_compile_option_t COMPILE_OPTION_FALSE = {0};
+ 
+@@ -340,6 +395,8 @@ make_compile_option(rb_compile_option_t *option, VALUE opt)
+ 	SET_COMPILE_OPTION(option, opt, instructions_unification);
+ 	SET_COMPILE_OPTION(option, opt, stack_caching);
+ 	SET_COMPILE_OPTION(option, opt, trace_instruction);
++	SET_COMPILE_OPTION(option, opt, save_tree_node);
++	SET_COMPILE_OPTION(option, opt, save_compile_opts);
+ 	SET_COMPILE_OPTION_NUM(option, opt, debug_level);
+ #undef SET_COMPILE_OPTION
+ #undef SET_COMPILE_OPTION_NUM
+@@ -376,14 +433,14 @@ VALUE
+ rb_iseq_new(NODE *node, VALUE name, VALUE filename, VALUE filepath,
+ 	    VALUE parent, enum iseq_type type)
+ {
+-    return rb_iseq_new_with_opt(node, name, filename, filepath, INT2FIX(0), parent, type,
++    return rb_iseq_new_with_opt(node, name, filename, filepath, INT2FIX(0), parent, type, Qnil,
+ 				&COMPILE_OPTION_DEFAULT);
+ }
+ 
+ VALUE
+ rb_iseq_new_top(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE parent)
+ {
+-    return rb_iseq_new_with_opt(node, name, filename, filepath, INT2FIX(0), parent, ISEQ_TYPE_TOP,
++    return rb_iseq_new_with_opt(node, name, filename, filepath, INT2FIX(0), parent, ISEQ_TYPE_TOP, Qnil,
+ 				&COMPILE_OPTION_DEFAULT);
+ }
+ 
+@@ -393,34 +450,89 @@ rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath)
+     rb_thread_t *th = GET_THREAD();
+     VALUE parent = th->base_block->iseq->self;
+     return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), filename, filepath, INT2FIX(0),
+-				parent, ISEQ_TYPE_MAIN, &COMPILE_OPTION_DEFAULT);
++				parent, ISEQ_TYPE_MAIN, Qnil, 
++				&COMPILE_OPTION_DEFAULT);
++}
++
++/* A debugger or similar introspection tool needs to be able to find
++ * all instruction sequences and access them. We facilitate this by
++ * adding the following behavior, analogous to SCRIPT_LINES__ for
++ * capturing source-code lines.
++ * 
++ * If SCRIPT_ISEQS__ is defined and is a hash, then every time a new
++ * instruction sequence is added, it is accessible from SCRIPT_ISEQS__
++ * using the "filename" as a key.
++ * 
++ * Similarly, if ISEQS__ is defined and is a hash, then every time a
++ * new instruction sequence is added, it is accessible from ISEQS__
++ * using its iseq_name as a key.  
++ */
++static int
++update_file_iseq(VALUE filename, VALUE iseq_name, VALUE iseq)
++{
++    ID hash_id;
++    int rc = 0;
++    CONST_ID(hash_id, "SCRIPT_ISEQS__");
++    if (rb_const_defined_at(rb_cObject, hash_id) && 
++	rb_safe_level() < 4) {
++	VALUE hash = rb_const_get_at(rb_cObject, hash_id);
++	rc = 1;
++	if (TYPE(hash) == T_HASH) {
++	    VALUE iseqs = rb_hash_aref(hash, filename);
++	    if (TYPE(iseqs) == T_ARRAY)
++		rb_ary_push(iseqs, iseq);
++	    else
++		rb_hash_aset(hash, filename, rb_ary_new3(1, iseq));
++	}
++    }
++    CONST_ID(hash_id, "ISEQS__");
++    if (rb_const_defined_at(rb_cObject, hash_id) &&
++	rb_safe_level() < 4) {
++	VALUE hash = rb_const_get_at(rb_cObject, hash_id);
++	rc = 1;
++	if (TYPE(hash) == T_HASH) {
++	    VALUE iseqs = rb_hash_aref(hash, iseq_name);
++	    if (TYPE(iseqs) == T_ARRAY)
++		rb_ary_push(iseqs, iseq);
++	    else
++		rb_hash_aset(hash, iseq_name, rb_ary_new3(1, iseq));
++	}
++    }
++    return rc;
+ }
+ 
+ static VALUE
+ rb_iseq_new_with_bopt_and_opt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
+-				VALUE parent, enum iseq_type type, VALUE bopt,
+-				const rb_compile_option_t *option)
++			      VALUE parent, enum iseq_type type, VALUE bopt,
++			      VALUE src,
++			      rb_compile_option_t *option)
+ {
+     rb_iseq_t *iseq;
+     VALUE self = iseq_alloc(rb_cISeq);
++    int saving_iseq;
+ 
+     GetISeqPtr(self, iseq);
+     iseq->self = self;
+ 
+     prepare_iseq_build(iseq, name, filename, filepath, line_no, parent, type, bopt, option);
+     rb_iseq_compile_node(self, node);
+-    cleanup_iseq_build(iseq);
++    if (option && option->save_tree_node) {
++	iseq->tree_node = node;
++    }
++    saving_iseq = update_file_iseq(filename, name, self);
++    option->save_compile_opts = option->save_compile_opts || saving_iseq;
++    cleanup_iseq_build(iseq, type, src, saving_iseq);
+     return self;
+ }
+ 
+ VALUE
+ rb_iseq_new_with_opt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
+-		     VALUE parent, enum iseq_type type,
+-		     const rb_compile_option_t *option)
++		     VALUE parent, enum iseq_type type, VALUE src,
++		     rb_compile_option_t *option)
+ {
+     /* TODO: argument check */
+     return rb_iseq_new_with_bopt_and_opt(node, name, filename, filepath, line_no, parent, type,
+-					   Qfalse, option);
++					 Qfalse, src, option);
+ }
+ 
+ VALUE
+@@ -429,7 +541,7 @@ rb_iseq_new_with_bopt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VA
+ {
+     /* TODO: argument check */
+     return rb_iseq_new_with_bopt_and_opt(node, name, filename, filepath, line_no, parent, type,
+-					   bopt, &COMPILE_OPTION_DEFAULT);
++                                         bopt, Qnil, &COMPILE_OPTION_DEFAULT);
+ }
+ 
+ #define CHECK_ARRAY(v)   rb_convert_type((v), T_ARRAY, "Array", "to_ary")
+@@ -450,6 +562,7 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
+     rb_iseq_t *iseq;
+     rb_compile_option_t option;
+     int i = 0;
++    int saving_iseq = 0;
+ 
+     /* [magic, major_version, minor_version, format_type, misc,
+      *  name, filename, line_no,
+@@ -514,11 +627,28 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
+ 		       parent, (enum iseq_type)iseq_type, 0, &option);
+ 
+     rb_iseq_build_from_ary(iseq, locals, args, exception, body);
++    saving_iseq = update_file_iseq(filename, name, self);
+ 
+-    cleanup_iseq_build(iseq);
++    cleanup_iseq_build(iseq, (enum iseq_type)iseq_type, body, saving_iseq);
+     return iseqval;
+ }
+ 
++/* 
++ *  call-seq:
++ *  RubyVM::InstructionSequence#arity -> Fixnum
++ *
++ *  Returns the number of arguments that would not be ignored.
++ *  See Ruby 1.9 proc_arity of proc.c
++ */
++VALUE
++rb_iseq_arity(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    if (Qnil == iseqval) return Qnil;
++    GetISeqPtr(iseqval, iseq);
++    return (iseq) ? INT2FIX(get_iseq_arity(iseq)) : Qnil;
++}
++
+ static VALUE
+ iseq_s_load(int argc, VALUE *argv, VALUE self)
+ {
+@@ -559,11 +689,11 @@ rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, V
+     if (th->base_block && th->base_block->iseq) {
+ 	return rb_iseq_new_with_opt(node, th->base_block->iseq->name,
+ 				    file, filepath, line, th->base_block->iseq->self,
+-				    ISEQ_TYPE_EVAL, &option);
++				    ISEQ_TYPE_EVAL, Qnil, &option);
+     }
+     else {
+ 	return rb_iseq_new_with_opt(node, rb_str_new2("<compiled>"), file, filepath, line, Qfalse,
+-				    ISEQ_TYPE_TOP, &option);
++				    ISEQ_TYPE_TOP, Qnil, &option);
+     }
+ }
+ 
+@@ -609,7 +739,7 @@ iseq_s_compile_file(int argc, VALUE *argv, VALUE self)
+     make_compile_option(&option, opt);
+     return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), file,
+ 				rb_realpath_internal(Qnil, file, 1), line, Qfalse,
+-				ISEQ_TYPE_TOP, &option);
++				ISEQ_TYPE_TOP, Qnil, &option);
+ }
+ 
+ static VALUE
+@@ -639,6 +769,117 @@ iseq_check(VALUE val)
+     return iseq;
+ }
+ 
++static void
++insn_operand_add_child(rb_iseq_t *iseq,
++		       VALUE insn, int op_no, VALUE op,
++		       VALUE child)
++{
++    const char *types = insn_op_types(insn);
++    char type = types[op_no];
++
++    switch (type) {
++      case TS_OFFSET:		/* LONG */
++	break;
++
++      case TS_NUM:		/* ULONG */
++	break;
++
++      case TS_LINDEX:
++	break;
++
++      case TS_DINDEX:
++	break;
++
++      case TS_ID:		/* ID (symbol) */
++	op = ID2SYM(op);
++
++      case TS_VALUE:		/* VALUE */
++	op = obj_resurrect(op);
++	if (CLASS_OF(op) == rb_cISeq) {
++	    rb_ary_push(child, op);
++	}
++	break;
++
++      case TS_ISEQ:		/* iseq */
++	{
++	    rb_iseq_t *iseq = (rb_iseq_t *)op;
++	    if (iseq) {
++		if (child) {
++		    rb_ary_push(child, iseq->self);
++		}
++	    }
++	    break;
++	}
++      case TS_GENTRY:
++	break;
++
++      case TS_IC:
++	break;
++
++      case TS_CDHASH:
++	break;
++
++      case TS_FUNCPTR:
++	break;
++
++      default:
++	rb_bug("rb_iseq_disasm: unknown operand type: %c", type);
++    }
++}
++
++/**
++ * Add to child array all instruction sequences found in an instruction.
++ */
++static int
++rb_iseq_insn_add_child(VALUE *iseq, size_t pos,
++		       rb_iseq_t *iseqdat, VALUE child)
++{
++    VALUE insn = iseq[pos];
++    int len = insn_len(insn);
++    int j;
++    const char *types = insn_op_types(insn);
++
++    for (j = 0; types[j]; j++) {
++	insn_operand_add_child(iseqdat, insn, j, iseq[pos + j + 1],
++			       child);
++    }
++    return len;
++}
++
++/* Return an ARRAY of iseq's which can be found off of this one. */
++VALUE
++rb_iseq_child_iseqs(VALUE self)
++{
++    VALUE *iseq;
++    rb_iseq_t *iseqdat;
++    VALUE child = rb_ary_new();
++    unsigned long size;
++    int i;
++    size_t n;
++    enum {header_minlen = 72};
++
++    rb_secure(1);
++    iseqdat = iseq_check(self);
++
++    rb_ary_push(child, self);
++    iseq = iseqdat->iseq;
++    size = iseqdat->iseq_size;
++
++    /* First, any catch table iseq's. */
++    for (i = 0; i < iseqdat->catch_table_size; i++) {
++	struct iseq_catch_table_entry *entry = &iseqdat->catch_table[i];
++	if (entry->iseq) {
++	    rb_ary_push(child, entry->iseq);
++	}
++    }
++
++    /* Next each iseq found inside the instructions */
++    for (n = 0; n < size;) {
++	n += rb_iseq_insn_add_child(iseq, n, iseqdat, child);
++    }
++    return child;
++}
++
+ static VALUE
+ iseq_eval(VALUE self)
+ {
+@@ -655,9 +896,13 @@ iseq_inspect(VALUE self)
+         return rb_sprintf("#<%s: uninitialized>", rb_obj_classname(self));
+     }
+ 
+-    return rb_sprintf("<%s:%s@%s>",
+-                      rb_obj_classname(self),
+-		      RSTRING_PTR(iseq->name), RSTRING_PTR(iseq->filename));
++    if (ISEQ_TYPE_TOP == iseq->type)
++	return rb_sprintf("<%s:%s>",
++			  rb_obj_classname(self), RSTRING_PTR(iseq->name));
++    else
++	return rb_sprintf("<%s:%s@%s>",
++			  rb_obj_classname(self),
++			  RSTRING_PTR(iseq->name), RSTRING_PTR(iseq->filename));
+ }
+ 
+ static
+@@ -727,6 +972,59 @@ find_prev_line_no(rb_iseq_t *iseqdat, unsigned long pos)
+     return 0;
+ }
+ 
++/**
++ * Return String used in the creation of this instruction sequence. If none
++ * recorded, 0 (or false) is returned.
++ */
++VALUE
++rb_iseq_source(VALUE self)
++{
++    rb_iseq_t *iseq = iseq_check(self);
++    rb_secure(1);
++    return iseq->source;
++}
++
++const char *
++source_container_type(VALUE fileval) 
++{
++    const char *filename = RSTRING_PTR(fileval);
++    size_t len = strlen(filename);
++
++    /* FIXME: Looking for (...) is a hack that I would love to know how
++       to remove. Probably Ruby has to be changed to record this kind
++       of information.
++     */
++    if (len > 0 && 
++	((filename[0] == '(' && filename[len-1] == ')')
++	 || 0 == strncmp(filename, "<compiled>", 
++			 sizeof("<compiled>"))))
++	return "string";
++    else
++	return "file";
++}
++
++
++/**
++ * Return an Array tuple of source container. This is either ["file"
++ * *filename*] if the instruction sequence came from a file, or
++ * ["string", *source-string*] if it came from "eval".  
++ * TODO: could have come from other sources too.
++ */
++VALUE
++rb_iseq_source_container(VALUE iseqval) 
++{
++    if (Qnil == iseqval) return Qnil;
++    else {
++	rb_iseq_t *iseq;
++	VALUE fileval;
++	GetISeqPtr(iseqval, iseq);
++	fileval = iseq->filename;
++	return rb_ary_new3(2, rb_str_new2(source_container_type(fileval)),
++			   fileval);
++    }
++}
++
++
+ static VALUE
+ insn_operand_intern(rb_iseq_t *iseq,
+ 		    VALUE insn, int op_no, VALUE op,
+@@ -916,9 +1214,8 @@ catch_type(int type)
+ }
+ 
+ VALUE
+-rb_iseq_disasm(VALUE self)
++rb_iseq_disasm_internal(rb_iseq_t *iseqdat, int include_child)
+ {
+-    rb_iseq_t *iseqdat = iseq_check(self);
+     VALUE *iseq;
+     VALUE str = rb_str_new(0, 0);
+     VALUE child = rb_ary_new();
+@@ -1010,14 +1307,44 @@ rb_iseq_disasm(VALUE self)
+ 	n += rb_iseq_disasm_insn(str, iseq, n, iseqdat, child);
+     }
+ 
+-    for (i = 0; i < RARRAY_LEN(child); i++) {
+-	VALUE isv = rb_ary_entry(child, i);
+-	rb_str_concat(str, rb_iseq_disasm(isv));
+-    }
++    if (include_child)
++	for (i = 0; i < RARRAY_LEN(child); i++) {
++	    VALUE isv = rb_ary_entry(child, i);
++	    rb_str_concat(str, rb_iseq_disasm(isv));
++	}
+ 
+     return str;
+ }
+ 
++/*
++ *  call-seq:
++ *     iseq.disasm   -> string
++ *
++ *  Returns a string disassembly of an instruction sequence.
++ */
++
++VALUE
++rb_iseq_disasm(VALUE self)
++{
++    return rb_iseq_disasm_internal(iseq_check(self), 1);
++}
++
++/*
++ *  call-seq:
++ *     iseq.disasm_nochildren   -> string
++ *
++ *  Returns a string disassembly of an instruction sequence, and
++ *  doesn't include instruction sequences for any associated catch
++ *  table, or instruction sequences found from this instruction
++ *  sequence.
++ */
++
++VALUE
++rb_iseq_disasm_nochildren(VALUE self)
++{
++    return rb_iseq_disasm_internal(iseq_check(self), 0);
++}
++
+ static VALUE
+ iseq_s_disasm(VALUE klass, VALUE body)
+ {
+@@ -1493,17 +1820,348 @@ rb_iseq_build_for_ruby2cext(
+     return iseqval;
+ }
+ 
++extern void Init_Brkpt(void); /* In brkpt.c */
++
++/* 
++ * call-seq:
++ *     RubyVM::InstructionSequence#name -> String
++ * 
++ *  Returns the name if the instruction sequence.
++ */
++VALUE
++iseq_name(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    GetISeqPtr(iseqval, iseq);
++    return(iseq->name);
++}
++
++/* 
++ *  Document-method: RubyVM::InstructionSequence::equal?
++ * 
++ *  call-seq:
++ *     RubyVM::InstructionSequence#equal?(iseq2) -> bool
++ *
++ *  Returns true if the instruction sequences are equal.
++ */
++VALUE 
++rb_iseq_equal(VALUE iseqval1, VALUE iseqval2)
++{
++    rb_iseq_t *iseq1, *iseq2;
++
++    if (Qnil == iseqval2) return Qfalse;
++    if (!rb_obj_is_kind_of(iseqval2, rb_cISeq)) {
++	rb_raise(rb_eTypeError, 
++		 "comparison argument must be an instance of %s or nil (is %s)",
++		 rb_obj_classname(iseqval1), rb_obj_classname(iseqval2));
++    }
++    
++    if (iseqval1 == iseqval2) return Qtrue;
++    GetISeqPtr(iseqval1, iseq1);
++    GetISeqPtr(iseqval2, iseq2);
++
++    /* FIXME: the count 28 below  is bogus. I think this should be the fields
++       from "type" to  "mark_ary". Should also include iseq->encoded.
++     */
++    if (0 == memcmp(iseq1, iseq2, 28))
++	return Qtrue;
++    else
++	return Qfalse;
++}
++
++VALUE 
++rb_iseq_parent(VALUE self)
++{
++    rb_iseq_t *piseq;
++    rb_iseq_t *parent_iseq;
++    VALUE parent_iseqval;
++    GetISeqPtr(self, piseq);
++
++    if (!RTEST(piseq->parent_iseq)) return Qnil;
++    parent_iseqval = iseq_alloc_shared(rb_cISeq);
++    GetISeqPtr(parent_iseqval, parent_iseq);
++    memcpy(parent_iseq, piseq->parent_iseq, sizeof(struct rb_iseq_struct));
++    return parent_iseqval;
++}
++
++VALUE 
++rb_iseq_local_iseq(VALUE self)
++{
++    rb_iseq_t *piseq;
++    rb_iseq_t *local_iseq;
++    VALUE local_iseqval;
++    GetISeqPtr(self, piseq);
++
++    if (!RTEST(piseq->local_iseq)) return Qnil;
++    local_iseqval = iseq_alloc_shared(rb_cISeq);
++    GetISeqPtr(local_iseqval, local_iseq);
++    memcpy(local_iseq, piseq->local_iseq, sizeof(struct rb_iseq_struct));
++    return local_iseqval;
++}
++
++/* 
++ * call-seq:
++ *     RubyVM::InstructionSequence#local_name(i) - String
++ * 
++ *  Returns the string name of local variable in i'th position
++ *  of the instruction sequence local table, or nil if i is
++ * out of range.
++ */
++VALUE
++rb_iseq_local_name(VALUE iseqval, VALUE val)
++{
++    rb_iseq_t *iseq;
++    if (FIXNUM_P(val)) {
++      long int i = FIX2INT(val);
++      long int size;
++      
++      GetISeqPtr(iseqval, iseq);
++      
++      size = iseq->local_table_size;
++      
++      if (i < 0) i = size + i;
++      
++      if (i >= size)
++	rb_raise(rb_eIndexError, 
++		 "local table index %ld should be in the range -%ld .. %ld",
++		 i, size, size-1);
++      
++      return rb_str_new2(rb_id2name(iseq->local_table[i]));
++    } else {
++      rb_raise(rb_eTypeError, "type mismatch: %s given, Fixnum expected", 
++	       rb_class2name(CLASS_OF(val)));
++    }
++    /* not reached. */
++    return Qnil;
++}
++
++/* 
++ * call-seq:
++ *     RubyVM::InstructionSequence#offsetlines -> Hash[Fixnum] -> [Fixnum]
++ * 
++ * Returns a hash. The keys in the hash form the VM offsets of the
++ * instructions.  The value of the hash for a given offset is a list
++ * of line numbers associated with that offset.
++ */
++VALUE iseq_offsetlines(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    VALUE offsetlines = rb_hash_new();
++    unsigned long i, size;
++    struct iseq_insn_info_entry *table;
++   
++    GetISeqPtr(iseqval, iseq);
++    
++    size = iseq->insn_info_size;
++    table = iseq->insn_info_table;
++
++    for (i = 0; i < size; i++) {
++	VALUE ary = rb_ary_new2(1);
++	rb_ary_push(ary, INT2FIX(table[i].line_no));
++	rb_hash_aset(offsetlines, INT2FIX(table[i].position), ary);
++    }
++    return offsetlines;
++}
++
++/* 
++ * call-seq:
++ *     RubyVM::InstructionSequence#offset2lines(offset) -> [Fixnum]
++ * 
++ * Returns an Array or nil. If offset is found then return the list of
++ * lines associated with that offset. If the offset isn't found return nil.
++ */
++VALUE iseq_offset2lines(VALUE iseqval, VALUE offsetval)
++{
++    rb_iseq_t *iseq;
++   
++    GetISeqPtr(iseqval, iseq);
++    
++    if (FIXNUM_P(offsetval)) {
++	unsigned long i, size;
++	int offset = FIX2INT(offsetval);
++	struct iseq_insn_info_entry *table;
++
++	size = iseq->insn_info_size;
++	table = iseq->insn_info_table;
++
++	for (i = 0; i < size; i++) {
++	    if (table[i].position == offset) {
++		VALUE ary = rb_ary_new2(1);
++		rb_ary_push(ary, INT2FIX(table[i].line_no));
++		return ary;
++	    }
++	}
++    }
++    return Qnil;
++}
++
++#define ISEQ_FIELD_METHOD(FIELD)		\
++VALUE					        \
++rb_iseq_##FIELD(VALUE iseqval)			\
++{						\
++  rb_iseq_t *iseq;				\
++  if (Qnil == iseqval) return Qnil;		\
++  GetISeqPtr(iseqval, iseq);			\
++  return iseq->FIELD;				\
++}
++
++ISEQ_FIELD_METHOD(orig) ;
++ISEQ_FIELD_METHOD(self) ;
++ISEQ_FIELD_METHOD(type) ;
++
++#define ISEQ_INT_FIELD_METHOD(FIELD)		\
++extern VALUE					\
++rb_iseq_##FIELD(VALUE iseqval)			\
++{						\
++  rb_iseq_t *iseq;				\
++  GetISeqPtr(iseqval, iseq);			\
++  return INT2FIX(iseq->FIELD);			\
++}
++
++ISEQ_INT_FIELD_METHOD(arg_block) ;
++ISEQ_INT_FIELD_METHOD(arg_opts) ;
++ISEQ_INT_FIELD_METHOD(arg_post_len) ;
++ISEQ_INT_FIELD_METHOD(arg_rest) ;
++ISEQ_INT_FIELD_METHOD(arg_simple) ;
++ISEQ_INT_FIELD_METHOD(argc) ;
++ISEQ_INT_FIELD_METHOD(iseq_size) ;
++ISEQ_INT_FIELD_METHOD(klass) ;
++ISEQ_INT_FIELD_METHOD(line_no) ;
++ISEQ_INT_FIELD_METHOD(local_size) ;
++ISEQ_INT_FIELD_METHOD(local_table_size) ;
++
++/*
++ * call-seq:
++ *    RubyVM::InstructionSequence#line_range() -> Range
++ *
++ * Returns a range containing the starting line number and the
++ * ending line of the source code for the instruction-sequence.
++ */
++VALUE
++rb_iseq_line_range(VALUE iseqval) 
++{
++    rb_iseq_t *iseq;
++
++    GetISeqPtr(iseqval, iseq);
++    if (Qnil == iseqval) return Qnil;
++    else {
++	unsigned long i, size = iseq->insn_info_size;
++	struct iseq_insn_info_entry *table = iseq->insn_info_table;
++	unsigned short min_line = table[0].line_no;
++	unsigned short max_line = table[0].line_no;
++	
++	for (i = 0; i < size; i++) {
++	    if (table[i].line_no < min_line) 
++		min_line = table[i].line_no;
++	    else if (table[i].line_no > max_line)
++		max_line = table[i].line_no;
++	}
++	return rb_range_new(INT2FIX(min_line), INT2FIX(max_line), 0);
++    }
++}
++
++#define COMPILE_OPTS_BOOL_SET_HASH(FIELD) \
++    rb_hash_aset(hash_opts, rb_str_new2(#FIELD), \
++		 (compile_opts->FIELD) ? Qtrue : Qfalse)
++    
++/* 
++ *  Document-method: RubyVM::InstructionSequence::compile_options
++ *
++ *  call-seq:
++ *     RubyVM::InstructionSequence#compile_options -> Hash
++ *
++ *  Returns a hash of the compiler options used to create the 
++ *  instruction sequence.
++ */
++VALUE
++rb_iseq_compile_options(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    if (Qnil == iseqval) return Qnil;
++    else {
++	VALUE hash_opts = rb_hash_new();
++	const rb_compile_option_t *compile_opts;
++	GetISeqPtr(iseqval, iseq);
++	if (!iseq->compile_data) return Qnil;
++	compile_opts = iseq->compile_data->option;
++	COMPILE_OPTS_BOOL_SET_HASH(inline_const_cache);
++	COMPILE_OPTS_BOOL_SET_HASH(peephole_optimization);
++	COMPILE_OPTS_BOOL_SET_HASH(tailcall_optimization);
++	COMPILE_OPTS_BOOL_SET_HASH(specialized_instruction);
++	COMPILE_OPTS_BOOL_SET_HASH(operands_unification);
++	COMPILE_OPTS_BOOL_SET_HASH(stack_caching);
++	COMPILE_OPTS_BOOL_SET_HASH(trace_instruction);
++	COMPILE_OPTS_BOOL_SET_HASH(debug_level);
++	COMPILE_OPTS_BOOL_SET_HASH(save_tree_node);
++	COMPILE_OPTS_BOOL_SET_HASH(save_compile_opts);
++	return hash_opts;
++    }
++}
++
++/* 
++ *  Document-method: RubyVM::InstructionSequence::encoded
++ * 
++ *  call-seq:
++ *     RubyVM::InstructionSequence#iseq_encoded -> String
++ *
++ *  Returns a string of the encoded bytes of the instruction
++ *  sequence. Note that this is probably not usable as is, may be useful in
++ *  decoding instructions (using other info) or for getting a sha1
++ *  checksum.
++ */
++VALUE 
++rb_iseq_iseq_encoded(VALUE iseqval)
++{
++    rb_iseq_t *iseq;
++    GetISeqPtr(iseqval, iseq);
++    return rb_str_new((char *) iseq->iseq_encoded, iseq->iseq_size);
++}
++
+ void
+ Init_ISeq(void)
+ {
+     /* declare ::RubyVM::InstructionSequence */
+     rb_cISeq = rb_define_class_under(rb_cRubyVM, "InstructionSequence", rb_cObject);
+     rb_define_alloc_func(rb_cISeq, iseq_alloc);
++    rb_define_method(rb_cISeq, "arg_block",        rb_iseq_arg_block, 0) ;
++    rb_define_method(rb_cISeq, "arg_opts",         rb_iseq_arg_opts, 0) ;
++    rb_define_method(rb_cISeq, "arg_post_len",     rb_iseq_arg_post_len, 0) ;
++    rb_define_method(rb_cISeq, "arg_rest",         rb_iseq_arg_rest, 0) ;
++    rb_define_method(rb_cISeq, "arg_simple",       rb_iseq_arg_simple, 0) ;
++    rb_define_method(rb_cISeq, "argc",             rb_iseq_argc, 0) ;
++
++    rb_define_method(rb_cISeq, "compile_options",  rb_iseq_compile_options, 0) ;
++    rb_define_method(rb_cISeq, "encoded",          rb_iseq_iseq_encoded, 0) ;
++    rb_define_method(rb_cISeq, "equal?",           rb_iseq_equal, 1) ;
++    rb_define_method(rb_cISeq, "line_range",       rb_iseq_line_range, 0) ;
++    rb_define_method(rb_cISeq, "local_iseq",       rb_iseq_local_iseq, 0) ;
++    rb_define_method(rb_cISeq, "local_name",       rb_iseq_local_name, 1) ;
++    rb_define_method(rb_cISeq, "parent",           rb_iseq_parent, 0) ;
++
++    rb_define_method(rb_cISeq, "iseq_size",        rb_iseq_iseq_size, 0) ;
++    rb_define_method(rb_cISeq, "klass",            rb_iseq_klass, 0) ;
++    rb_define_method(rb_cISeq, "lineno",           rb_iseq_line_no, 0) ;
++    rb_define_method(rb_cISeq, "local_size",       rb_iseq_local_size, 0) ;
++    rb_define_method(rb_cISeq, "local_table_size", rb_iseq_local_table_size, 0) ;
++    rb_define_method(rb_cISeq, "name",             iseq_name, 0) ;
++    rb_define_method(rb_cISeq, "offset2lines",     iseq_offset2lines, 1) ;
++    rb_define_method(rb_cISeq, "offsetlines",      iseq_offsetlines, 0) ;
++    rb_define_method(rb_cISeq, "orig",             rb_iseq_orig, 0) ;
++    rb_define_method(rb_cISeq, "self",             rb_iseq_self, 0) ;
++    rb_define_method(rb_cISeq, "type",             rb_iseq_type, 0) ;
++    rb_define_method(rb_cISeq, "iseq_size",        rb_iseq_iseq_size, 0) ;
+     rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
++    rb_define_method(rb_cISeq, "arity",   rb_iseq_arity, 0);
+     rb_define_method(rb_cISeq, "disasm", rb_iseq_disasm, 0);
+     rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
++    rb_define_method(rb_cISeq, "disasm_nochildren", 
++		     rb_iseq_disasm_nochildren, 0);
++    rb_define_method(rb_cISeq, "child_iseqs", rb_iseq_child_iseqs, 0);
++
+     rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
+     rb_define_method(rb_cISeq, "eval", iseq_eval, 0);
++    rb_define_method(rb_cISeq, "source", rb_iseq_source, 0);
++    rb_define_method(rb_cISeq, "source_container", rb_iseq_source_container, 0) ;
+ 
+ #if 0 /* TBD */
+     rb_define_method(rb_cISeq, "marshal_dump", iseq_marshal_dump, 0);
+@@ -1521,5 +2179,7 @@ Init_ISeq(void)
+     rb_define_singleton_method(rb_cISeq, "compile_option=", iseq_s_compile_option_set, 1);
+     rb_define_singleton_method(rb_cISeq, "disasm", iseq_s_disasm, 1);
+     rb_define_singleton_method(rb_cISeq, "disassemble", iseq_s_disasm, 1);
++
++    Init_Brkpt();
+ }
+ 
+diff --git a/iseq.h b/iseq.h
+index 8df190e..e4cdd5f 100644
+--- a/iseq.h
++++ b/iseq.h
+@@ -26,10 +26,17 @@ VALUE rb_iseq_build_from_ary(rb_iseq_t *iseq, VALUE locals, VALUE args,
+ VALUE rb_iseq_load(VALUE data, VALUE parent, VALUE opt);
+ VALUE rb_iseq_parameters(const rb_iseq_t *iseq, int is_proc);
+ struct st_table *ruby_insn_make_insn_table(void);
++VALUE iseq_alloc_shared(VALUE klass);
++const char *source_container_type(VALUE fileval);
++VALUE rb_iseq_argc(VALUE iseqval);
++VALUE rb_iseq_arity(VALUE iseqval);
+ 
+ /* proc.c */
+ rb_iseq_t *rb_method_get_iseq(VALUE body);
+ rb_iseq_t *rb_proc_get_iseq(VALUE proc, int *is_proc);
++int method_arity(VALUE);
++int get_iseq_arity(rb_iseq_t *iseq);
++VALUE rb_binding_frame_new(void *vth, void *vcfp);
+ 
+ struct rb_compile_option_struct {
+     int inline_const_cache;
+@@ -41,6 +48,8 @@ struct rb_compile_option_struct {
+     int stack_caching;
+     int trace_instruction;
+     int debug_level;
++    int save_tree_node;
++    int save_compile_opts;
+ };
+ 
+ struct iseq_insn_info_entry {
+@@ -97,7 +106,7 @@ struct iseq_compile_data {
+     int flip_cnt;
+     int label_no;
+     int node_level;
+-    const rb_compile_option_t *option;
++    rb_compile_option_t *option;
+ #if SUPPORT_JOKE
+     st_table *labels_table;
+ #endif
+@@ -118,6 +127,12 @@ enum defined_type {
+     DEFINED_FUNC
+ };
+ 
++/* some utilities */
++extern int insn_len(VALUE insn);
++extern const char *insn_name(VALUE insn);
++extern const char *insn_op_types(VALUE insn);
++extern int insn_op_type(VALUE insn, long pos);
++
+ #if defined __GNUC__ && __GNUC__ >= 4
+ #pragma GCC visibility pop
+ #endif
+diff --git a/load.c b/load.c
+index 0ff4b60..4bfc157 100644
+--- a/load.c
++++ b/load.c
+@@ -301,11 +301,13 @@ rb_load_internal(VALUE fname, int wrap)
+     if (state == 0) {
+ 	NODE *node;
+ 	VALUE iseq;
++	char iseq_name[MAXPATHLEN];
+ 
+ 	th->mild_compile_error++;
+ 	node = (NODE *)rb_load_file(RSTRING_PTR(fname));
+ 	loaded = TRUE;
+-	iseq = rb_iseq_new_top(node, rb_str_new2("<top (required)>"), fname, rb_realpath_internal(Qnil, fname, 1), Qfalse);
++	snprintf(iseq_name, sizeof(iseq_name), "<top %s>", RSTRING_PTR(fname));
++	iseq = rb_iseq_new_top(node, rb_str_new2(iseq_name), fname, rb_realpath_internal(Qnil, fname, 1), Qfalse);
+ 	th->mild_compile_error--;
+ 	rb_iseq_eval(iseq);
+     }
+diff --git a/method.h b/method.h
+index 896e309..aa7d861 100644
+--- a/method.h
++++ b/method.h
+@@ -46,7 +46,11 @@ typedef enum {
+ 
+ typedef struct rb_method_cfunc_struct {
+     VALUE (*func)(ANYARGS);
+-    int argc;
++    int argc; /* This should probably be called "arity" since it is based
++		 on the static prototype, not the supplied arguments
++		 at runtime. */
++    int actual_argc; /* This probably should be called argc. It is the
++			argument count at runtime.*/
+ } rb_method_cfunc_t;
+ 
+ typedef struct rb_method_attr_struct {
+diff --git a/proc.c b/proc.c
+index 11a2d3e..eb6c731 100644
+--- a/proc.c
++++ b/proc.c
+@@ -28,7 +28,6 @@ VALUE rb_cBinding;
+ VALUE rb_cProc;
+ 
+ static VALUE bmcall(VALUE, VALUE);
+-static int method_arity(VALUE);
+ 
+ /* Proc */
+ 
+@@ -326,6 +325,28 @@ rb_binding_new(void)
+     return bindval;
+ }
+ 
++/*  Like rb_binding_new(), but we allow you to pass your own thread and
++ *  cfp rather than assume the current thread and current frame
++ *  pointer. 
++*/
++VALUE
++rb_binding_frame_new(void *vth, void *vcfp)
++{
++    rb_thread_t * th = (rb_thread_t *) vth;
++    rb_control_frame_t * cfp  = (rb_control_frame_t *) vcfp;
++    VALUE bindval = binding_alloc(rb_cBinding);
++    rb_binding_t *bind;
++    
++    if (cfp == 0) {
++        rb_raise(rb_eRuntimeError, 
++		 "Can't create Binding Object on top of Fiber.");
++    }
++
++    GetBindingPtr(bindval, bind);
++    bind->env = rb_vm_make_env_object(th, cfp);
++    return bindval;
++}
++
+ /*
+  *  call-seq:
+  *     binding -> a_binding
+@@ -631,6 +652,29 @@ proc_arity(VALUE self)
+     return INT2FIX(arity);
+ }
+ 
++int 
++get_iseq_arity(rb_iseq_t *iseq) 
++{
++    if (iseq) {
++	if (BUILTIN_TYPE(iseq) != T_NODE) {
++	    if (iseq->arg_rest < 0) {
++		return iseq->argc;
++	    }
++	    else {
++		return -(iseq->argc + 1 + iseq->arg_post_len);
++	    }
++	}
++	else {
++	    NODE *node = (NODE *)iseq;
++	    if (nd_type(node) == NODE_IFUNC && node->nd_cfnc == bmcall) {
++		/* method(:foo).to_proc.arity */
++		return method_arity(node->nd_tval);
++	    }
++	}
++    }
++    return -1;
++}
++
+ int
+ rb_proc_arity(VALUE self)
+ {
+@@ -681,6 +725,23 @@ rb_proc_get_iseq(VALUE self, int *is_proc)
+     return iseq;
+ }
+ 
++/* 
++ *  call-seq:
++ *  Method#iseq -> RubyVM::InstructionSequence
++ * 
++ *  Returns the instruction sequence of a Method object.
++ */
++VALUE
++rb_method_iseq(VALUE self)
++{
++    VALUE rb_iseq;
++    rb_iseq_t *iseq = rb_method_get_iseq(self);
++    if (!iseq) return Qnil;
++    rb_iseq = iseq_alloc_shared(rb_cISeq);
++    RDATA(rb_iseq)->data = iseq;
++    return rb_iseq;
++}
++
+ static VALUE
+ iseq_location(rb_iseq_t *iseq)
+ {
+@@ -1649,7 +1710,7 @@ method_arity_m(VALUE method)
+     return INT2FIX(n);
+ }
+ 
+-static int
++int
+ method_arity(VALUE method)
+ {
+     struct METHOD *data;
+@@ -2042,6 +2103,100 @@ proc_curry(int argc, VALUE *argv, VALUE self)
+     return make_curry_proc(self, rb_ary_new(), arity);
+ }
+ 
++/* 
++ *  call-seq:
++ *  Proc#iseq -> RubyVM::InstructionSequence
++ *
++ *  Returns the instruction sequence for a Proc object.
++ */
++VALUE
++rb_proc_iseq(VALUE self)
++{
++    rb_proc_t *proc;
++    rb_iseq_t *iseq;
++    VALUE rb_iseq;
++    GetProcPtr(self, proc);
++    iseq = proc->block.iseq;
++    if (!iseq || !RUBY_VM_NORMAL_ISEQ_P(iseq->self))
++	return Qnil;
++    rb_iseq = iseq_alloc_shared(rb_cISeq);
++    RDATA(rb_iseq)->data = iseq;
++    return rb_iseq;
++}
++
++/* 
++ *  call-seq:
++ *  Method#alias_count -> Fixnum
++ *
++ *  number of aliases a method has
++ */
++VALUE
++rb_method_alias_count(VALUE self)
++{
++  struct METHOD *m1 = (struct METHOD *)DATA_PTR(self);
++  return INT2FIX(m1->me->def->alias_count);
++}
++
++/* 
++ *  call-seq:
++ *  Method#original_id - Original name of method
++ */
++VALUE
++rb_method_original_id(VALUE self)
++{
++  struct METHOD *m1 = (struct METHOD *)DATA_PTR(self);
++  return ID2SYM(m1->me->def->original_id);
++}
++
++/* 
++ *  call-seq:
++ *  Method#type -> String
++ * 
++ *  Returns the Method object.
++ */
++VALUE
++rb_method_type(VALUE self)
++{
++    rb_method_definition_t *def = method_get_def(self);
++    const char *type_str;
++    switch (def->type) {
++      case VM_METHOD_TYPE_ISEQ: 
++	type_str = "instruction sequence";
++	break;
++      case VM_METHOD_TYPE_CFUNC: 
++	type_str = "C function";
++	break;
++      case VM_METHOD_TYPE_ATTRSET:
++	type_str = "attrset";
++	break;
++      case VM_METHOD_TYPE_IVAR:
++	type_str = "ivar";
++	break;
++      case VM_METHOD_TYPE_BMETHOD:
++	type_str = "bmethod";
++	break;
++      case VM_METHOD_TYPE_ZSUPER:
++	type_str = "zsuper";
++	break;
++      case VM_METHOD_TYPE_UNDEF:
++	type_str = "undefined";
++	break;
++      case VM_METHOD_TYPE_NOTIMPLEMENTED:
++	type_str = "not implemented";
++	break;
++      case VM_METHOD_TYPE_OPTIMIZED: /* Kernel#send, Proc#call, etc */
++	type_str = "optimized";
++	break;
++      case VM_METHOD_TYPE_MISSING: /* wrapper for method_missing(id) */
++	type_str = "type missing";
++	break;
++      default:
++	type_str = "unknown";
++	break;
++    }
++    return rb_str_new2(type_str);
++}
++
+ /*
+  *  Document-class: LocalJumpError
+  *
+@@ -2133,6 +2288,7 @@ Init_Proc(void)
+     rb_define_method(rb_cProc, "==", proc_eq, 1);
+     rb_define_method(rb_cProc, "eql?", proc_eq, 1);
+     rb_define_method(rb_cProc, "hash", proc_hash, 0);
++    rb_define_method(rb_cProc, "iseq", rb_proc_iseq, 0);
+     rb_define_method(rb_cProc, "to_s", proc_to_s, 0);
+     rb_define_method(rb_cProc, "lambda?", rb_proc_lambda_p, 0);
+     rb_define_method(rb_cProc, "binding", proc_binding, 0);
+@@ -2174,9 +2330,14 @@ Init_Proc(void)
+     rb_define_method(rb_cMethod, "unbind", method_unbind, 0);
+     rb_define_method(rb_cMethod, "source_location", rb_method_location, 0);
+     rb_define_method(rb_cMethod, "parameters", rb_method_parameters, 0);
++    rb_define_method(rb_cMethod, "iseq",       rb_method_iseq, 0);
+     rb_define_method(rb_mKernel, "method", rb_obj_method, 1);
+     rb_define_method(rb_mKernel, "public_method", rb_obj_public_method, 1);
+ 
++    rb_define_method(rb_cMethod, "alias_count",  rb_method_alias_count, 0);
++    rb_define_method(rb_cMethod, "original_id",  rb_method_original_id, 0);
++    rb_define_method(rb_cMethod, "type",         rb_method_type, 0);
++
+     /* UnboundMethod */
+     rb_cUnboundMethod = rb_define_class("UnboundMethod", rb_cObject);
+     rb_undef_alloc_func(rb_cUnboundMethod);
+@@ -2194,6 +2355,10 @@ Init_Proc(void)
+     rb_define_method(rb_cUnboundMethod, "source_location", rb_method_location, 0);
+     rb_define_method(rb_cUnboundMethod, "parameters", rb_method_parameters, 0);
+ 
++    rb_define_method(rb_cUnboundMethod, "alias_count", rb_method_alias_count, 0);
++    rb_define_method(rb_cUnboundMethod, "original_id", rb_method_original_id, 0);
++    rb_define_method(rb_cUnboundMethod, "type",        rb_method_type, 0);
++
+     /* Module#*_method */
+     rb_define_method(rb_cModule, "instance_method", rb_mod_instance_method, 1);
+     rb_define_method(rb_cModule, "public_instance_method", rb_mod_public_instance_method, 1);
+diff --git a/ruby.c b/ruby.c
+index ed39f44..57bda3b 100644
+--- a/ruby.c
++++ b/ruby.c
+@@ -116,10 +116,7 @@ static NODE *load_file(VALUE, const char *, int, struct cmdline_options *);
+ static void forbid_setid(const char *, struct cmdline_options *);
+ #define forbid_setid(s) forbid_setid((s), opt)
+ 
+-static struct {
+-    int argc;
+-    char **argv;
+-} origarg;
++struct origarg origarg;
+ 
+ static void
+ usage(const char *name)
+@@ -1854,6 +1851,17 @@ ruby_sysinit(int *argc, char ***argv)
+ #endif
+     origarg.argc = *argc;
+     origarg.argv = *argv;
++    origarg.os_startup_dir = malloc(MAXPATHLEN);
++#ifdef HAVE_GETCWD
++    if (!getcwd(origarg.os_startup_dir, MAXPATHLEN)) 
++        origarg.os_startup_dir[0] = '\0';
++#else
++    if (!getwd(origarg.os_startup_dir)) 
++        origarg.os_startup_dir[0] = '\0';
++#endif
++    origarg.os_startup_dir = realloc(origarg.os_startup_dir, 
++                                     strlen(origarg.os_startup_dir)+1);
++
+ #if defined(USE_DLN_A_OUT)
+     dln_argv0 = origarg.argv[0];
+ #endif
+diff --git a/template/insns_info.inc.tmpl b/template/insns_info.inc.tmpl
+index 99e4b7b..985736a 100644
+--- a/template/insns_info.inc.tmpl
++++ b/template/insns_info.inc.tmpl
+@@ -42,38 +42,6 @@ insn_stack_increase(int depth, int insn, VALUE *opes)
+ }
+ #endif
+ 
+-/* some utilities */
+-
+-static int
+-insn_len(VALUE insn)
+-{
+-  return insn_len_info[(int)insn];
+-}
+-
+-static const char *
+-insn_name(VALUE insn)
+-{
+-  return insn_name_info[(int)insn];
+-}
+-
+-static const char *
+-insn_op_types(VALUE insn)
+-{
+-  return insn_operand_info[(int)insn];
+-}
+-
+-static int
+-insn_op_type(VALUE insn, long pos)
+-{
+-  int len = insn_len(insn) - 1;
+-  if(pos < len){
+-    return insn_operand_info[(int)insn][pos];
+-  }
+-  else{
+-    return 0;
+-  }
+-}
+-
+ #ifdef USE_INSN_RET_NUM
+ static int
+ insn_ret_num(VALUE insn)
+diff --git a/test/debugger-ext/test_argc.rb b/test/debugger-ext/test_argc.rb
+new file mode 100644
+index 0000000..bf64df6
+--- /dev/null
++++ b/test/debugger-ext/test_argc.rb
+@@ -0,0 +1,44 @@
++require 'test/unit'
++
++class TestARGC < Test::Unit::TestCase
++
++  def setup
++    @original_compile_option = RubyVM::InstructionSequence.compile_option
++    RubyVM::InstructionSequence.compile_option = {
++      :trace_instruction => false,
++      :specialized_instruction => false
++    }
++  end
++
++  def teardown
++    set_trace_func(nil)
++    RubyVM::InstructionSequence.compile_option = @original_compile_option
++  end
++
++  def test_C_argc
++    cmd='File.basename("/tmp/foo.rb");File.basename("/tmp/foo.rb",".rb")'
++    iseq = RubyVM::InstructionSequence.compile(cmd)
++    events = []
++    all_events = []
++    eval <<-EOF.gsub(/^.*?: /, "")
++     1: set_trace_func(Proc.new { |event, file, lineno, mid, binding, klass|
++     2:   tf = RubyVM::Frame.prev
++     3:   all_events << [tf.argc, tf.arity, tf.type, mid]
++     4:   if :basename == mid 
++     5:     events << [tf.argc, tf.arity, tf.type, mid]
++     6:   end
++     7: })
++     8: iseq.eval
++     9: set_trace_func(nil)
++    EOF
++    # p all_events
++    assert_equal([[1, -1, "CFUNC", :basename],  # 1-arg c-call
++                  [1, -1, "CFUNC", :basename],  # 1-arg c-return
++                  [2, -1, "CFUNC", :basename],  # 2-arg c-call
++                  [2, -1, "CFUNC", :basename]   # 2-arg c-return
++                 ], events)
++  end
++end
++
++# We want to double-check we didn't mess up any pointers somewhere.
++at_exit { GC.start  }
+diff --git a/test/debugger-ext/test_binding.rb b/test/debugger-ext/test_binding.rb
+new file mode 100644
+index 0000000..61a4dee
+--- /dev/null
++++ b/test/debugger-ext/test_binding.rb
+@@ -0,0 +1,43 @@
++require 'test/unit'
++
++def outside(a)
++    return eval('a', RubyVM::Frame.new(Thread::current).binding)
++end
++
++$a = 10
++
++class TestBinding < Test::Unit::TestCase
++  def test_basic
++    a = 1
++    c = 0
++    assert_equal(5, outside(5))
++    tf = RubyVM::Frame.new(Thread::current)
++    b  = tf.binding
++    assert_equal(1, eval('a', b))
++    assert_equal(10, eval('$a', b))
++    assert_equal(self, tf.self)
++    1.times do |i;a| 
++      tf2 = Thread::current.frame()
++      b2  = tf2.binding
++      a = 2
++      assert_equal(2, eval('a', b2))
++      assert_equal(0, eval('c', b2))
++
++      # Times is C inline so prev we can't get a binding for it
++      # But we can for use the instruction sequence before that.
++      assert_equal(1, eval('a', tf2.prev(2).binding))
++    end
++    def inner(a)
++      tf3 = Thread::current.frame()
++      b3  = tf3.binding
++      if a == 4
++        assert_equal(4, eval('a', b3))
++        inner(a-1)
++      else
++        assert_equal(3, eval('a', b3))
++        assert_equal(4, eval('a', tf3.prev.binding))
++      end
++    end
++    inner(4)
++  end
++end
+diff --git a/test/debugger-ext/test_brkpt.rb b/test/debugger-ext/test_brkpt.rb
+new file mode 100644
+index 0000000..71fd471
+--- /dev/null
++++ b/test/debugger-ext/test_brkpt.rb
+@@ -0,0 +1,60 @@
++require 'test/unit'
++
++class TestISeqBrkpt < Test::Unit::TestCase
++
++  def setup
++    @original_compile_option = RubyVM::InstructionSequence.compile_option
++    RubyVM::InstructionSequence.compile_option = {
++      :trace_instruction => false,
++      :specialized_instruction => false
++    }
++  end
++
++  def teardown
++    set_trace_func(nil)
++    RubyVM::InstructionSequence.compile_option = @original_compile_option
++  end
++
++  def test_iseq_brkpt
++    iseq = RubyVM::InstructionSequence.compile('x=1; y=2')
++    assert iseq
++    assert_equal(nil, iseq.brkpts)
++    assert_equal(true, iseq.brkpt_alloc)
++    assert_equal([], iseq.brkpts)
++    assert_equal(false, iseq.brkpt_alloc)
++    
++    assert_equal(true, iseq.brkpt_set(0))
++    assert_equal(1,    iseq.brkpts.size)
++    assert_equal(true, iseq.brkpt_get(0), 'Offset 0 should be set')
++    assert_equal(true, iseq.brkpt_unset(0),'Offset 0 should be unset')
++    assert_equal(false, iseq.brkpt_get(0), 'Offset 0 should be unset now')
++    assert_equal(true, iseq.brkpt_unset(0), 
++                 'Offset 0 should be unset again')
++    assert_raises TypeError do iseq.brkpt_get(100) end
++    assert_equal(true, iseq.brkpt_dealloc)
++    assert_equal(false, iseq.brkpt_dealloc)
++    assert_equal(true, iseq.brkpt_unset(0),
++                 'Offset 0 should be unset even when deallocated')
++
++    assert_raises TypeError do iseq.brkpt_set('a') end
++
++    iseq.brkpt_set(2)    
++    iseq.brkpt_set(4)    
++    events = []
++    eval <<-EOF.gsub(/^.*?: /, "")
++     1: set_trace_func(Proc.new { |event, file, lineno, mid, binding, klass|
++     2:   events << [event, lineno, mid, klass]
++     3: })
++     4: iseq.eval
++     5: set_trace_func(nil)
++    EOF
++    # puts iseq.disassemble
++    brkpt_events = events.select{|item| item[0] == 'brkpt'}
++    assert_equal(2, brkpt_events.size, 
++                 "Expecting to see 2 brkpts in #{events}.inspect")
++    assert_equal(true, iseq.brkpt_dealloc)
++  end
++end
++
++# We want to double-check we didn't mess up any pointers somewhere.
++at_exit { GC.start  }
+diff --git a/test/debugger-ext/test_disasm.rb b/test/debugger-ext/test_disasm.rb
+new file mode 100644
+index 0000000..05cb775
+--- /dev/null
++++ b/test/debugger-ext/test_disasm.rb
+@@ -0,0 +1,17 @@
++# Some simple tests of RubyVM::InstructionSequence#disasm, and
++# #disasm_nochildren
++require 'test/unit'
++
++class TestDisasmClass < Test::Unit::TestCase
++
++  def test_basic
++    assert_equal(RubyVM::InstructionSequence.compile('1+2').disassemble,
++                 RubyVM::InstructionSequence.compile('1+2').disasm)
++
++    p='def five; 5 end; five'
++    s1=RubyVM::InstructionSequence.compile(p).disasm
++    assert_equal String, s1.class, 'disasm output should be a string'
++    s2=RubyVM::InstructionSequence.compile(p).disasm_nochildren
++    assert_equal true, s1.size > s2.size
++  end
++end
+diff --git a/test/debugger-ext/test_frame.rb b/test/debugger-ext/test_frame.rb
+new file mode 100644
+index 0000000..ac63ae3
+--- /dev/null
++++ b/test/debugger-ext/test_frame.rb
+@@ -0,0 +1,117 @@
++require 'test/unit'
++
++class TestFrame < Test::Unit::TestCase
++  def test_basic
++    assert_equal(RubyVM::Frame.new(Thread::current).thread, 
++                 RubyVM::Frame::current.thread)
++    assert_equal(RubyVM::Frame.new(Thread::current).thread, 
++                 Thread::current)
++    assert_equal(Thread::current.frame.thread, Thread::current)
++  end
++
++  def test_pc_offset
++    tf = RubyVM::Frame::current
++    offset_1 = tf.pc_offset
++    assert_equal(true, offset_1 > 0,
++                 "Expecting a positive integer pc offset, got %s" % offset_1)
++    offset_2 = tf.pc_offset
++    assert_equal(true, offset_2 > 0,
++                 "Expecting a positive integer pc offset, got %s" % offset_2)
++    assert_equal(true, offset_2 > offset_1,
++                 "Expecting second pc offset %s to be larger than the first %s" %
++                 [offset_2, offset_1])
++  end
++
++  def test_sp
++    tf = RubyVM::Frame.prev
++    assert tf.sp(1)
++    tf.sp_set(1, 5)
++    assert_equal(5, tf.sp(1), 'checking value of recently-set sp(1)')
++  end
++
++  def test_fields(notused=nil)
++    tf = RubyVM::Frame::current
++    pc1 = tf.pc_offset
++    assert(pc1 > 0, 'Should be able to get a valid PC offset')
++    # pc_offset is dynamic - it changes constantly
++    pc2 = tf.pc_offset 
++    assert(pc2 > pc1, 'PC offset should have changed (for the greater)')
++    assert_equal('test_fields', tf.method)
++    assert_equal(self, tf.self)
++    assert_equal(0, tf.arity)
++    assert_equal(0, tf.argc)
++
++    # assert_raises IndexError do
++    #   x = tf.lfp(tf.iseq.local_size+1)
++    # end
++
++
++    tf_prev = tf.prev
++    assert(tf_prev.pc_offset > 0, "Should be valid PC offset for prev")
++  
++    # Is this too specific to test/unit.rb implementation details? 
++    assert_equal('run', tf_prev.method)
++
++    # 1.times creates a C frame.
++    1.times do 
++      tf = RubyVM::Frame::current
++      tup = tf.source_container
++      tup[1] = File.basename(tup[1])
++      assert_equal(['file', 'test_frame.rb'], tup)
++      assert_equal('block in test_fields', tf.method)
++      assert_equal('CFUNC', tf.prev.type)
++      assert_equal('times', tf.prev.method) 
++      assert_equal(self, tf.self)
++      assert_equal(0, tf.prev.arity, 'C arity should work nowadays' )
++      assert_equal(0, tf.prev.argc, 'C args is the same as arity')
++      assert_equal('test_fields', tf.prev.prev.method) 
++      assert_equal(0, tf.arity)
++      assert_equal(0, tf.argc)
++    end
++
++    # 1.upto also creates a C frame.
++    1.upto(1) do 
++      # We could use ".prev" below instead of '.current.prev", but we
++      # may as well test current.prev.
++      tf = RubyVM::Frame::current.prev  
++      assert_equal('CFUNC', tf.type)
++      assert_equal(1, tf.arity, 'C arity should work nowadays' )
++      assert_equal(1, tf.argc)
++    end
++
++    x  = lambda do |x,y| 
++      frame = RubyVM::Frame::current
++      assert_equal('block in test_fields', frame.method)
++      assert_equal('LAMBDA', frame.type)
++      assert_equal(x, tf.self)
++      assert_equal(2, frame.arity)
++      assert_equal(2, frame.argc)
++    end
++    x.call(x,2)
++
++    x  = Proc.new do |x, y|
++      frame = RubyVM::Frame::current
++      assert_equal('block in test_fields', frame.method)
++      assert_equal(x, tf.self)
++    assert_equal('BLOCK', frame.type)
++    end
++    x.call(x,2)
++
++  end
++
++  def test_frame_equal
++    tf = RubyVM::Frame.current
++    tf2 = RubyVM::Frame.current
++    assert_equal(true,  tf.equal?(tf))
++    assert_equal(true,  tf.equal?(tf2))
++    tf2 = tf2.prev 
++    assert_equal(false, tf.equal?(tf2))
++    assert_raises TypeError do
++      tf.equal?(tf.iseq)
++    end
++  end
++end
++
++# We want to double-check we didn't mess up any pointers somewhere along
++# the line.
++at_exit { GC.start  }
+diff --git a/test/debugger-ext/test_invalid.rb b/test/debugger-ext/test_invalid.rb
+new file mode 100644
+index 0000000..dd7bfd7
+--- /dev/null
++++ b/test/debugger-ext/test_invalid.rb
+@@ -0,0 +1,39 @@
++require 'test/unit'
++
++class TestInvalid < Test::Unit::TestCase
++  def test_basic
++    @tf = RubyVM::Frame::current
++    assert_equal(false, @tf.invalid?, 
++                 'Frame should be valid right after RubyVM::Frame::current')
++    def notgood(test_tf=nil)
++      # FIXME
++      # if test_tf
++      #   assert_equal(test_tf != @tf, test_tf.invalid?)
++      # end
++      return RubyVM::Frame::current
++    end
++
++    def inner_fn(tf)
++      tf.invalid?
++    end
++      
++    invalid_tf = notgood
++    # FIXME:
++    # assert_equal(true, invalid_tf.invalid?,
++    #             'current thread frame should not be returned from a fn')
++    # begin
++    #   b = invalid_tf.binding
++    #   assert false, 'Should have raised an ThreadFrameError'
++    # rescue ThreadFrameError
++    #   assert true
++    # end
++    # Add a new local variable
++    x = 5
++    assert_equal(false, @tf.invalid?, 
++                 'Frame should still be valid after adding more locals')
++    assert_equal(false, inner_fn(@tf),
++                 'outer thread frame should ok inside a called fn')
++    notgood(invalid_tf)
++    notgood(@tf)
++  end
++end
+diff --git a/test/debugger-ext/test_iseq.rb b/test/debugger-ext/test_iseq.rb
+new file mode 100644
+index 0000000..7c961c0
+--- /dev/null
++++ b/test/debugger-ext/test_iseq.rb
+@@ -0,0 +1,126 @@
++require 'test/unit'
++
++class TestISeq < Test::Unit::TestCase
++
++  class C
++    def initialize(test_obj, optional=true)
++      iseq = RubyVM::Frame::current.iseq
++      test_obj.assert_equal('test_obj', iseq.local_name(0))
++      test_obj.assert_equal(1, iseq.arity)
++      test_obj.assert_equal(-1, iseq.arg_block)
++      test_obj.assert_equal(1, iseq.argc)
++    end
++  end
++  
++  def test_fields
++    skip "RubyVM::Frame patch needs to be done for this to work" unless
++      defined?(RubyVM::Frame)
++    start_lineno = __LINE__ - 3
++    iseq = RubyVM::Frame::current.iseq
++    assert iseq
++    assert_equal('test_fields', iseq.name)
++    ## FIXME: Why does this fail? 
++    ## assert_equal(start_lineno, iseq.lineno, 'iseq.lineno')
++    assert_equal(0, iseq.arity)
++    assert_equal(-1, iseq.arg_block)
++    assert_equal(0, iseq.argc)
++    assert_equal(0, iseq.arg_opts)
++    assert_equal(4, iseq.local_table_size)
++    x  = lambda do |x,y| 
++      iseq = RubyVM::Frame::current.iseq
++      assert iseq
++      assert_equal(2, iseq.arity)
++      assert_equal(-1, iseq.arg_block)
++      assert_equal(2, iseq.argc)
++      assert_equal(0, iseq.arg_opts)
++      assert_equal(3, iseq.local_table_size)
++      ['x', 'y'].each_with_index do |expect, i|
++        assert_equal(expect, iseq.local_name(i))
++      end
++      
++      assert_equal('x', iseq.local_name(-1))
++      assert_raise IndexError do
++        x = iseq.local_name(10)
++      end
++    end
++    x.call(1,2)
++
++    x  = Proc.new do |a|
++      iseq = RubyVM::Frame::current.iseq
++      assert iseq
++      assert_equal(1, iseq.arity)
++      assert_equal(-1, iseq.arg_block)
++      assert_equal(1, iseq.argc)
++      assert_equal(0, iseq.arg_opts)
++      assert_equal(1, iseq.local_table_size)
++      ['a'].each_with_index do |expect, i|
++        assert_equal(expect, iseq.local_name(i))
++      end
++      assert_raises IndexError do
++        x = iseq.local_name(100)
++      end
++      assert_raises TypeError do 
++        p iseq.local_name('a')
++      end
++    end
++    x.call(1,2)
++    C.new(self, 5)
++    end_lineno = __LINE__ + 3
++    assert_equal((start_lineno..end_lineno), 
++                 method(:test_fields).iseq.line_range, 'line range')
++  end
++
++  def test_iseq_equal
++    skip "RubyVM::Frame patch needs to be done for this to work" unless
++      defined?(RubyVM::Frame)
++    tf = RubyVM::Frame.current
++    tf2 = RubyVM::Frame.current
++    while !tf.iseq do
++      tf = tf.prev
++      tf2 = tf2.prev
++    end
++    assert_equal(false, tf.iseq.equal?(nil))
++    assert_equal(true,  tf.iseq.equal?(tf.iseq))
++    assert_equal(true,  tf.iseq.equal?(tf2.iseq))
++    tf2 = tf2.prev 
++    while !tf2.iseq do tf2 = tf2.prev end
++    assert_equal(false, tf.iseq.equal?(tf2.iseq))
++    assert_raises TypeError do
++      tf.iseq.equal?(tf)
++    end
++  end
++
++  # # FIXME: killcache interface will probably change. Try make less sensitive
++  # # to compile sequence
++  # def test_iseq_killcache
++  #   iseq = RubyVM::Frame.current.iseq
++  #   count = iseq.killcache
++  #   if 0 != count
++  #     assert_equal(0, iseq.killcache, 
++  #                'Doing killcache a second time should do nothing')
++  #   end
++  # end
++
++  def test_offsetlines
++    skip "RubyVM::Frame patch needs to be done for this to work" unless
++      defined?(RubyVM::Frame)
++    start     = __LINE__ - 3
++    tf        = RubyVM::Frame::current
++    iseq      = tf.iseq
++    offlines  = iseq.offsetlines
++    pc        = tf.pc_offset
++    assert_equal(__LINE__, offlines[pc][0]+1)
++    offlines.values.each do |value|
++      assert(value[0] >= start, "#{value[0]} should be not less than starting line #{start}")
++      # Rough count of # of lines is less than 20
++      assert(value[0] < start + 20, "#{value[0]} should be less than starting line #{start}")
++    end
++    offlines.keys.each do |offset|
++      assert_equal offlines[offset][0], iseq.offset2lines(offset)[0]
++    end
++  end
++
++end
++
++# We want to double-check we didn't mess up any pointers somewhere.
++at_exit { GC.start  }
+diff --git a/test/debugger-ext/test_iseq_hash.rb b/test/debugger-ext/test_iseq_hash.rb
+new file mode 100644
+index 0000000..303dcd3
+--- /dev/null
++++ b/test/debugger-ext/test_iseq_hash.rb
+@@ -0,0 +1,57 @@
++# See that setting ISEQS__ and SCRIPT_ISEQS__ saves 
++# RubyVM::Instruction_sequenses
++require 'test/unit'
++$SAFE = 0
++SCRIPT_ISEQS__ = {}
++ISEQS__ = {}
++class TestIseqAccess < Test::Unit::TestCase
++  ## FIXME: this doesn't work. Find out why.
++  # def setup
++  #   old_verbosity = $VERBOSE
++  #   $VERBOSE = nil
++  #   Kernel.const_set(:ISEQS__, {})
++  #   Kernel.const_set(:SCRIPT_ISEQS__, {})
++  #   $VERBOSE = old_verbosity
++  # end
++  # def teardown
++  #   old_verbosity = $VERBOSE
++  #   $VERBOSE = nil
++  #   Kernel.const_set(:ISEQS__, nil)
++  #   Kernel.const_set(:SCRIPT_ISEQS__, nil)
++  #   $VERBOSE = old_verbosity
++  # end
++
++  def test_basic
++   sizes=[]
++    [ISEQS__, SCRIPT_ISEQS__].each do |iseq_hash|
++      sizes << iseq_hash.size
++    end
++    # defining five should trigger five instruction sequence additions
++    # to ISEQS__ and SCRIPT_ISEQS__
++    # 
++    eval 'def five; 5 end'
++    # assert_equal sizes[0], sizes[1]
++    [SCRIPT_ISEQS__, ISEQS__].each do |iseq_hash|
++      # assert_equal true, iseq_hash.size > sizes.pop
++      assert_equal Hash, iseq_hash.class
++      a = iseq_hash.first
++      assert_equal Array, a.class
++      assert_equal RubyVM::InstructionSequence, iseq_hash.values[0][0].class
++    end
++    assert_equal RubyVM::InstructionSequence, ISEQS__["five"][0].class
++
++    # Check RubyVM::InstructionSequence#arity
++    eval 'def five; 5 end'
++    eval 'def add(a,b); a+b end'
++    eval 'def splat(*a); 5 end'
++# #   [['five', 0,], ['add', 2], ['splat', -1]].each do |meth, expect|
++    [['five', 0,], ['splat', -1]].each do |meth, expect|
++      assert_equal(expect, ISEQS__[meth][0].arity)
++    end
++
++    # Null ISEQS__ and SCRIPT_ISEQS__ but avoid: dynanmic constant warning
++    eval "ISEQS__ = nil; SCRIPT_ISEQS__ = nil"
++  end
++end
++# We want to double-check we didn't mess up any pointers somewhere.
++at_exit { GC.start  }
+diff --git a/test/debugger-ext/test_iseq_source.rb b/test/debugger-ext/test_iseq_source.rb
+new file mode 100644
+index 0000000..07a7e1f
+--- /dev/null
++++ b/test/debugger-ext/test_iseq_source.rb
+@@ -0,0 +1,26 @@
++require 'test/unit'
++class TestISeqSource < Test::Unit::TestCase
++  def test_source
++    iseq = RubyVM::InstructionSequence.new("x=1")
++    assert_equal  2, iseq.local_size
++    assert_equal  0, iseq.argc
++    assert_equal -1, iseq.arg_rest
++    assert_equal  0, iseq.arg_post_len
++    assert_equal -1, iseq.arg_block
++    assert_equal  1, iseq.arg_simple
++    assert_equal  1, iseq.local_table_size
++    assert_operator 0, :<=, iseq.iseq_size
++    assert_equal [1], iseq.offset2lines(0)
++    assert iseq.offsetlines.is_a?(Hash)
++    assert iseq.offsetlines.values.all?{|x| x == [1]}
++    assert iseq.disasm.is_a?(String)
++    assert_equal 1, iseq.eval
++    assert iseq.self.kind_of?(RubyVM::InstructionSequence)
++    # puts iseq.disasm
++    # puts iseq.name
++    # puts iseq.type
++    # puts iseq.klass
++    # puts iseq.lineno
++  end
++
++end
+diff --git a/test/debugger-ext/test_method.rb b/test/debugger-ext/test_method.rb
+new file mode 100644
+index 0000000..000ad2f
+--- /dev/null
++++ b/test/debugger-ext/test_method.rb
+@@ -0,0 +1,22 @@
++# Test of additional methods in Method
++require 'test/unit'
++
++class TestMethod < Test::Unit::TestCase
++  def test_method
++    m = self.method :test_method
++    assert_equal(1, m.alias_count)
++    assert_equal(:test_method, m.original_id)
++    self.instance_eval { assert_equal(1, m.alias_count) }
++    assert_equal(1, m.alias_count)
++    self.instance_eval { alias :two :test_method }
++    assert_equal(2, m.alias_count)
++    assert_equal(3, self.method(:test_method).alias_count)
++    assert_equal(3, m.alias_count)
++    assert_equal(4, self.method(:two).alias_count)
++    assert_equal(:test_method, self.method(:two).original_id)
++    assert_equal("instruction sequence", method(:test_method).type)
++    assert_equal("C function", File.method(:basename).type)
++    # Array.map is an unbound method
++    assert_equal("C function", Array.instance_method(:map).type)
++  end
++end
+diff --git a/test/debugger-ext/test_os_startup.rb b/test/debugger-ext/test_os_startup.rb
+new file mode 100644
+index 0000000..5851c9a
+--- /dev/null
++++ b/test/debugger-ext/test_os_startup.rb
+@@ -0,0 +1,11 @@
++require 'test/unit'
++
++class TestThread < Test::Unit::TestCase
++  def test_os_startup
++    assert_equal(true, RubyVM::OS_ARGV.any?{|arg| $0 == arg},
++                 "program name args should contain #{$0}")
++    assert_operator(2, :<=, RubyVM::OS_ARGV.size, 
++                    "RubyVM::OS_ARGV should contain at least the Ruby interpeter and the program name")
++    assert RubyVM::OS_STARTUP_DIR
++  end    
++end
+diff --git a/test/debugger-ext/test_proc.rb b/test/debugger-ext/test_proc.rb
+new file mode 100644
+index 0000000..7737aef
+--- /dev/null
++++ b/test/debugger-ext/test_proc.rb
+@@ -0,0 +1,7 @@
++require 'test/unit'
++
++class TestProc < Test::Unit::TestCase
++  def test_sha1
++    assert proc{ 5}.iseq.kind_of?(RubyVM::InstructionSequence)
++  end
++end
+diff --git a/test/debugger-ext/test_source.rb b/test/debugger-ext/test_source.rb
+new file mode 100644
+index 0000000..47b8041
+--- /dev/null
++++ b/test/debugger-ext/test_source.rb
+@@ -0,0 +1,101 @@
++require 'test/unit'
++
++# Test source_location and source_container.
++class TestSource < Test::Unit::TestCase
++
++  def test_iseq_source_container
++    test_basic_lineno = __LINE__ - 1
++    tup = method(:test_iseq_source_container).iseq.source_container
++    tup[1] = File.basename(tup[1])
++    assert_equal(['file',  File.basename(__FILE__)], tup)
++
++    eval('def foo; 5 end')
++    tup = method(:foo).iseq.source_container    
++    assert_equal('string',  tup[0])
++    # puts tup[1]
++
++    iseq = RubyVM::InstructionSequence.compile("1+2")
++    assert_equal('string',  iseq.source_container[0])
++    # puts iseq.source_container[1]
++
++    eval_str = '  RubyVM::Frame.current.source_container # test'
++    tuple = eval(eval_str)
++    assert_equal('string',  tuple[0])
++    assert_equal(eval_str,  tuple[1])
++
++  end
++
++  def test_basic
++    tf = RubyVM::Frame::current
++    # Is this too specific to test/unit.rb implementation details? 
++    tup = tf.source_container
++    tup[1] = File.basename(tup[1])
++    assert_equal(['file',  File.basename(__FILE__)], tup)
++    assert_equal(__LINE__, tf.source_location[0])
++
++    # 1.times creates a C frame.
++    1.times do 
++      expect_line = __LINE__ - 1
++      tf = RubyVM::Frame::current
++      tup = tf.source_container
++      tup[1] = File.basename(tup[1])
++      assert_equal(['file',  File.basename(__FILE__)], tup)
++      assert_equal(tf.source_location[0], __LINE__)
++      tf = tf.prev
++      assert_equal('CFUNC', tf.type)
++      tup = tf.source_container
++      tup[1] = File.basename(tup[1])
++      assert_equal(expect_line, tf.source_location[0])
++    end
++
++    # 1.upto also creates a C frame.
++    1.upto(1) do 
++      expect_line = __LINE__ - 1
++      tf = RubyVM::Frame::current
++      assert_equal('BLOCK', tf.type)
++      tup = tf.source_container
++      tup[1] = File.basename(tup[1])
++      assert_equal(['file',  File.basename(__FILE__)], tup)
++      assert_equal(__LINE__, tf.source_location[0])
++      tf = tf.prev
++      assert_equal('CFUNC', tf.type)
++      tup = tf.source_container
++      tup[1] = File.basename(tup[1])
++      assert_equal(expect_line, tf.source_location[0])
++    end
++
++    x  = lambda do |expect_line| 
++      tf = RubyVM::Frame::current
++      assert_equal('LAMBDA', tf.type)
++      tup = tf.source_container
++      tup[1] = File.basename(tup[1])
++      assert_equal(['file',  File.basename(__FILE__)], tup)
++      assert_equal(__LINE__, tf.source_location[0])
++      tf = tf.prev
++      assert_equal('CFUNC', tf.type)
++      tup = tf.source_container
++      tup[1] = File.basename(tup[1])
++      assert_equal(expect_line, tf.source_location[0])
++    end
++    x.call(__LINE__)
++
++    x  = Proc.new do |expect_line|
++      tf = RubyVM::Frame::current
++      tup = tf.source_container
++      tup[1] = File.basename(tup[1])
++      assert_equal(['file',  File.basename(__FILE__)], tup)
++      assert_equal(__LINE__, tf.source_location[0])
++      tf = tf.prev
++      tup = tf.source_container
++      tup[1] = File.basename(tup[1])
++      # FIXME? 
++      # assert_equal(['file',  File.basename(__FILE__)], tup)
++      assert_equal(expect_line, tf.source_location[0])
++    end
++    x.call(__LINE__)
++  end
++end
++
++# We want to double-check we didn't mess up any pointers somewhere along
++# the line.
++at_exit { GC.start  }
+diff --git a/test/debugger-ext/test_sp_size.rb b/test/debugger-ext/test_sp_size.rb
+new file mode 100644
+index 0000000..4ebc33f
+--- /dev/null
++++ b/test/debugger-ext/test_sp_size.rb
+@@ -0,0 +1,42 @@
++require 'test/unit'
++
++# Test source_location and source_container.
++class TestSpSize < Test::Unit::TestCase
++
++  def sizes
++    tf = RubyVM::Frame::current
++    ary = []
++    0.upto(2) do |i|
++      ary << tf.sp_size
++      tf = tf.prev
++    end
++    # Swap first two items. The item that generally 
++    # will vary is the a[0].
++    ary[0], ary[1] = ary[1], ary[0]
++    # p ary
++    return ary
++  end
++
++  def f0; return sizes end
++  def f1; a=1; return sizes end
++  def f1a(a) return sizes end
++  def f2(a,b) return sizes end
++
++  def test_sp_size
++    f0_s   = f0
++    f1_s   = f1
++    f1a_s  = f1a(1)
++    f2_s   = f2(1,2)
++    assert_equal(f0_s[0]+1,   f1_s[0])
++    assert_equal(f0_s[1..-1], f1_s[1..-1])
++    assert_equal(f1_s, f1a_s)
++    assert_equal(f1_s[0]+1,   f2_s[0])
++    assert_equal(f1_s[1..-1], f2_s[1..-1])
++
++    assert_raises ArgumentError do 
++      tf = RubyVM::Frame.current
++      tf.sp_set(tf.sp_size, "Should not be able to set this.")
++    end
++  end
++
++end
+diff --git a/test/debugger-ext/test_thread.rb b/test/debugger-ext/test_thread.rb
+new file mode 100644
+index 0000000..89afb5e
+--- /dev/null
++++ b/test/debugger-ext/test_thread.rb
+@@ -0,0 +1,15 @@
++require 'test/unit'
++
++class TestThread < Test::Unit::TestCase
++  def test_thread_tracing
++    assert_equal(false, Thread.current.tracing?)
++    Thread.current.tracing = true
++    assert_equal(true, Thread.current.tracing?)
++    Thread.current.tracing = false
++    assert_equal(false, Thread.current.tracing?)
++  end    
++end
++
++# We want to double-check we didn't mess up any pointers somewhere along
++# the line.
++at_exit { GC.start  }
+diff --git a/test/debugger-ext/test_tracemask.rb b/test/debugger-ext/test_tracemask.rb
+new file mode 100644
+index 0000000..2221729
+--- /dev/null
++++ b/test/debugger-ext/test_tracemask.rb
+@@ -0,0 +1,128 @@
++require 'test/unit'
++
++# tests set_trace_func with event bitmasks, clear_trace_func, 
++# Newer changes
++class TestSetTraceFuncAdds < Test::Unit::TestCase
++
++  # Some of the below setup is similar to what is in lib/trace_mod.rb of 
++  # rb-trace
++  @@NO_EVENT_MASK        = 0x0000
++  @@LINE_EVENT_MASK      = 0x0001
++  @@CLASS_EVENT_MASK     = 0x0002
++  @@END_EVENT_MASK       = 0x0004
++  @@CALL_EVENT_MASK      = 0x0008
++  @@RETURN_EVENT_MASK    = 0x0010
++  @@C_CALL_EVENT_MASK    = 0x0020
++  @@C_RETURN_EVENT_MASK  = 0x0040
++  @@RAISE_EVENT_MASK     = 0x0080
++  @@ALL_EVENTS_MASK      = 0x00ff
++  
++  @@EVENT2MASK = {
++    'line'     => @@LINE_EVENT_MASK,
++    'call'     => @@CALL_EVENT_MASK,
++    'return'   => @@RETURN_EVENT_MASK,
++    'c-call'   => @@C_CALL_EVENT_MASK,
++    'c-return' => @@C_RETURN_EVENT_MASK,
++    'c-raise'  => @@RAISE_EVENT_MASK
++  }
++
++  # Convert +events+ into a Fixnum bitmask used internally by Ruby.
++  # Parameter +events+ should be Enumerable and each element should
++  # either be a Fixnum mask value or something that can be converted
++  # to a symbol. If the latter, the case is not important as we'll
++  # downcase the string representation.
++  def events2bitmask(event_list)
++    bitmask = @@NO_EVENT_MASK
++    event_list.each do |event|
++      bitmask |= @@EVENT2MASK[event]
++    end
++    return bitmask
++  end
++
++  def setup
++    @original_compile_option = RubyVM::InstructionSequence.compile_option
++    RubyVM::InstructionSequence.compile_option = {
++      :trace_instruction => true,
++      :specialized_instruction => false
++    }
++    @proc_template = 'Proc.new { |event, file, lineno, mid, binding, klass|
++      %s << [event, lineno, mid, klass]}'
++  end
++
++  def teardown
++    clear_trace_func
++    RubyVM::InstructionSequence.compile_option = @original_compile_option
++  end
++
++  def test_eventmask
++    # In the below we leave out c-call and c-return because there
++    # is another useful patch which changes the order than these appear.
++    # We want this patch to be independent of that patch.
++    returned_tuples = 
++      [['line', 5, :test_eventmask, self.class],
++       ['class', 5, nil, nil],
++       ['end', 5, nil, nil],
++       ['line', 6, :test_eventmask, self.class],
++       ['call', 1, :five, self.class],
++       ['line', 1, :five, self.class],
++       ['return', 1, :five, self.class],
++       ['line', 6, :test_eventmask, self.class],
++       ['line', 7, :test_eventmask, self.class],
++      ]
++
++    [nil, %w(line), %w(call line)].each do |event_list|
++      tuples = []
++      event_mask = if event_list
++                     events2bitmask(event_list)
++                   else
++                     @@ALL_EVENTS_MASK
++                   end
++      cmd = <<-EOF.gsub(/^.*?: /, '')
++        1: def five; 5 end
++        2: p1 = #{@proc_template}
++        3: set_trace_func(p1, #{event_mask})
++        4: class Foo; end
++        5: [1,2,five].any? {|n| n}
++        6: clear_trace_func
++      EOF
++      eval(cmd % 'tuples')
++      if event_list
++        expected = returned_tuples.select{|x| !([x[0]] & event_list).empty?}
++      else
++        expected = returned_tuples
++        tuples = tuples.select { |x| !%w(c-call c-return).member?(x[0]) }
++      end
++      assert_equal(expected, tuples, 
++                   "Error filtering #{event_list}")
++     # p tuples
++    end
++  end
++
++  def test_chained_hook
++    skip "FIX add_trace_func"
++    tuples1 = []
++    tuples2 = []
++    cmd = <<-EOF.gsub(/^.*?: /, '')
++        1: def five; 5 end
++        2: p1 = #{@proc_template}
++        3: p2 = #{@proc_template}
++        4: add_trace_func(p1, @@LINE_EVENT_MASK)
++        5: add_trace_func(p2, @@CALL_EVENT_MASK)
++        6: class Foo; end
++        7: [1,2,five].any? {|n| n}
++      EOF
++    eval(cmd % %w(tuples1 tuples2))
++    clear_trace_func
++    assert_equal([
++                  ["line", 7, :test_chained_hook, self.class], 
++                  ["line", 8, :test_chained_hook, self.class], 
++                  ["line", 9, :test_chained_hook, self.class], 
++                  ["line", 1, :five, self.class], 
++                  ["line", 9, :test_chained_hook, self.class], 
++                 ], tuples1[0..-2],
++                 'line filtering')
++    assert_equal([["call", 1, :five, self.class]], tuples2, 
++                 'call filtering')
++  end
++
++end
+diff --git a/test/debugger-ext/testit.sh b/test/debugger-ext/testit.sh
+new file mode 100755
+index 0000000..ab610a2
+--- /dev/null
++++ b/test/debugger-ext/testit.sh
+@@ -0,0 +1,16 @@
++#!/bin/bash
++if (( $# == 0 )) ; then
++    args=test_*.rb
++elif [[ $1 == 'shortest' ]] ; then
++    exec $SHELL $0 | grep 'failure'
++elif [[ $1 == 'short' ]] ; then
++    exec $SHELL $0 | egrep 'failure|=='
++else
++    args=$@
++fi
++for t in $args ; do 
++    echo "===== $t ====="
++    ../../miniruby -I../../lib -I../.. $t
++    # echo ../../miniruby -I../../lib -I../.. $t
++    # gdb ../../miniruby
++done
+diff --git a/thread.c b/thread.c
+index 2cf1064..16a94af 100644
+--- a/thread.c
++++ b/thread.c
+@@ -4108,7 +4108,7 @@ set_threads_event_flags_i(st_data_t key, st_data_t val, st_data_t flag)
+     GetThreadPtr(thval, th);
+ 
+     if (flag) {
+-	th->event_flags |= RUBY_EVENT_VM;
++        th->event_flags |= (RUBY_EVENT_VM | RUBY_EVENT_BRKPT);
+     }
+     else {
+ 	th->event_flags &= (~RUBY_EVENT_VM);
+@@ -4147,31 +4147,40 @@ thread_exec_event_hooks(VALUE args, int running)
+     rb_thread_t *th = argp->th;
+     rb_event_flag_t flag = argp->event;
+     VALUE self = argp->self;
+-    ID id = argp->id;
+-    VALUE klass = argp->klass;
+-    const rb_event_flag_t wait_event = th->event_flags;
+-    int removed;
++    int do_tracing;
+ 
+     if (self == rb_mRubyVMFrozenCore) return 0;
+ 
+-    if ((wait_event & flag) && !(running & EVENT_RUNNING_THREAD)) {
+-	th->tracing |= EVENT_RUNNING_THREAD;
+-	removed = exec_event_hooks(th->event_hooks, flag, self, id, klass);
+-	th->tracing &= ~EVENT_RUNNING_THREAD;
+-	if (removed) {
+-	    remove_defered_event_hook(&th->event_hooks);
+-	}
+-    }
+-    if (wait_event & RUBY_EVENT_VM) {
+-	if (th->vm->event_hooks == NULL) {
+-	    th->event_flags &= (~RUBY_EVENT_VM);
+-	}
+-	else if (!(running & EVENT_RUNNING_VM)) {
+-	    th->tracing |= EVENT_RUNNING_VM;
+-	    removed = exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
+-	    th->tracing &= ~EVENT_RUNNING_VM;
++    /* Either we haven't turned off tracing via the thread mechanism
++       or we set a return trace and the event is a some kind of return. */
++    do_tracing = UNLIKELY( !(th->cfp->tracing & VM_FRAME_TRACE_OFF) ||
++			   ((flag & (RUBY_EVENT_C_RETURN | RUBY_EVENT_RETURN))
++			    && th->cfp->tracing & VM_FRAME_TRACE_RETURN) );
++
++    if (do_tracing) {
++	const rb_event_flag_t wait_event = th->event_flags;
++	ID id = argp->id;
++	int removed;
++	VALUE klass = argp->klass;
++	if ((wait_event & flag) && !(running & EVENT_RUNNING_THREAD)) {
++	    th->tracing |= EVENT_RUNNING_THREAD;
++	    removed = exec_event_hooks(th->event_hooks, flag, self, id, klass);
++	    th->tracing &= ~EVENT_RUNNING_THREAD;
+ 	    if (removed) {
+-		remove_defered_event_hook(&th->vm->event_hooks);
++		remove_defered_event_hook(&th->event_hooks);
++	    }
++	}
++	if (wait_event & RUBY_EVENT_VM) {
++	    if (th->vm->event_hooks == NULL) {
++		th->event_flags &= (~RUBY_EVENT_VM);
++	    }
++	    else if (!(running & EVENT_RUNNING_VM)) {
++		th->tracing |= EVENT_RUNNING_VM;
++		removed = exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
++		th->tracing &= ~EVENT_RUNNING_VM;
++		if (removed) {
++		    remove_defered_event_hook(&th->vm->event_hooks);
++		}
+ 	    }
+ 	}
+     }
+@@ -4333,19 +4342,48 @@ clear_trace_func_i(st_data_t key, st_data_t val, st_data_t flag)
+     return ST_CONTINUE;
+ }
+ 
+-void
++VALUE
+ rb_clear_trace_func(void)
+ {
+     st_foreach(GET_VM()->living_threads, clear_trace_func_i, (st_data_t) 0);
+     rb_remove_event_hook(0);
++    return Qnil;
+ }
+ 
+ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALUE klass);
+ 
++static VALUE
++add_trace_func(int argc, VALUE *argv)
++{
++    VALUE vmask;
++    VALUE trace;
++    int mask=RUBY_EVENT_ALL;
++    if (2 == rb_scan_args(argc, argv, "11", &trace, &vmask)) {
++        mask = NUM2INT(vmask);
++    }
++
++    if (NIL_P(trace)) {
++	return Qnil;
++    }
++
++    if (!rb_obj_is_proc(trace)) {
++	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
++    }
++
++    {
++	rb_thread_t *th = GET_THREAD(); /* main thread */
++	th->tracing     = -1;
++	rb_add_event_hook(call_trace_func, mask, trace);
++    }
++    
++    return trace;
++}
++
+ /*
+  *  call-seq:
+- *     set_trace_func(proc)    -> proc
+- *     set_trace_func(nil)     -> nil
++ *     set_trace_func(proc)        -> proc
++ *     set_trace_func(proc, mask)  -> proc
++ *     set_trace_func(nil)         -> nil
+  *
+  *  Establishes _proc_ as the handler for tracing, or disables
+  *  tracing if the parameter is +nil+. _proc_ takes up
+@@ -4359,6 +4397,8 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
+  *  <code>line</code> (execute code on a new line), <code>raise</code>
+  *  (raise an exception), and <code>return</code> (return from a Ruby
+  *  method). Tracing is disabled within the context of _proc_.
++ *  _mask_ is an optional bitmask of events to trigger on, See ruby.h
++ *  for the integer values. If no mask is specified all events are triggered.
+  *
+  *      class Test
+  *	def test
+@@ -4383,13 +4423,29 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
+  *	  line prog.rb:3        test     Test
+  *	  line prog.rb:4        test     Test
+  *      return prog.rb:4        test     Test
++ *      set_trace_func(proc { |event, file, line, id, binding, classname|
++ *	   printf "%8s %s:%-2d %10s %8s\n", event, file, line, id, classname
++ *      }, 0x018) # 0x018 == calls and returns only
++ *      t = Test.new
++ *      t.test
++ *
++ *  	  call prog.rb:2        test     Test
++ *      return prog.rb:4        test     Test
+  */
+ 
+ static VALUE
+-set_trace_func(VALUE obj, VALUE trace)
++set_trace_func(int argc, VALUE *argv)
+ {
++    VALUE trace;
++    VALUE event_maskval;
++    rb_event_flag_t events=RUBY_EVENT_ALL;
++
+     rb_remove_event_hook(call_trace_func);
+ 
++    if (2 == rb_scan_args(argc, argv, "11", &trace, &event_maskval)) {
++        events = NUM2INT(event_maskval);
++    }
++
+     if (NIL_P(trace)) {
+ 	GET_THREAD()->tracing = EVENT_RUNNING_NOTHING;
+ 	return Qnil;
+@@ -4399,18 +4455,18 @@ set_trace_func(VALUE obj, VALUE trace)
+ 	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
+     }
+ 
+-    rb_add_event_hook(call_trace_func, RUBY_EVENT_ALL, trace);
++    rb_add_event_hook(call_trace_func, events, trace);
+     return trace;
+ }
+ 
+ static void
+-thread_add_trace_func(rb_thread_t *th, VALUE trace)
++thread_add_trace_func(rb_thread_t *th, VALUE trace, rb_event_flag_t events)
+ {
+     if (!rb_obj_is_proc(trace)) {
+ 	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
+     }
+ 
+-    rb_threadptr_add_event_hook(th, call_trace_func, RUBY_EVENT_ALL, trace);
++    rb_threadptr_add_event_hook(th, call_trace_func, events, trace);
+ }
+ 
+ /*
+@@ -4422,18 +4478,26 @@ thread_add_trace_func(rb_thread_t *th, VALUE trace)
+  */
+ 
+ static VALUE
+-thread_add_trace_func_m(VALUE obj, VALUE trace)
++thread_add_trace_func_m(int argc, VALUE *argv, VALUE obj)
+ {
++    VALUE trace;
++    VALUE event_maskval;
++    rb_event_flag_t events=RUBY_EVENT_ALL;
+     rb_thread_t *th;
++
++    if (2 == rb_scan_args(argc, argv, "11", &trace, &event_maskval)) {
++        events = NUM2INT(event_maskval);
++    }
++
+     GetThreadPtr(obj, th);
+-    thread_add_trace_func(th, trace);
++    thread_add_trace_func(th, trace, events);
+     return trace;
+ }
+ 
+ /*
+  *  call-seq:
+  *     thr.set_trace_func(proc)    -> proc
+- *     thr.set_trace_func(nil)     -> nil
++ *     thr.set_trace_func(proc, events=RB_EVENT_ALL)    -> proc
+  *
+  *  Establishes _proc_ on _thr_ as the handler for tracing, or
+  *  disables tracing if the parameter is +nil+.
+@@ -4441,9 +4505,17 @@ thread_add_trace_func_m(VALUE obj, VALUE trace)
+  */
+ 
+ static VALUE
+-thread_set_trace_func_m(VALUE obj, VALUE trace)
++thread_set_trace_func_m(int argc, VALUE *argv, VALUE obj)
+ {
++    VALUE trace;
++    VALUE event_maskval;
++    rb_event_flag_t events=RUBY_EVENT_ALL;
+     rb_thread_t *th;
++
++    if (2 == rb_scan_args(argc, argv, "11", &trace, &event_maskval)) {
++        events = NUM2INT(event_maskval);
++    }
++
+     GetThreadPtr(obj, th);
+     rb_threadptr_remove_event_hook(th, call_trace_func);
+ 
+@@ -4451,7 +4523,7 @@ thread_set_trace_func_m(VALUE obj, VALUE trace)
+ 	th->tracing = EVENT_RUNNING_NOTHING;
+ 	return Qnil;
+     }
+-    thread_add_trace_func(th, trace);
++    thread_add_trace_func(th, trace, events);
+     return trace;
+ }
+ 
+@@ -4465,6 +4537,8 @@ get_event_name(rb_event_flag_t event)
+ 	return "class";
+       case RUBY_EVENT_END:
+ 	return "end";
++      case RUBY_EVENT_BRKPT:
++	return "brkpt";
+       case RUBY_EVENT_CALL:
+ 	return "call";
+       case RUBY_EVENT_RETURN:
+@@ -4579,6 +4653,37 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
+     return result;
+ }
+ 
++
++/* 
++ *  call-seq:
++ *  Thread#tracing? -> bool
++ * 
++ *  Returns the value of the thread event-hook tracing.
++ */
++VALUE
++rb_thread_tracing(VALUE self)
++{
++    rb_thread_t *th;
++    GetThreadPtr(self, th);
++    return th->tracing ? Qtrue : Qfalse;
++}
++
++/* 
++ *  call-seq:
++ *  Thread#tracing= bool
++ * 
++ *  Sets the value of thread event-hook tracing.
++ */
++VALUE
++rb_thread_tracing_set(VALUE self, VALUE new_value)
++{
++    rb_thread_t *th;
++    GetThreadPtr(self, th);
++
++    th->tracing = RTEST(new_value) ? Qtrue : Qfalse;
++    return th->tracing;
++}
++
+ /*
+  *  call-seq:
+  *     thr.backtrace    -> array
+@@ -4696,9 +4801,15 @@ Init_Thread(void)
+     rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
+ 
+     /* trace */
+-    rb_define_global_function("set_trace_func", set_trace_func, 1);
+-    rb_define_method(rb_cThread, "set_trace_func", thread_set_trace_func_m, 1);
+-    rb_define_method(rb_cThread, "add_trace_func", thread_add_trace_func_m, 1);
++    rb_define_global_function("add_trace_func", add_trace_func, -1);
++    rb_define_global_function("set_trace_func", set_trace_func, -1);
++    rb_define_global_function("clear_trace_func", rb_clear_trace_func, 0);
++    rb_define_method(rb_cThread, "set_trace_func", thread_set_trace_func_m, -1);
++    rb_define_method(rb_cThread, "add_trace_func", thread_add_trace_func_m, -1);
++
++    rb_define_method(rb_cThread, "tracing=",  rb_thread_tracing_set, 1);
++    rb_define_method(rb_cThread, "tracing?",  rb_thread_tracing, 0);
++
+ 
+     /* init thread core */
+     {
+@@ -4832,4 +4943,3 @@ rb_reset_coverages(void)
+     GET_VM()->coverages = Qfalse;
+     rb_remove_event_hook(update_coverage);
+ }
+-
+diff --git a/vm.c b/vm.c
+index c8e9569..463bc4a 100644
+--- a/vm.c
++++ b/vm.c
+@@ -2070,6 +2070,8 @@ nsdr(void)
+     return ary;
+ }
+ 
++extern struct origarg origarg;
++
+ void
+ Init_VM(void)
+ {
+@@ -2082,6 +2084,21 @@ Init_VM(void)
+     rb_undef_alloc_func(rb_cRubyVM);
+     rb_undef_method(CLASS_OF(rb_cRubyVM), "new");
+ 
++    /** set RubyVM::OS_ARGV and RubyVM::OS_STARTUP_DIR */
++    rb_define_const(rb_cRubyVM, "OS_STARTUP_DIR", 
++		    strlen(origarg.os_startup_dir) > 0 ? 
++		    rb_str_new2(origarg.os_startup_dir) : Qnil);
++    {
++	int argc;
++	char **argv;
++	VALUE ary = rb_ary_new();
++	rb_define_const(rb_cRubyVM, "OS_ARGV", ary);
++	for (argc = origarg.argc, argv = origarg.argv; 
++	     argc > 0; argc--, argv++) {
++	    rb_ary_push(ary, rb_str_new2(*argv));
++	}
++    }
++
+     /* ::VM::FrozenCore */
+     fcore = rb_class_new(rb_cBasicObject);
+     RBASIC(fcore)->flags = T_ICLASS;
+diff --git a/vm_core.h b/vm_core.h
+index b28a222..fd2f2e0 100644
+--- a/vm_core.h
++++ b/vm_core.h
+@@ -255,6 +255,23 @@ struct rb_iseq_struct {
+ 
+     /* used at compile time */
+     struct iseq_compile_data *compile_data;
++
++    /* Used to set a breakpoint at a VM instruction */
++    unsigned char *breakpoints; 
++
++    /* If this instruction sequence came from eval, the string of the
++       source as a String. */
++    VALUE source;
++
++    /* If we are saving tree nodes (a compile option), then tree_node
++       is the internal parse tree node representation for this
++       instruction sequence.
++    */
++    NODE *tree_node;
++    int in_use;  /* Reference count of number of times and instruction
++		    sequence is in use such as via thread_frame object
++		    access or is stored in ISEQS__ or SCRIPT_ISEQS.
++		  */
+ };
+ 
+ enum ruby_special_exceptions {
+@@ -340,6 +357,9 @@ typedef struct {
+     rb_iseq_t *block_iseq;	/* cfp[8] / block[3] */
+     VALUE proc;			/* cfp[9] / block[4] */
+     const rb_method_entry_t *me;/* cfp[10] */
++    short int tracing;          /* Bits to control per-frame event tracing. 
++				   See VM_FRAME_TRACE_xxx defines.
++				 */
+ } rb_control_frame_t;
+ 
+ typedef struct rb_block_struct {
+@@ -500,10 +520,11 @@ VALUE rb_iseq_new(NODE*, VALUE, VALUE, VALUE, VALUE, enum iseq_type);
+ VALUE rb_iseq_new_top(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE parent);
+ VALUE rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath);
+ VALUE rb_iseq_new_with_bopt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, VALUE);
+-VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, const rb_compile_option_t*);
++VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, VALUE, rb_compile_option_t*);
+ VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
+ VALUE rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, VALUE opt);
+ VALUE rb_iseq_disasm(VALUE self);
++VALUE rb_iseq_disasm_nochildren(VALUE self);
+ int rb_iseq_disasm_insn(VALUE str, VALUE *iseqval, size_t pos, rb_iseq_t *iseq, VALUE child);
+ const char *ruby_node_name(int node);
+ int rb_iseq_first_lineno(rb_iseq_t *iseq);
+@@ -583,6 +604,10 @@ enum vm_special_object_type {
+ 
+ #define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)
+ 
++#define VM_FRAME_TRACE_RETURN 0x01  /* Call trace hook on return. */
++#define VM_FRAME_TRACE_OFF    0x02  /* Turn of event hook tracing in this frame
++				       and any frames created from this one. */
++
+ /* other frame flag */
+ #define VM_FRAME_FLAG_PASSED 0x0100
+ 
+diff --git a/vm_eval.c b/vm_eval.c
+index 65bec06..dccb78b 100644
+--- a/vm_eval.c
++++ b/vm_eval.c
+@@ -68,22 +68,32 @@ vm_call0(rb_thread_t* th, VALUE recv, VALUE id, int argc, const VALUE *argv,
+       }
+       case VM_METHOD_TYPE_NOTIMPLEMENTED:
+       case VM_METHOD_TYPE_CFUNC: {
+-	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
+ 	{
+ 	    rb_control_frame_t *reg_cfp = th->cfp;
+ 	    rb_control_frame_t *cfp =
+ 		vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
+ 			      recv, (VALUE)blockptr, 0, reg_cfp->sp, 0, 1);
+ 
++	    /* Store actual argument count. Note that cfunc.argc
++	       contains the prototype value.
++	    */
++	    me->def->body.cfunc.actual_argc = argc;
++
+ 	    cfp->me = me;
++	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, id, klass);
++
+ 	    val = call_cfunc(def->body.cfunc.func, recv, def->body.cfunc.argc, argc, argv);
+ 
+ 	    if (reg_cfp != th->cfp + 1) {
+ 		rb_bug("cfp consistency error - call0");
+ 	    }
++
++	    PUSH(val);
++	    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
++	    val = reg_cfp->sp[-1];    /* Allow for hook to change value */
++	    reg_cfp->sp--; /*  for above push */
+ 	    vm_pop_frame(th);
+ 	}
+-	EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, id, klass);
+ 	break;
+       }
+       case VM_METHOD_TYPE_ATTRSET: {
+@@ -1041,6 +1051,7 @@ eval_string_with_cref(VALUE self, VALUE src, VALUE scope, NODE *cref, const char
+ 
+ 	/* save new env */
+ 	GetISeqPtr(iseqval, iseq);
++	iseq->source = src;
+ 	if (bind && iseq->local_table_size > 0) {
+ 	    bind->env = rb_vm_make_env_object(th, th->cfp);
+ 	}
+diff --git a/vm_exec.h b/vm_exec.h
+index 57ed474..7d4b540 100644
+--- a/vm_exec.h
++++ b/vm_exec.h
+@@ -28,12 +28,17 @@ typedef rb_iseq_t *ISEQ;
+ #define USAGE_ANALYSIS_REGISTER(reg, s)		/* none */
+ #endif
+ 
+-#ifdef __GCC__
++/* Rocky: VM-assisted breakpoint handling. */
++#define TEST_AND_HANDLE_BREAKPOINT(cfp, pc)				\
++    if (UNLIKELY(cfp->iseq &&						\
++		 cfp->iseq->breakpoints &&				\
++		 cfp->iseq->breakpoints[pc - cfp->iseq->iseq_encoded])) \
++	EXEC_EVENT_HOOK(th, RUBY_EVENT_BRKPT, cfp->self,		\
++			0, 0)
++
+ /* TODO: machine dependent prefetch instruction */
+-#define PREFETCH(pc)
+-#else
+-#define PREFETCH(pc)
+-#endif
++#define PREFETCH(pc)							\
++    TEST_AND_HANDLE_BREAKPOINT(GET_CFP(), pc)
+ 
+ #if VMDEBUG > 0
+ #define debugs printf
+diff --git a/vm_insnhelper.c b/vm_insnhelper.c
+index 8e7fe94..77b7f11 100644
+--- a/vm_insnhelper.c
++++ b/vm_insnhelper.c
+@@ -28,9 +28,12 @@ vm_push_frame(rb_thread_t * th, const rb_iseq_t * iseq,
+ 	      const VALUE *pc, VALUE *sp, VALUE *lfp,
+ 	      int local_size)
+ {
++    short int tracing = 0;
+     rb_control_frame_t * const cfp = th->cfp - 1;
+     int i;
+ 
++    if (type != VM_FRAME_MAGIC_TOP) tracing = th->cfp->tracing;
++
+     if ((void *)(sp + local_size) >= (void *)cfp) {
+ 	rb_exc_raise(sysstack_error);
+     }
+@@ -63,6 +66,7 @@ vm_push_frame(rb_thread_t * th, const rb_iseq_t * iseq,
+     cfp->block_iseq = 0;
+     cfp->proc = 0;
+     cfp->me = 0;
++    cfp->tracing = tracing & ~VM_FRAME_TRACE_RETURN;
+ 
+ #define COLLECT_PROFILE 0
+ #if COLLECT_PROFILE
+@@ -394,11 +398,15 @@ vm_call_cfunc(rb_thread_t *th, rb_control_frame_t *reg_cfp,
+     const rb_method_definition_t *def = me->def;
+     rb_control_frame_t *cfp;
+ 
+-    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, me->called_id, me->klass);
+-
+     cfp = vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
+ 			recv, (VALUE) blockptr, 0, reg_cfp->sp, 0, 1);
++    /* Store actual argument count. Note that cfunc.argc contains the
++       prototype value.
++    */
++    me->def->body.cfunc.actual_argc = num;
+     cfp->me = me;
++    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_CALL, recv, me->called_id, me->klass);
++
+     reg_cfp->sp -= num + 1;
+ 
+     val = call_cfunc(def->body.cfunc.func, recv, (int)def->body.cfunc.argc, num, reg_cfp->sp + 1);
+@@ -411,9 +419,19 @@ vm_call_cfunc(rb_thread_t *th, rb_control_frame_t *reg_cfp,
+     RB_LLVM_GUARD(reg_cfp);
+ #endif
+ 
+-    vm_pop_frame(th);
++    if (0 == th->tracing) {
++	rb_event_flag_t wait_event__ = th->event_flags;			
++	if (UNLIKELY(wait_event__)) {
++	    PUSH(val);
++	    rb_threadptr_exec_event_hooks(th, RUBY_EVENT_C_RETURN, recv, 
++					  me->called_id, me->klass);
++	    val = reg_cfp->sp[-1];    /* Allow for hook to change value */
++	    reg_cfp->sp--; /* for above push */
++	}
++    } else if (th->tracing < 0)
++	th->tracing++;
+ 
+-    EXEC_EVENT_HOOK(th, RUBY_EVENT_C_RETURN, recv, me->called_id, me->klass);
++    vm_pop_frame(th);
+ 
+     return val;
+ }
+@@ -488,6 +506,12 @@ vm_setup_method(rb_thread_t *th, rb_control_frame_t *cfp,
+ 		      iseq->iseq_encoded + opt_pc, sp, 0, 0);
+ 
+ 	cfp->sp = rsp - 1 /* recv */;
++	if (LIKELY(0 == th->tracing && !(VM_FRAME_TRACE_OFF & cfp->tracing))) {
++	    if (UNLIKELY(cfp->iseq &&
++			 cfp->iseq->breakpoints &&
++			 cfp->iseq->breakpoints[opt_pc]))
++		EXEC_EVENT_HOOK(th, RUBY_EVENT_BRKPT, cfp->self, 0, 0);
++	}
+     }
+     else {
+ 	VALUE *p_rsp;
+diff --git a/vm_opts.h b/vm_opts.h
+index d153d56..07b6105 100644
+--- a/vm_opts.h
++++ b/vm_opts.h
+@@ -23,6 +23,8 @@
+ #define OPT_PEEPHOLE_OPTIMIZATION    1
+ #define OPT_SPECIALISED_INSTRUCTION  1
+ #define OPT_INLINE_CONST_CACHE       1
++#define OPT_SAVE_TREE_NODE           1
++#define OPT_SAVE_COMPILE_OPTS        1
+ 
+ 
+ /* Build Options.

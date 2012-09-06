@@ -1,9 +1,8 @@
 require 'test/unit'
 
-# require 'thread_frame'  # To compare with previous version
-require_relative '../../ext/thread_frame'
+require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
 
-# Test source_location and source_container.
+# Test accessing and settign RubyVM::Frame stack data
 class TestSpSize < Test::Unit::TestCase
 
   def sizes

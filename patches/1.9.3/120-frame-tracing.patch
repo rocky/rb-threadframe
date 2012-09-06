@@ -1,0 +1,144 @@
+Adds the ability to set tracing on or off per frame.
+
+There is already a such a tracing bit that is similar which is set per
+thread, but this is a bit different.
+
+In frame tracing of this patch, subsequent frames created from a frame
+with tracing set off keeps tracing off by default.  Inside a debugger,
+one may want to turn back on tracing to implement recursive debugging.
+
+When a frame returns, the trace bit is taken from the whatever value
+was set from the previous frame's trace bit.
+
+One use of setting frame tracing off in a debugger is to make a "step
+out" (or gdb's "finish") command fast.
+
+Here is another use. In ruby-debug one can call method debugger() to
+force a call to the debugger. From the programmer's standpoint, such a
+stop mechanism straightforward and predictable. But in the debugger()
+method, one might need to do some setup and tear down before calling
+set_trace(). And that might involve calling other methods that we
+don't want to trace in. Without this patch then one has to arrange the
+call to set_trace() as the last statement of the "debugger" method.
+Or one might have some sort of mechanism to say "skip so many
+statements" after tracing is turned on. Both of these approaches is
+cumbersome and frail. With this patch the set_trace() call can
+be placed anywhere in the debugger() method anywhere after the frame
+tracing is turned off in the debugger() method.
+
+diff --git a/thread.c b/thread.c
+index 69e6daa..fc6b152 100644
+--- a/thread.c
++++ b/thread.c
+@@ -4147,31 +4147,40 @@ thread_exec_event_hooks(VALUE args, int running)
+     rb_thread_t *th = argp->th;
+     rb_event_flag_t flag = argp->event;
+     VALUE self = argp->self;
+-    ID id = argp->id;
+-    VALUE klass = argp->klass;
+-    const rb_event_flag_t wait_event = th->event_flags;
+-    int removed;
++    int do_tracing;
+ 
+     if (self == rb_mRubyVMFrozenCore) return 0;
+ 
+-    if ((wait_event & flag) && !(running & EVENT_RUNNING_THREAD)) {
+-	th->tracing |= EVENT_RUNNING_THREAD;
+-	removed = exec_event_hooks(th->event_hooks, flag, self, id, klass);
+-	th->tracing &= ~EVENT_RUNNING_THREAD;
+-	if (removed) {
+-	    remove_defered_event_hook(&th->event_hooks);
+-	}
+-    }
+-    if (wait_event & RUBY_EVENT_VM) {
+-	if (th->vm->event_hooks == NULL) {
+-	    th->event_flags &= (~RUBY_EVENT_VM);
+-	}
+-	else if (!(running & EVENT_RUNNING_VM)) {
+-	    th->tracing |= EVENT_RUNNING_VM;
+-	    removed = exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
+-	    th->tracing &= ~EVENT_RUNNING_VM;
++    /* Either we haven't turned off tracing via the thread mechanism
++       or we set a return trace and the event is a some kind of return. */
++    do_tracing = UNLIKELY( !(th->cfp->tracing & VM_FRAME_TRACE_OFF) ||
++			   ((flag & (RUBY_EVENT_C_RETURN | RUBY_EVENT_RETURN))
++			    && th->cfp->tracing & VM_FRAME_TRACE_RETURN) );
++
++    if (do_tracing) {
++	const rb_event_flag_t wait_event = th->event_flags;
++	ID id = argp->id;
++	int removed;
++	VALUE klass = argp->klass;
++	if ((wait_event & flag) && !(running & EVENT_RUNNING_THREAD)) {
++	    th->tracing |= EVENT_RUNNING_THREAD;
++	    removed = exec_event_hooks(th->event_hooks, flag, self, id, klass);
++	    th->tracing &= ~EVENT_RUNNING_THREAD;
+ 	    if (removed) {
+-		remove_defered_event_hook(&th->vm->event_hooks);
++		remove_defered_event_hook(&th->event_hooks);
++	    }
++	}
++	if (wait_event & RUBY_EVENT_VM) {
++	    if (th->vm->event_hooks == NULL) {
++		th->event_flags &= (~RUBY_EVENT_VM);
++	    }
++	    else if (!(running & EVENT_RUNNING_VM)) {
++		th->tracing |= EVENT_RUNNING_VM;
++		removed = exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
++		th->tracing &= ~EVENT_RUNNING_VM;
++		if (removed) {
++		    remove_defered_event_hook(&th->vm->event_hooks);
++		}
+ 	    }
+ 	}
+     }
+diff --git a/vm_core.h b/vm_core.h
+index b28a222..8abccf3 100644
+--- a/vm_core.h
++++ b/vm_core.h
+@@ -340,6 +340,9 @@ typedef struct {
+     rb_iseq_t *block_iseq;	/* cfp[8] / block[3] */
+     VALUE proc;			/* cfp[9] / block[4] */
+     const rb_method_entry_t *me;/* cfp[10] */
++    short int tracing;          /* Bits to control per-frame event tracing. 
++				   See VM_FRAME_TRACE_xxx defines.
++				 */
+ } rb_control_frame_t;
+ 
+ typedef struct rb_block_struct {
+@@ -583,6 +586,10 @@ enum vm_special_object_type {
+ 
+ #define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)
+ 
++#define VM_FRAME_TRACE_RETURN 0x01  /* Call trace hook on return. */
++#define VM_FRAME_TRACE_OFF    0x02  /* Turn of event hook tracing in this frame
++				       and any frames created from this one. */
++
+ /* other frame flag */
+ #define VM_FRAME_FLAG_PASSED 0x0100
+ 
+diff --git a/vm_insnhelper.c b/vm_insnhelper.c
+index 33bb45c..47f130c 100644
+--- a/vm_insnhelper.c
++++ b/vm_insnhelper.c
+@@ -28,9 +28,12 @@ vm_push_frame(rb_thread_t * th, const rb_iseq_t * iseq,
+ 	      const VALUE *pc, VALUE *sp, VALUE *lfp,
+ 	      int local_size)
+ {
++    short int tracing = 0;
+     rb_control_frame_t * const cfp = th->cfp - 1;
+     int i;
+ 
++    if (type != VM_FRAME_MAGIC_TOP) tracing = th->cfp->tracing;
++
+     if ((void *)(sp + local_size) >= (void *)cfp) {
+ 	rb_exc_raise(sysstack_error);
+     }
+@@ -63,6 +66,7 @@ vm_push_frame(rb_thread_t * th, const rb_iseq_t * iseq,
+     cfp->block_iseq = 0;
+     cfp->proc = 0;
+     cfp->me = 0;
++    cfp->tracing = tracing & ~VM_FRAME_TRACE_RETURN;
+ 
+ #define COLLECT_PROFILE 0
+ #if COLLECT_PROFILE

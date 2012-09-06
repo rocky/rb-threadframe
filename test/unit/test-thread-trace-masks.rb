@@ -1,6 +1,7 @@
 # Test of additional tracing flag use to selectively turn on off tracing
 require 'test/unit'
-require_relative '../../ext/thread_frame'
+
+require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
 
 class TestTracingMasks < Test::Unit::TestCase
   @@EVENT2MASK = {

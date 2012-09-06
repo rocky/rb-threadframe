@@ -41,7 +41,7 @@ Index: vm_core.h
 ===================================================================
 --- vm_core.h	(revision 28955)
 +++ vm_core.h	(working copy)
-@@ -330,6 +330,9 @@
+@@ -334,6 +334,9 @@
      rb_iseq_t *block_iseq;	/* cfp[8] / block[3] */
      VALUE proc;			/* cfp[9] / block[4] */
      const rb_method_entry_t *me;/* cfp[10] */
@@ -51,7 +51,7 @@ Index: vm_core.h
  } rb_control_frame_t;
  
  typedef struct rb_block_struct {
-@@ -567,6 +572,10 @@
+@@ -570,6 +573,10 @@
  
  #define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)
  
@@ -66,7 +66,7 @@ Index: thread.c
 ===================================================================
 --- thread.c	(revision 28955)
 +++ thread.c	(working copy)
-@@ -3793,22 +3801,34 @@
+@@ -3779,22 +3779,34 @@
  void
  rb_threadptr_exec_event_hooks(rb_thread_t *th, rb_event_flag_t flag, VALUE self, ID id, VALUE klass)
  {
@@ -81,9 +81,6 @@ Index: thread.c
 -    if (wait_event & RUBY_EVENT_VM) {
 -	if (th->vm->event_hooks == NULL) {
 -	    th->event_flags &= (~RUBY_EVENT_VM);
--	}
--	else {
--	    exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
 +
 +    /* Either we haven't turned off tracing via the thread mechanism
 +       or we set a return trace and the event is a some kind of return. */
@@ -98,7 +95,9 @@ Index: thread.c
 +	if (wait_event & flag) {
 +	    if (UNLIKELY(!RUBY_VM_CONTROL_FRAME_STACK_OVERFLOW_P(th, th->cfp)))
 +		exec_event_hooks(th->event_hooks, flag, self, id, klass);
-+	}
+ 	}
+-	else {
+-	    exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
 +	if (wait_event & RUBY_EVENT_VM) {
 +	    if (th->vm->event_hooks == NULL) {
 +		th->event_flags &= (~RUBY_EVENT_VM);
@@ -113,16 +112,16 @@ Index: thread.c
  }
  
  void
-@@ -4097,7 +4181,7 @@
+@@ -4082,7 +4094,7 @@
  ruby_suppress_tracing(VALUE (*func)(VALUE, int), VALUE arg, int always)
  {
      rb_thread_t *th = GET_THREAD();
 -    int state, tracing;
 +    int state, tracing, cfp_tracing;
      volatile int raised;
+     volatile int outer_state;
      VALUE result = Qnil;
- 
-@@ -4106,6 +4182,10 @@
+@@ -4092,6 +4104,10 @@
      }
      else {
  	th->tracing = 1;
@@ -133,7 +132,7 @@ Index: thread.c
      }
  
      raised = rb_threadptr_reset_raised(th);
-@@ -4121,6 +4207,8 @@
+@@ -4109,6 +4125,8 @@
      POP_TAG();
  
      th->tracing = tracing;
@@ -160,8 +159,8 @@ Index: vm_insnhelper.c
      if ((void *)(sp + local_size) >= (void *)cfp) {
  	rb_exc_raise(sysstack_error);
      }
-@@ -60,6 +63,7 @@
-     cfp->dfp = sp;
+@@ -61,6 +64,7 @@
+     cfp->block_iseq = 0;
      cfp->proc = 0;
      cfp->me = 0;
 +    cfp->tracing = tracing & ~VM_FRAME_TRACE_RETURN;

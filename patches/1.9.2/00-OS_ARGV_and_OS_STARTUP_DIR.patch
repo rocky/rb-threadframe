@@ -2,8 +2,8 @@ Index: include/ruby/ruby.h
 ===================================================================
 --- include/ruby/ruby.h	(revision 29767)
 +++ include/ruby/ruby.h	(working copy)
-@@ -1454,6 +1454,12 @@
- #include "ruby/subst.h"
+@@ -1449,6 +1449,12 @@
+ #define close ruby_close
  #endif
  
 +struct origarg {
@@ -19,7 +19,7 @@ Index: vm.c
 ===================================================================
 --- vm.c	(revision 29767)
 +++ vm.c	(working copy)
-@@ -1975,6 +1975,8 @@
+@@ -1991,6 +1991,8 @@
      return ary;
  }
  
@@ -28,7 +28,7 @@ Index: vm.c
  void
  Init_VM(void)
  {
-@@ -1987,6 +1990,21 @@
+@@ -2003,6 +2005,21 @@
      rb_undef_alloc_func(rb_cRubyVM);
      rb_undef_method(CLASS_OF(rb_cRubyVM), "new");
  
@@ -71,7 +71,7 @@ Index: ruby.c
  
  static void
  usage(const char *name)
-@@ -1752,8 +1750,8 @@
+@@ -1738,8 +1736,8 @@
      setproctitle("%.*s", (int)i, s);
  #else
  
@@ -82,7 +82,7 @@ Index: ruby.c
      }
  
      memcpy(origarg.argv[0], s, i);
-@@ -1763,8 +1761,8 @@
+@@ -1749,8 +1747,8 @@
  	char *t = origarg.argv[0] + i;
  	*t = '\0';
  
@@ -93,7 +93,7 @@ Index: ruby.c
  	}
  	for (j = 1; j < origarg.argc; j++) {
  	    origarg.argv[j] = t;
-@@ -1891,8 +1889,19 @@
+@@ -1877,8 +1875,19 @@
  #endif
      origarg.argc = *argc;
      origarg.argv = *argv;

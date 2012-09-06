@@ -19,7 +19,7 @@ Index: include/ruby/ruby.h
 ===================================================================
 --- include/ruby/ruby.h	(revision 33354)
 +++ include/ruby/ruby.h	(working copy)
-@@ -1352,7 +1352,12 @@
+@@ -1368,7 +1368,12 @@
  #define RUBY_EVENT_C_CALL    0x0020
  #define RUBY_EVENT_C_RETURN  0x0040
  #define RUBY_EVENT_RAISE     0x0080
@@ -33,7 +33,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_VM       0x10000
  #define RUBY_EVENT_SWITCH   0x20000
  #define RUBY_EVENT_COVERAGE 0x40000
-@@ -1433,6 +1438,12 @@
+@@ -1449,6 +1454,12 @@
  #define close ruby_close
  #endif
  

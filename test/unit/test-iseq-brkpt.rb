@@ -1,5 +1,5 @@
 require 'test/unit'
-require_relative '../../ext/thread_frame'
+require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
 
 class TestISeqBrkpt < Test::Unit::TestCase
 
@@ -41,7 +41,7 @@ class TestISeqBrkpt < Test::Unit::TestCase
   end
 
   def test_iseq_brkpt_set
-    add_trace_func(Proc.new { |event, file, lineno, mid, binding, klass|
+    set_trace_func(Proc.new { |event, file, lineno, mid, binding, klass|
                      if 'brkpt' == event
                        $saw_brkpt = true
                      end

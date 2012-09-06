@@ -1,0 +1,85 @@
+Adds per-thread tracing by adding methods Thread#tracing? and Thread#tracing=
+
+The basic mechanism of per-tracing thread was already inside. This
+just exposes the ability the set or query thread tracing individually
+by adding a couple of methods.
+
+diff --git a/thread.c b/thread.c
+index 2cf1064..69e6daa 100644
+--- a/thread.c
++++ b/thread.c
+@@ -4579,6 +4579,37 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
+     return result;
+ }
+ 
++
++/* 
++ *  call-seq:
++ *  Thread#tracing? -> bool
++ * 
++ *  Returns the value of the thread event-hook tracing.
++ */
++VALUE
++rb_thread_tracing(VALUE self)
++{
++    rb_thread_t *th;
++    GetThreadPtr(self, th);
++    return th->tracing ? Qtrue : Qfalse;
++}
++
++/* 
++ *  call-seq:
++ *  Thread#tracing= bool
++ * 
++ *  Sets the value of thread event-hook tracing.
++ */
++VALUE
++rb_thread_tracing_set(VALUE self, VALUE new_value)
++{
++    rb_thread_t *th;
++    GetThreadPtr(self, th);
++
++    th->tracing = RTEST(new_value) ? Qtrue : Qfalse;
++    return th->tracing;
++}
++
+ /*
+  *  call-seq:
+  *     thr.backtrace    -> array
+@@ -4700,6 +4731,10 @@ Init_Thread(void)
+     rb_define_method(rb_cThread, "set_trace_func", thread_set_trace_func_m, 1);
+     rb_define_method(rb_cThread, "add_trace_func", thread_add_trace_func_m, 1);
+ 
++    rb_define_method(rb_cThread, "tracing=",  rb_thread_tracing_set, 1);
++    rb_define_method(rb_cThread, "tracing?",  rb_thread_tracing, 0);
++
++
+     /* init thread core */
+     {
+ 	/* main thread setting */
+@@ -4832,4 +4867,3 @@ rb_reset_coverages(void)
+     GET_VM()->coverages = Qfalse;
+     rb_remove_event_hook(update_coverage);
+ }
+-
+diff --git a/test/debugger-ext/test_thread.rb b/test/debugger-ext/test_thread.rb
+new file mode 100644
+index 0000000..89afb5e
+--- /dev/null
++++ b/test/debugger-ext/test_thread.rb
+@@ -0,0 +1,15 @@
++require 'test/unit'
++
++class TestThread < Test::Unit::TestCase
++  def test_thread_tracing
++    assert_equal(false, Thread.current.tracing?)
++    Thread.current.tracing = true
++    assert_equal(true, Thread.current.tracing?)
++    Thread.current.tracing = false
++    assert_equal(false, Thread.current.tracing?)
++  end    
++end
++
++# We want to double-check we didn't mess up any pointers somewhere along
++# the line.
++at_exit { GC.start  }

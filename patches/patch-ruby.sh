@@ -12,33 +12,63 @@ fi
 patchfile=${1:-'1.9.2'}
 case $patchfile in
     1.9.3 | head | trunk )
-	echo "patching 1.9.3 is not supported yet".
-	# for file in \
-	#     00-extern-access.patch  \
-	#     01-get-sourceline.patch \
-	#     02-frame-trace.patch    \
-	#     03-disasm-insns.patch   \
-	#     04-iseq-access.patch    \
-	#     05-iseq-create.patch    \
-	#     06-C-argc.patch         \
-	#     07-brkpt.patch          \
-	#     08-raise-msg.patch      \
-	#     09-trace_func.patch     \
-	#     10-iseq-top-name.patch  \
-	#     11-binding-arity.patch  \
-	#     12-insn-step.patch      \
-	#     13-hook-error-recover.patch
-	# do 
-	#     patch_file=${dirname}/trunk/$file
-	#     echo -- Applying patches in $patch_file ... | tee -a patches_applied.log
-	#     patch -p0 < $patch_file
-	# done
+	for file in \
+	    000-testit.patch \
+	    110-thread-tracing.patch \
+	    120-frame-tracing.patch \
+	    130-brkpt.patch \
+	    210-iseq-field-access.patch \
+	    215-iseq-field-access.patch \
+	    220-iseq-eval-source-save.patch \
+	    230-iseq-top-name.patch \
+	    240-iseq-SCRIPT_ISEQS__.patch \
+	    245-method-arity.patch \
+	    246-frame.patch \
+	    247-c-argc.patch \
+	    310-os-startup.patch \
+ 	    320-disasm-insns.patch \
+	    340-trace-func-mask.patch \
+	    345-raise-msg.patch \
+	    350-c-hook.patch \
+	    360-save-compile-opts.patch \
+	    370-proc-iseq.patch \
+	    380-method-extra.patch
+	do 
+	    patch_file=${dirname}/1.9.3/$file
+	    echo -- Applying patches in $patch_file ... | tee -a patches_applied.log
+	    patch -p1 < $patch_file
+	done
 	;;
     combined ) 
-	file=ruby-trunk-combined.patch
+	file=ruby-1.9.3-combined.patch
 	patch_file=${dirname}/$file
 	echo -- Applying patches in $patch_file
-	patch -p0 < $patch_file
+	patch -p1 < $patch_file
+	;;
+    1.9.2-single )
+	# Up to 04-iseq-access.patch tested
+	for file in \
+	    00-eval-source-save.patch \
+	    00-extern-access.patch \
+	    00-OS_ARGV_and_OS_STARTUP_DIR.patch \
+	    01-get-sourceline.patch \
+	    02-frame-trace.patch \
+	    03-disasm-insns.patch \
+	    04-iseq-access.patch \
+	    05-iseq-create.patch \
+	    06-C-argc.patch \
+	    07-brkpt.patch \
+	    08-trace_func.patch \
+	    09-raise-msg.patch \
+	    10-iseq-top-name.patch \
+	    11-binding-arity.patch \
+	    12-insn-step.patch \
+	    13-hook-error-recover.patch 
+	do 
+	    patch_file=${dirname}/1.9.2/$file
+	    echo -- Applying patches in $patch_file ... | tee -a patches_applied.log
+	    patch -p0 < $patch_file
+	done
 	;;
     1.9.2 | * )
 	file=ruby-1.9.2-combined.patch

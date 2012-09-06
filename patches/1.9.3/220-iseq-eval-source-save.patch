@@ -1,0 +1,64 @@
+Adds Instruction#source method. If this instruction sequence came from
+eval(), the string of the source is returned from this method.
+
+TODO: figure out how to have this "source" field filled out more
+often.
+
+diff --git a/iseq.c b/iseq.c
+index ec66a69..a51a19e 100644
+--- a/iseq.c
++++ b/iseq.c
+@@ -744,6 +744,18 @@ find_prev_line_no(rb_iseq_t *iseqdat, unsigned long pos)
+     return 0;
+ }
+ 
++/**
++ * Return String used in the creation of this instruction sequence. If none
++ * recorded, 0 (or false) is returned.
++ */
++VALUE
++rb_iseq_source(VALUE self)
++{
++    rb_iseq_t *iseq = iseq_check(self);
++    rb_secure(1);
++    return iseq->source;
++}
++
+ static VALUE
+ insn_operand_intern(rb_iseq_t *iseq,
+ 		    VALUE insn, int op_no, VALUE op,
+@@ -1847,6 +1859,7 @@ Init_ISeq(void)
+     rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
+     rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
+     rb_define_method(rb_cISeq, "eval", iseq_eval, 0);
++    rb_define_method(rb_cISeq, "source", rb_iseq_source, 0);
+ 
+ #if 0 /* TBD */
+     rb_define_method(rb_cISeq, "marshal_dump", iseq_marshal_dump, 0);
+diff --git a/vm_core.h b/vm_core.h
+index 1a1af10..0170eda 100644
+--- a/vm_core.h
++++ b/vm_core.h
+@@ -258,6 +258,10 @@ struct rb_iseq_struct {
+ 
+     /* Used to set a breakpoint at a VM instruction */
+     unsigned char *breakpoints; 
++
++    /* If this instruction sequence came from eval, the string of the
++       source as a String. */
++    VALUE source;
+ };
+ 
+ enum ruby_special_exceptions {
+diff --git a/vm_eval.c b/vm_eval.c
+index 65bec06..6957aa2 100644
+--- a/vm_eval.c
++++ b/vm_eval.c
+@@ -1041,6 +1041,7 @@ eval_string_with_cref(VALUE self, VALUE src, VALUE scope, NODE *cref, const char
+ 
+ 	/* save new env */
+ 	GetISeqPtr(iseqval, iseq);
++	iseq->source = src;
+ 	if (bind && iseq->local_table_size > 0) {
+ 	    bind->env = rb_vm_make_env_object(th, th->cfp);
+ 	}

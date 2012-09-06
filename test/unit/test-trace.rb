@@ -1,6 +1,6 @@
 # Test of additional tracing flag use to selectively turn on off tracing
 require 'test/unit'
-require_relative '../../ext/thread_frame'
+require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
 
 class TestTracing < Test::Unit::TestCase
   def test_basic_query_set_unset

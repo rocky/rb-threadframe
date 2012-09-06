@@ -1,7 +1,8 @@
 require 'test/unit'
-require_relative '../../ext/thread_frame'
 
-class TestProc < Test::Unit::TestCase
+require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
+
+class TestInvalid < Test::Unit::TestCase
   def test_basic
     @tf = RubyVM::Frame::current
     assert_equal(false, @tf.invalid?, 

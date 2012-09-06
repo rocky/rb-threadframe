@@ -8,6 +8,9 @@ using eval('self.class', binding)
 Another small but unrelated change here is to fill in some of the
 missing event names in the case statement of routine get_event_name().
 
+The test in this patch depends on 08-trace_func.patch as it uses
+clear_trace_func and set_trace_func with an event mask. The patch
+could probably be rewritten so it doesn't need this dependency.
 
 Index: eval.c
 ===================================================================
@@ -31,7 +34,7 @@ Index: thread.c
 --- thread.c	(revision 28955)
 +++ thread.c	(working copy)
 ===================================================================
-@@ -4046,6 +4109,12 @@
+@@ -4070,6 +4070,12 @@
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -44,29 +47,28 @@ Index: thread.c
        default:
  	return "unknown";
      }
-@@ -4077,8 +4055,15 @@
- 	p->event == RUBY_EVENT_C_RETURN) {
+@@ -4097,7 +4103,15 @@
+     ID id = 0;
+     VALUE klass = 0;
+ 
+-    if (p->klass != 0) {
++    if (p->event == RUBY_EVENT_RAISE) {
++        /* rb_thread_method_and_id() wants a place to store a klass
++	   value which subsequently we will not use.  */
++        VALUE junk_klass; 
++	rb_thread_method_id_and_class(GET_THREAD(), &id, &junk_klass);
++	/* When the event is RUBY_EVENT_RAISE, we have stored the raise
++	   message as the trace-hook klass parameter. */ 
++	klass = p->klass;
++    } else if (p->klass != 0) {
  	id = p->id;
  	klass = p->klass;
--    }
--    else {
-+    } else if (p->event == RUBY_EVENT_RAISE) {
-+        /* rb_thread_method_and_id() wants a place to store a klass
-+	    value which subsequently we will not use.  */
-+        VALUE junk_klass; 
-+	 rb_thread_method_id_and_class(GET_THREAD(), &id, &junk_klass);
-+	 /* When the event is RUBY_EVENT_RAISE, we have stored the raise
-+	    message as the trace-hook klass parameter. */ 
-+	 klass = p->klass;
-+    } else {
- 	rb_thread_method_id_and_class(p->th, &id, &klass);
      }
-     if (id == ID_ALLOCATOR)
 Index: test/ruby/test_settracefunc.rb
 ===================================================================
 --- test/ruby/test_settracefunc.rb	(revision 28955)
 +++ test/ruby/test_settracefunc.rb	(working copy)
-@@ -220,7 +220,7 @@
+@@ -210,7 +210,7 @@
       3: })
       4: begin
       5:   raise TypeError, "error"
@@ -75,7 +77,7 @@ Index: test/ruby/test_settracefunc.rb
       7: end
       8: set_trace_func(nil)
      EOF
-@@ -248,7 +248,7 @@
+@@ -236,7 +236,7 @@
                   events.shift)
      assert_equal(["c-return", 5, :set_backtrace, Exception],
                   events.shift)

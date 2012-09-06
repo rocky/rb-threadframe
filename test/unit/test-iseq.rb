@@ -1,5 +1,5 @@
 require 'test/unit'
-require_relative '../../ext/thread_frame'
+require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
 
 class TestISeq < Test::Unit::TestCase
 
@@ -90,6 +90,7 @@ class TestISeq < Test::Unit::TestCase
   # FIXME: killcache interface will probably change. Try make less sensitive
   # to compile sequence
   def test_iseq_killcache
+    skip "killcache doesn't work on 1.9.3" if '1.9.3' == RUBY_VERSION
     iseq = RubyVM::Frame.current.iseq
     count = iseq.killcache
     if 0 != count
