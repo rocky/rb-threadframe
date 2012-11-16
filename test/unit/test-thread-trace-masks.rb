@@ -40,6 +40,7 @@ class TestTracingMasks < Test::Unit::TestCase
   end  
 
   def test_thread_trace_mask
+    skip "reinstate this on 1.9.3" if '1.9.3' == RUBY_VERSION
     def trace_hook(event, file, line, id, binding, klass)
       @events << [line, event, id, klass]
     end

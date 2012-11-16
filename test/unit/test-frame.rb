@@ -50,6 +50,7 @@ class TestThread < Test::Unit::TestCase
     # because the location is reported on a traceback
     # and that probably can't happen at PC 0.
     def bug_when_zero_pc
+      skip "reinstate this on 1.9.3" if '1.9.3' == RUBY_VERSION
       @not_first = true
       tf = RubyVM::Frame::current.prev
       pc_save = tf.pc_offset
@@ -64,6 +65,7 @@ class TestThread < Test::Unit::TestCase
     
 
   def test_thread_tracing
+    skip "reinstate this on 1.9.3" if '1.9.3' == RUBY_VERSION
     assert_equal(false, Thread.current.tracing)
     Thread.current.tracing = true
     assert_equal(true, Thread.current.tracing)
@@ -72,6 +74,7 @@ class TestThread < Test::Unit::TestCase
   end    
     
   def test_thread_exec_event_tracing
+    skip "reinstate this on 1.9.3" if '1.9.3' == RUBY_VERSION
     assert_equal(false, Thread.current.exec_event_tracing)
     Thread.current.exec_event_tracing = true
     assert_equal(true, Thread.current.exec_event_tracing)
