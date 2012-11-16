@@ -1,0 +1,14 @@
+Notes in RbConfig an that we have threadframe support.
+
+diff --git a/tool/mkconfig.rb b/tool/mkconfig.rb
+index b707c4b..fcb3761 100755
+--- a/tool/mkconfig.rb
++++ b/tool/mkconfig.rb
+@@ -155,6 +155,7 @@ ARCH
+ print "  universal = #{universal}\n" if universal
+ print "  CONFIG = {}\n"
+ print "  CONFIG[\"DESTDIR\"] = DESTDIR\n"
++print "  CONFIG[\"rb-threadframe\"] = \"0.3\"\n"
+ 
+ versions = {}
+ IO.foreach(File.join(srcdir, "version.h")) do |l|
