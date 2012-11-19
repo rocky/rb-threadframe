@@ -274,7 +274,7 @@ new file mode 100644
 index 0000000..7ca859b
 --- /dev/null
 +++ b/frame.c
-@@ -0,0 +1,1059 @@
+@@ -0,0 +1,1058 @@
 +/* 
 + * Copyright (C) 2012 Rocky Bernstein
 + *
@@ -293,8 +293,7 @@ index 0000000..7ca859b
 +#include "gc.h"
 +#include "iseq.h"
 +
-+/* From Ruby 1.9.2 thread.c: */
-+rb_control_frame_t *
++RUBY_EXTERN rb_control_frame_t *
 +thread_control_frame(rb_thread_t *th) 
 +{
 +  if (th == NULL || ((VALUE) th) == Qnil)
