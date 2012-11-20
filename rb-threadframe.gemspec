@@ -4,12 +4,19 @@ require 'rake'
 require 'rubygems' unless 
   Object.const_defined?(:Gem)
 
-PACKAGE_VERSION = open("ext/#{RUBY_VERSION}/thread_frame.c") do |f| 
+
+PACKAGE_VERSION = open("ext/1.9.2/thread_frame.c") do |f| 
   f.grep(/^#define THREADFRAME_VERSION/).first[/"(.+)"/,1]
 end
 
-EXT_FILES     = FileList[%W(ext/#{RUBY_VERSION}/*.c ext/#{RUBY_VERSION}/*.h)]
-INCLUDE_FILES = FileList['include/*.h']
+if '1.9.2' == RUBY_VERSION
+  EXT_FILES     = FileList[%W(ext/#{RUBY_VERSION}/*.c 
+                              ext/#{RUBY_VERSION}/*.h)] 
+  INCLUDE_FILES = FileList['include/*.h']
+else
+  EXT_FILES     = []
+  INCLUDE_FILES = FileList[]
+end
 LIB_FILES     = FileList['lib/*.rb']
 TEST_FILES    = FileList['test/**/*.rb']
 COMMON_FILES  = FileList[%w(README.md Rakefile Makefile LICENSE NEWS)]
@@ -24,7 +31,7 @@ Gem::Specification.new do |spec|
 rb-threadframe gives introspection access for frames of a thread.
 EOF
   spec.email        = 'rockyb@rubyforge.net'
-  spec.extensions   = ["ext/extconf.rb"]
+  spec.extensions   = ["ext/extconf.rb"] if '1.9.2' == RUBY_VERSION
   spec.files        = FILES.to_a  
   spec.has_rdoc     = false
   spec.homepage     = "http://github.com/rocky/rb-threadframe/tree/master"

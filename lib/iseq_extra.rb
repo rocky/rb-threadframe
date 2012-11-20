@@ -1,5 +1,5 @@
 require 'digest/sha1'
-require_relative '../ext/thread_frame' if ['1.9.2', '1.9.3'].member?(RUBY_VERSION)
+require_relative '../ext/thread_frame' if '1.9.2' == RUBY_VERSION
 # Some additions to RubyVM::InstructionSequence
 class RubyVM::InstructionSequence
 
