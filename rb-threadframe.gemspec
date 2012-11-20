@@ -4,11 +4,11 @@ require 'rake'
 require 'rubygems' unless 
   Object.const_defined?(:Gem)
 
-PACKAGE_VERSION = open("ext/thread_frame.c") do |f| 
+PACKAGE_VERSION = open("ext/#{RUBY_VERSION}/thread_frame.c") do |f| 
   f.grep(/^#define THREADFRAME_VERSION/).first[/"(.+)"/,1]
 end
 
-EXT_FILES     = FileList[%w(ext/*.c ext/*.h)]
+EXT_FILES     = FileList[%W(ext/#{RUBY_VERSION}/*.c ext/#{RUBY_VERSION}/*.h)]
 INCLUDE_FILES = FileList['include/*.h']
 LIB_FILES     = FileList['lib/*.rb']
 TEST_FILES    = FileList['test/**/*.rb']

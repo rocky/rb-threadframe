@@ -4084,6 +4084,20 @@ index b28a222..fd2f2e0 100644
  /* other frame flag */
  #define VM_FRAME_FLAG_PASSED 0x0100
  
+@@ -686,8 +707,13 @@
+ /* for thread */
+ 
+ #if RUBY_VM_THREAD_MODEL == 2
++#if defined __GNUC__ && __GNUC__ >= 4
++#pragma GCC visibility push(default)
+ RUBY_EXTERN rb_thread_t *ruby_current_thread;
++
+ extern rb_vm_t *ruby_current_vm;
++#pragma GCC visibility pop
++#endif
+ 
+ #define GET_VM() ruby_current_vm
+ #define GET_THREAD() ruby_current_thread
 diff --git a/vm_eval.c b/vm_eval.c
 index 65bec06..dccb78b 100644
 --- a/vm_eval.c

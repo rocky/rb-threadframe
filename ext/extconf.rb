@@ -11,4 +11,8 @@ See http://github.com/rocky/rb-threadframe/wiki/How-to-Install" unless
 config_file = File.join(File.dirname(__FILE__), 'config_options.rb')
 load config_file if File.exist?(config_file)
 
-create_makefile("thread_frame")
+if  '1.9.3' == RUBY_VERSION
+  create_makefile("thread_frame", '1.9.3')
+else 
+  create_makefile("thread_frame", '1.9.2')
+end

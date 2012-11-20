@@ -10,8 +10,8 @@ class TestProcAndMethod < Test::Unit::TestCase
                  Proc.new{|x,y| x+y}.iseq.is_a?(RubyVM::InstructionSequence))
   end
   def test_method_extra
-    skip "Figure out what's up with on 1.9.3" if 
-      '1.9.3' == RUBY_VERSION
+    # skip "Figure out what's up with on 1.9.3" if 
+    #  '1.9.3' == RUBY_VERSION
     m = self.method :test_method_extra
     assert_equal(1, m.alias_count)
     assert_equal(:test_method_extra, m.original_id)
