@@ -36,11 +36,14 @@ class TestLibISeqExtra < Test::Unit::TestCase
   end
 
   def test_iseq_type
-    skip "Figure out what's up with iseq#type on 1.9.3" if 
-      '1.9.3' == RUBY_VERSION
     tf = RubyVM::Frame.current
     top_iseq = tf.prev(-1).iseq
-    assert_equal('method', RubyVM::InstructionSequence::TYPE2STR[top_iseq.type])
+    if '1.9.3' == RUBY_VERSION 
+      assert_equal('METHOD', tf.prev.type)
+    else
+      assert_equal('method', 
+                   RubyVM::InstructionSequence::TYPE2STR[top_iseq.type])
+    end
   end
 
   def test_format_args
