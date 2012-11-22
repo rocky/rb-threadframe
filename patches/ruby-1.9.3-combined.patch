@@ -250,6 +250,14 @@ index c9ef641..22067b2 100644
  		class.$(OBJEXT) \
  		compar.$(OBJEXT) \
  		complex.$(OBJEXT) \
+@@ -84,6 +84,7 @@ COMMONOBJS    = array.$(OBJEXT) \
+ 		string.$(OBJEXT) \
+ 		struct.$(OBJEXT) \
+ 		time.$(OBJEXT) \
++		tracehook.$(OBJEXT) \
+ 		transcode.$(OBJEXT) \
+ 		util.$(OBJEXT) \
+ 		variable.$(OBJEXT) \
 @@ -93,6 +94,7 @@ COMMONOBJS    = array.$(OBJEXT) \
  		vm.$(OBJEXT) \
  		vm_dump.$(OBJEXT) \
@@ -4669,16 +4677,3 @@ index b707c4b..fcb3761 100755
  
  versions = {}
  IO.foreach(File.join(srcdir, "version.h")) do |l|
-diff --git a/version.h b/version.h
-index b2b42e1..124b6a6 100644
---- a/version.h
-+++ b/version.h
-@@ -42,7 +42,7 @@
- # define RUBY_DESCRIPTION	    \
-     "ruby "RUBY_VERSION		    \
-     RUBY_PATCHLEVEL_STR             \
--    " ("RUBY_RELEASE_DATE	    \
-+    " with debugger support ("RUBY_RELEASE_DATE	    \
-     RUBY_REVISION_STR") "	    \
-     "["RUBY_PLATFORM"]"
- # define RUBY_COPYRIGHT 	    \

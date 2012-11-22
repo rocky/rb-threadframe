@@ -1,3 +1,15 @@
+diff --git a/common.mk b/common.mk
+index c9ef641..04626a8 100644
+--- a/common.mk
++++ b/common.mk
+@@ -85,6 +85,7 @@ COMMONOBJS    = array.$(OBJEXT) \
+ 		string.$(OBJEXT) \
+ 		struct.$(OBJEXT) \
+ 		time.$(OBJEXT) \
++		tracehook.$(OBJEXT) \
+ 		transcode.$(OBJEXT) \
+ 		util.$(OBJEXT) \
+ 		variable.$(OBJEXT) \
 diff --git a/inits.c b/inits.c
 index 0a28805..19ff327 100644
 --- a/inits.c
