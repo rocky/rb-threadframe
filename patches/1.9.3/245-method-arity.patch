@@ -93,7 +93,7 @@ index 11a2d3e..45998dd 100644
  /*
   *  call-seq:
   *     binding -> a_binding
-@@ -631,6 +652,29 @@ proc_arity(VALUE self)
+@@ -630,6 +651,29 @@ proc_arity(VALUE self)
      return INT2FIX(arity);
  }
  
@@ -123,7 +123,7 @@ index 11a2d3e..45998dd 100644
  int
  rb_proc_arity(VALUE self)
  {
-@@ -1649,7 +1693,7 @@ method_arity_m(VALUE method)
+@@ -1648,7 +1692,7 @@ method_arity_m(VALUE method)
      return INT2FIX(n);
  }
  

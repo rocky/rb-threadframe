@@ -89,7 +89,7 @@ diff --git a/thread.c b/thread.c
 index 01c5f3f..5ee10b8 100644
 --- a/thread.c
 +++ b/thread.c
-@@ -4549,6 +4549,12 @@ get_event_name(rb_event_flag_t event)
+@@ -4562,6 +4562,12 @@ get_event_name(rb_event_flag_t event)
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -102,7 +102,7 @@ index 01c5f3f..5ee10b8 100644
        default:
  	return "unknown";
      }
-@@ -4566,11 +4572,18 @@ call_trace_proc(VALUE args, int tracing)
+@@ -4579,11 +4585,18 @@ call_trace_proc(VALUE args, int tracing)
      ID id = 0;
      VALUE klass = 0;
  

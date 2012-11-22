@@ -10,7 +10,7 @@ diff --git a/common.mk b/common.mk
 index 48ff6cc..ad3769b 100644
 --- a/common.mk
 +++ b/common.mk
-@@ -93,6 +93,7 @@ COMMONOBJS    = array.$(OBJEXT) \
+@@ -94,6 +94,7 @@ COMMONOBJS    = array.$(OBJEXT) \
  		vm.$(OBJEXT) \
  		vm_dump.$(OBJEXT) \
  		thread.$(OBJEXT) \
@@ -1142,7 +1142,7 @@ diff --git a/proc.c b/proc.c
 index 45998dd..8963247 100644
 --- a/proc.c
 +++ b/proc.c
-@@ -725,6 +725,23 @@ rb_proc_get_iseq(VALUE self, int *is_proc)
+@@ -724,6 +724,23 @@ rb_proc_get_iseq(VALUE self, int *is_proc)
      return iseq;
  }
  
@@ -1166,7 +1166,7 @@ index 45998dd..8963247 100644
  static VALUE
  iseq_location(rb_iseq_t *iseq)
  {
-@@ -2218,6 +2235,7 @@ Init_Proc(void)
+@@ -2217,6 +2234,7 @@ Init_Proc(void)
      rb_define_method(rb_cMethod, "unbind", method_unbind, 0);
      rb_define_method(rb_cMethod, "source_location", rb_method_location, 0);
      rb_define_method(rb_cMethod, "parameters", rb_method_parameters, 0);

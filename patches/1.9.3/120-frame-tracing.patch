@@ -30,7 +30,7 @@ diff --git a/thread.c b/thread.c
 index 69e6daa..fc6b152 100644
 --- a/thread.c
 +++ b/thread.c
-@@ -4147,31 +4147,40 @@ thread_exec_event_hooks(VALUE args, int running)
+@@ -4160,31 +4160,40 @@ thread_exec_event_hooks(VALUE args, int running)
      rb_thread_t *th = argp->th;
      rb_event_flag_t flag = argp->event;
      VALUE self = argp->self;

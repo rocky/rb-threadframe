@@ -8,7 +8,7 @@ diff --git a/thread.c b/thread.c
 index 2cf1064..69e6daa 100644
 --- a/thread.c
 +++ b/thread.c
-@@ -4579,6 +4579,37 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
+@@ -4592,6 +4592,37 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
      return result;
  }
  
@@ -46,7 +46,7 @@ index 2cf1064..69e6daa 100644
  /*
   *  call-seq:
   *     thr.backtrace    -> array
-@@ -4700,6 +4731,10 @@ Init_Thread(void)
+@@ -4713,6 +4744,10 @@ Init_Thread(void)
      rb_define_method(rb_cThread, "set_trace_func", thread_set_trace_func_m, 1);
      rb_define_method(rb_cThread, "add_trace_func", thread_add_trace_func_m, 1);
  
@@ -57,7 +57,7 @@ index 2cf1064..69e6daa 100644
      /* init thread core */
      {
  	/* main thread setting */
-@@ -4832,4 +4867,3 @@ rb_reset_coverages(void)
+@@ -4846,4 +4881,3 @@ rb_reset_coverages(void)
      GET_VM()->coverages = Qfalse;
      rb_remove_event_hook(update_coverage);
  }

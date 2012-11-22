@@ -4,7 +4,7 @@ diff --git a/proc.c b/proc.c
 index 8963247..92dddc0 100644
 --- a/proc.c
 +++ b/proc.c
-@@ -2103,6 +2103,27 @@ proc_curry(int argc, VALUE *argv, VALUE self)
+@@ -2102,6 +2102,27 @@ proc_curry(int argc, VALUE *argv, VALUE self)
      return make_curry_proc(self, rb_ary_new(), arity);
  }
  
@@ -32,7 +32,7 @@ index 8963247..92dddc0 100644
  /*
   *  Document-class: LocalJumpError
   *
-@@ -2194,6 +2215,7 @@ Init_Proc(void)
+@@ -2193,6 +2214,7 @@ Init_Proc(void)
      rb_define_method(rb_cProc, "==", proc_eq, 1);
      rb_define_method(rb_cProc, "eql?", proc_eq, 1);
      rb_define_method(rb_cProc, "hash", proc_hash, 0);

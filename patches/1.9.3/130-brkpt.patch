@@ -262,7 +262,7 @@ diff --git a/common.mk b/common.mk
 index eb89a2b..48ff6cc 100644
 --- a/common.mk
 +++ b/common.mk
-@@ -40,6 +40,7 @@ ENC_MK        = enc.mk
+@@ -41,6 +41,7 @@ ENC_MK        = enc.mk
  
  COMMONOBJS    = array.$(OBJEXT) \
  		bignum.$(OBJEXT) \
@@ -373,7 +373,7 @@ diff --git a/thread.c b/thread.c
 index fc6b152..216e158 100644
 --- a/thread.c
 +++ b/thread.c
-@@ -4108,7 +4108,7 @@ set_threads_event_flags_i(st_data_t key, st_data_t val, st_data_t flag)
+@@ -4121,7 +4121,7 @@ set_threads_event_flags_i(st_data_t key, st_data_t val, st_data_t flag)
      GetThreadPtr(thval, th);
  
      if (flag) {
@@ -382,7 +382,7 @@ index fc6b152..216e158 100644
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -4474,6 +4474,8 @@ get_event_name(rb_event_flag_t event)
+@@ -4487,6 +4487,8 @@ get_event_name(rb_event_flag_t event)
  	return "class";
        case RUBY_EVENT_END:
  	return "end";

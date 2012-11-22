@@ -37,7 +37,7 @@ index ed39f44..57bda3b 100644
  
  static void
  usage(const char *name)
-@@ -1854,6 +1851,17 @@ ruby_sysinit(int *argc, char ***argv)
+@@ -1873,6 +1870,17 @@ ruby_sysinit(int *argc, char ***argv)
  #endif
      origarg.argc = *argc;
      origarg.argv = *argv;
@@ -76,7 +76,7 @@ diff --git a/vm.c b/vm.c
 index c8e9569..463bc4a 100644
 --- a/vm.c
 +++ b/vm.c
-@@ -2070,6 +2070,8 @@ nsdr(void)
+@@ -2073,6 +2073,8 @@ nsdr(void)
      return ary;
  }
  
@@ -85,7 +85,7 @@ index c8e9569..463bc4a 100644
  void
  Init_VM(void)
  {
-@@ -2082,6 +2084,21 @@ Init_VM(void)
+@@ -2085,6 +2087,21 @@ Init_VM(void)
      rb_undef_alloc_func(rb_cRubyVM);
      rb_undef_method(CLASS_OF(rb_cRubyVM), "new");
  
