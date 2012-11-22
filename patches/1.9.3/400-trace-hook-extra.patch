@@ -1,0 +1,286 @@
+diff --git a/inits.c b/inits.c
+index 0a28805..19ff327 100644
+--- a/inits.c
++++ b/inits.c
+@@ -57,6 +57,7 @@ rb_call_inits(void)
+     CALL(ISeq);
+     CALL(Thread);
+     CALL(Frame);
++    CALL(TraceHook);
+     CALL(Cont);
+     CALL(Rational);
+     CALL(Complex);
+diff --git a/test/debugger-ext/test_trace_hook.rb b/test/debugger-ext/test_trace_hook.rb
+new file mode 100644
+index 0000000..2ae65ca
+--- /dev/null
++++ b/test/debugger-ext/test_trace_hook.rb
+@@ -0,0 +1,94 @@
++#!/usr/bin/env ruby
++require 'test/unit'
++
++# Testing RubyVM::TraceHook
++class TestTraceHook < Test::Unit::TestCase
++
++  def setup
++    set_trace_func(nil)
++  end
++
++  def test_trace_hooks
++    tt = RubyVM::TraceHook::trace_hooks
++    assert_equal([], tt)
++
++    set_trace_func(Proc.new { 1  })
++    tt = RubyVM::TraceHook::trace_hooks
++
++    assert_equal(1, tt.size)
++    assert tt[0].event_mask.is_a?(Fixnum)
++    
++    set_trace_func(Proc.new { }, 5)
++    tt = RubyVM::TraceHook::trace_hooks
++
++    assert_equal(1, tt.size)
++
++    set_trace_func(nil)
++    tt = RubyVM::TraceHook::trace_hooks
++    assert_equal([], tt)
++    
++  end
++
++  # Test getting and setting event mask of a trace hook
++  def test_event
++    set_trace_func(Proc.new { }, 5)
++    tt = RubyVM::TraceHook::trace_hooks
++    assert_equal(5, tt[0].event_mask)
++
++    tt[0].event_mask = 6;
++    assert_equal(6, tt[0].event_mask)
++
++    set_trace_func(nil)
++    assert_raises RubyVM::TraceHookError do 
++      tt[0].event_mask 
++    end
++
++    assert_raises RubyVM::TraceHookError do 
++      tt[0].event_mask = 10
++    end
++
++  end
++
++  # Test getting and setting proc of a trace hook
++  def test_proc
++    p = Proc.new { 1 }
++    set_trace_func(p)
++    tt = RubyVM::TraceHook::trace_hooks
++    assert_equal(p, tt[0].proc)
++    assert_equal 1, tt[0].proc.call
++
++    p2 = Proc.new { 2 }
++    assert_raises TypeError do
++      tt[0].proc = 5
++    end
++    tt[0].proc = p2
++
++    assert_equal(p2, tt[0].proc)
++    assert_equal 2, tt[0].proc.call
++
++    set_trace_func(nil)
++    assert_raises RubyVM::TraceHookError do 
++      tt[0].proc
++    end
++
++    assert_raises TypeError do 
++      tt[0].proc = 6
++    end
++
++    # Test valid?
++    def test_valid
++      tt = RubyVM::TraceHook::trace_hooks
++      assert_equal(true, tt[0].valid?)
++      set_trace_func(Proc.new {} )
++      tt = RubyVM::TraceHook::trace_hooks
++      assert_equal(true, tt[0].valid?)
++      set_trace_func(Proc.new { 1 } )
++      assert_equal(false, tt[0].valid?)
++      tt = RubyVM::TraceHook::trace_hooks
++      assert_equal(true, tt[0].valid?)
++      set_trace_func(nil)
++      GC.start
++      assert_equal(false, tt[0].valid?)
++    end
++  end
++end
+diff --git a/test/debugger-ext/testit.sh b/test/debugger-ext/testit.sh
+old mode 100644
+new mode 100755
+diff --git a/tracehook.c b/tracehook.c
+new file mode 100644
+index 0000000..2f4ca65
+--- /dev/null
++++ b/tracehook.c
+@@ -0,0 +1,165 @@
++/**********************************************************************
++
++  tracehook.c -
++
++  Copyright (C) 2012 Rocky Bernstein
++
++**********************************************************************/
++
++#include "vm_core.h" 
++
++extern VALUE rb_cRubyVM;   /* RubyVM class */
++extern rb_vm_t *ruby_current_vm;
++extern VALUE rb_obj_is_proc(VALUE proc);
++
++VALUE rb_cTraceHook;       /* TraceHook class */
++VALUE rb_eTraceHookError;  /* Exception raised by TraceHook class */
++
++/* Extra information we need to save about a hook. 
++   FIXME: For now we will work only with vm hooks. When this
++   extends to thread hooks, we will need to use this.
++ */
++typedef struct 
++{
++  rb_thread_t *th;         /* If NULL, hook is in vm. Otherwise, this
++			      is the thread the hook belongs to. */
++  rb_event_hook_t *hook;
++} hook_info_t;
++
++static int is_hook_member(rb_event_hook_t *check_hook, rb_event_hook_t *hook);
++
++static void
++check_hook_valid(rb_event_hook_t *check_hook)
++{
++  /* FIXME: in the future use check_hook to find the hook head. */
++  rb_event_hook_t *hook_head = GET_VM()->event_hooks;
++  
++  if (!is_hook_member(check_hook, hook_head))
++    rb_raise(rb_eTraceHookError, "hook not found");
++}
++
++/* Return an Array of vm event hooks found from hook. */
++VALUE
++get_trace_hooks(rb_event_hook_t *hook)
++{
++    VALUE ary;
++    for (ary = rb_ary_new(); hook; hook = hook->next)
++	rb_ary_push(ary, Data_Wrap_Struct(rb_cTraceHook, NULL, NULL, hook));
++    return ary;
++}
++
++/* Return 1 if check_hook is found in the list of hooks pointed to by
++ 'hook', or 0 if not found. */
++static int 
++is_hook_member(rb_event_hook_t *check_hook, rb_event_hook_t *hook) 
++{
++    for (; hook; hook = hook->next) if (check_hook == hook) return 1;
++    return 0;  /* Not found */
++}
++
++/* Return an Array of VM event hooks objects. */
++VALUE
++trace_hook_s_trace_hooks()
++{
++  return get_trace_hooks(GET_VM()->event_hooks);
++}
++
++/*
++  Return the event mask value for a given hook. If no hook, then return nil.
++ */
++static VALUE
++trace_hook_event_mask(VALUE klass)
++{
++    rb_event_hook_t *hook;
++    Data_Get_Struct(klass, rb_event_hook_t, hook);
++    if (!hook) return Qnil;
++    check_hook_valid(hook);
++    return INT2FIX(hook->flag);
++}
++
++/* Set a new mask value for given hook and return the old mask
++   value. Can raise an error if there is no hook installed.  */
++static VALUE
++trace_hook_event_mask_set(VALUE klass, VALUE maskval)
++{
++    rb_event_hook_t *hook;
++    rb_event_flag_t flag;
++    Data_Get_Struct(klass, rb_event_hook_t, hook);
++    if (!hook) 
++	rb_raise(rb_eTraceHookError, "No hook installed");
++    if (!FIXNUM_P(maskval)) {
++	rb_raise(rb_eTypeError, "integer argument expected");
++    } 
++    check_hook_valid(hook);
++    flag = hook->flag;
++    hook->flag = FIX2INT(maskval);
++    return INT2FIX(flag);
++}
++
++/*
++  Return the event mask value for a given hook. If no hook, then return nil.
++ */
++static VALUE
++trace_hook_proc(VALUE klass)
++{
++    rb_event_hook_t *hook;
++    Data_Get_Struct(klass, rb_event_hook_t, hook);
++    if (!hook) return Qnil;
++    check_hook_valid(hook);
++    return hook->data;
++}
++
++/*
++  Return the event mask value for a given hook. If no hook, then return nil.
++ */
++static VALUE
++trace_hook_proc_set(VALUE klass, VALUE trace_proc)
++{
++    rb_event_hook_t *hook;
++    if (!rb_obj_is_proc(trace_proc)) {
++	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
++    }
++
++    Data_Get_Struct(klass, rb_event_hook_t, hook);
++    if (!hook) return Qnil;
++    check_hook_valid(hook);
++    hook->data = trace_proc;
++    return trace_proc;
++}
++
++/*
++  Return true if hook is still valid or is nil), false otherwise.
++ */
++static VALUE
++trace_hook_valid(VALUE klass)
++{
++    rb_event_hook_t *hook;
++    Data_Get_Struct(klass, rb_event_hook_t, hook);
++    /* FIXME in the future we will need to extract whether this hook is
++       part of a thread or from the vm.
++    */
++    return is_hook_member(hook, GET_VM()->event_hooks) ? Qtrue : Qfalse;
++}
++
++void
++Init_TraceHook(void)
++{
++  rb_eTraceHookError = rb_define_class_under(rb_cRubyVM, "TraceHookError",
++					     rb_eStandardError);
++  rb_cTraceHook      = rb_define_class_under(rb_cRubyVM, "TraceHook", 
++					     rb_cObject);
++
++  rb_define_singleton_method(rb_cTraceHook, "trace_hooks", 
++			     trace_hook_s_trace_hooks, 0);
++  
++  rb_define_method(rb_cTraceHook, "event_mask", 
++		   trace_hook_event_mask, 0);
++  rb_define_method(rb_cTraceHook, "event_mask=", 
++		   trace_hook_event_mask_set, 1);
++  rb_define_method(rb_cTraceHook, "proc", 
++		   trace_hook_proc, 0);
++  rb_define_method(rb_cTraceHook, "proc=", 
++		   trace_hook_proc_set, 1);
++  rb_define_method(rb_cTraceHook, "valid?", 
++		   trace_hook_valid, 0);
++}

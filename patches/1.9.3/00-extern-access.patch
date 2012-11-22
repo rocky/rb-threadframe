@@ -64,17 +64,3 @@ index f6f42ca..4d97118 100644
  #ifdef USE_SIGALTSTACK
      void *altstack;
  #endif
-@@ -686,8 +707,13 @@
- /* for thread */
- 
- #if RUBY_VM_THREAD_MODEL == 2
-+#if defined __GNUC__ && __GNUC__ >= 4
-+#pragma GCC visibility push(default)
- RUBY_EXTERN rb_thread_t *ruby_current_thread;
-+
- extern rb_vm_t *ruby_current_vm;
-+#pragma GCC visibility pop
-+#endif
- 
- #define GET_VM() ruby_current_vm
- #define GET_THREAD() ruby_current_thread

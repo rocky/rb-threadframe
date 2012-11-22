@@ -1,11 +1,13 @@
 diff --git a/brkpt.c b/brkpt.c
 new file mode 100644
-index 0000000..8e55325
+index 0000000..4d6eb8f
 --- /dev/null
 +++ b/brkpt.c
-@@ -0,0 +1,232 @@
+@@ -0,0 +1,234 @@
 +/**********************************************************************
 +  brkpt.c - VM-assisted Breakpoint support 
++  Copyright (C) 2012 Rocky Bernstein
++
 +
 +**********************************************************************/
 +
@@ -237,10 +239,10 @@ index 0000000..8e55325
 +    rb_define_method(rb_cISeq, "brkpts",           iseq_brkpts, 0);
 +}
 diff --git a/common.mk b/common.mk
-index eb89a2b..ad3769b 100644
+index c9ef641..22067b2 100644
 --- a/common.mk
 +++ b/common.mk
-@@ -40,6 +40,7 @@ ENC_MK        = enc.mk
+@@ -41,6 +41,7 @@ ENC_MK        = enc.mk
  
  COMMONOBJS    = array.$(OBJEXT) \
  		bignum.$(OBJEXT) \
@@ -248,7 +250,7 @@ index eb89a2b..ad3769b 100644
  		class.$(OBJEXT) \
  		compar.$(OBJEXT) \
  		complex.$(OBJEXT) \
-@@ -92,6 +93,7 @@ COMMONOBJS    = array.$(OBJEXT) \
+@@ -93,6 +94,7 @@ COMMONOBJS    = array.$(OBJEXT) \
  		vm.$(OBJEXT) \
  		vm_dump.$(OBJEXT) \
  		thread.$(OBJEXT) \
@@ -257,7 +259,7 @@ index eb89a2b..ad3769b 100644
  		$(BUILTIN_ENCOBJS) \
  		$(BUILTIN_TRANSOBJS) \
 diff --git a/compile.c b/compile.c
-index fb51053..8f7bc75 100644
+index d35c13f..d6c814f 100644
 --- a/compile.c
 +++ b/compile.c
 @@ -960,7 +960,7 @@ new_child_iseq(rb_iseq_t *iseq, NODE *node,
@@ -269,9 +271,27 @@ index fb51053..8f7bc75 100644
      debugs("[new_child_iseq]< ---------------------------------------\n");
      iseq_add_mark_object(iseq, ret);
      return ret;
+diff --git a/eval.c b/eval.c
+index 3999ea5..b2c8aae 100644
+--- a/eval.c
++++ b/eval.c
+@@ -441,7 +441,12 @@ setup_exception(rb_thread_t *th, int tag, volatile VALUE mesg)
+     rb_trap_restore_mask();
+ 
+     if (tag != TAG_FATAL) {
+-	EXEC_EVENT_HOOK(th, RUBY_EVENT_RAISE, th->cfp->self, 0, 0);
++        /* In a RAISE event, we store as the "class" parameter the
++           the optional message parameter which is likely to be of more
++           use. Given a binding, a trace hook can get the class via 
++           eval('self.class', binding)
++	 */
++        EXEC_EVENT_HOOK(th, RUBY_EVENT_RAISE, th->cfp->self, 0, mesg);
+     }
+ }
+ 
 diff --git a/frame.c b/frame.c
 new file mode 100644
-index 0000000..7ca859b
+index 0000000..4669d4f
 --- /dev/null
 +++ b/frame.c
 @@ -0,0 +1,1058 @@
@@ -1359,22 +1379,23 @@ index 3b72f8c..5eca96f 100644
  #if 0
  { /* satisfy cc-mode */
 diff --git a/inits.c b/inits.c
-index a6f63f0..0a28805 100644
+index a6f63f0..19ff327 100644
 --- a/inits.c
 +++ b/inits.c
-@@ -56,6 +56,7 @@ rb_call_inits(void)
+@@ -56,6 +56,8 @@ rb_call_inits(void)
      CALL(VM);
      CALL(ISeq);
      CALL(Thread);
 +    CALL(Frame);
++    CALL(TraceHook);
      CALL(Cont);
      CALL(Rational);
      CALL(Complex);
 diff --git a/internal.h b/internal.h
-index 5d0cff0..0692212 100644
+index 59c9284..db5406a 100644
 --- a/internal.h
 +++ b/internal.h
-@@ -169,7 +169,7 @@ struct timeval rb_time_timeval(VALUE);
+@@ -176,7 +176,7 @@ struct timeval rb_time_timeval(VALUE);
  VALUE rb_obj_is_mutex(VALUE obj);
  VALUE ruby_suppress_tracing(VALUE (*func)(VALUE, int), VALUE arg, int always);
  void rb_thread_execute_interrupts(VALUE th);
@@ -2358,7 +2379,7 @@ index 8df190e..e4cdd5f 100644
  #pragma GCC visibility pop
  #endif
 diff --git a/load.c b/load.c
-index 0ff4b60..4bfc157 100644
+index 163ec4c..a6773c1 100644
 --- a/load.c
 +++ b/load.c
 @@ -301,11 +301,13 @@ rb_load_internal(VALUE fname, int wrap)
@@ -2394,14 +2415,14 @@ index 896e309..aa7d861 100644
  
  typedef struct rb_method_attr_struct {
 diff --git a/proc.c b/proc.c
-index 11a2d3e..eb6c731 100644
+index fe52565..585d0f3 100644
 --- a/proc.c
 +++ b/proc.c
 @@ -28,7 +28,6 @@ VALUE rb_cBinding;
  VALUE rb_cProc;
  
  static VALUE bmcall(VALUE, VALUE);
--int method_arity(VALUE);
+-static int method_arity(VALUE);
  
  /* Proc */
  
@@ -2434,7 +2455,7 @@ index 11a2d3e..eb6c731 100644
  /*
   *  call-seq:
   *     binding -> a_binding
-@@ -631,6 +652,29 @@ proc_arity(VALUE self)
+@@ -630,6 +651,29 @@ proc_arity(VALUE self)
      return INT2FIX(arity);
  }
  
@@ -2464,7 +2485,7 @@ index 11a2d3e..eb6c731 100644
  int
  rb_proc_arity(VALUE self)
  {
-@@ -681,6 +725,23 @@ rb_proc_get_iseq(VALUE self, int *is_proc)
+@@ -680,6 +724,23 @@ rb_proc_get_iseq(VALUE self, int *is_proc)
      return iseq;
  }
  
@@ -2488,7 +2509,16 @@ index 11a2d3e..eb6c731 100644
  static VALUE
  iseq_location(rb_iseq_t *iseq)
  {
-@@ -2042,6 +2103,100 @@ proc_curry(int argc, VALUE *argv, VALUE self)
+@@ -1648,7 +1709,7 @@ method_arity_m(VALUE method)
+     return INT2FIX(n);
+ }
+ 
+-static int
++int
+ method_arity(VALUE method)
+ {
+     struct METHOD *data;
+@@ -2041,6 +2102,100 @@ proc_curry(int argc, VALUE *argv, VALUE self)
      return make_curry_proc(self, rb_ary_new(), arity);
  }
  
@@ -2589,7 +2619,7 @@ index 11a2d3e..eb6c731 100644
  /*
   *  Document-class: LocalJumpError
   *
-@@ -2133,6 +2288,7 @@ Init_Proc(void)
+@@ -2132,6 +2287,7 @@ Init_Proc(void)
      rb_define_method(rb_cProc, "==", proc_eq, 1);
      rb_define_method(rb_cProc, "eql?", proc_eq, 1);
      rb_define_method(rb_cProc, "hash", proc_hash, 0);
@@ -2597,7 +2627,7 @@ index 11a2d3e..eb6c731 100644
      rb_define_method(rb_cProc, "to_s", proc_to_s, 0);
      rb_define_method(rb_cProc, "lambda?", rb_proc_lambda_p, 0);
      rb_define_method(rb_cProc, "binding", proc_binding, 0);
-@@ -2174,9 +2330,14 @@ Init_Proc(void)
+@@ -2173,9 +2329,14 @@ Init_Proc(void)
      rb_define_method(rb_cMethod, "unbind", method_unbind, 0);
      rb_define_method(rb_cMethod, "source_location", rb_method_location, 0);
      rb_define_method(rb_cMethod, "parameters", rb_method_parameters, 0);
@@ -2612,7 +2642,7 @@ index 11a2d3e..eb6c731 100644
      /* UnboundMethod */
      rb_cUnboundMethod = rb_define_class("UnboundMethod", rb_cObject);
      rb_undef_alloc_func(rb_cUnboundMethod);
-@@ -2194,6 +2355,10 @@ Init_Proc(void)
+@@ -2193,6 +2354,10 @@ Init_Proc(void)
      rb_define_method(rb_cUnboundMethod, "source_location", rb_method_location, 0);
      rb_define_method(rb_cUnboundMethod, "parameters", rb_method_parameters, 0);
  
@@ -2624,7 +2654,7 @@ index 11a2d3e..eb6c731 100644
      rb_define_method(rb_cModule, "instance_method", rb_mod_instance_method, 1);
      rb_define_method(rb_cModule, "public_instance_method", rb_mod_public_instance_method, 1);
 diff --git a/ruby.c b/ruby.c
-index ed39f44..57bda3b 100644
+index b29b8c0..4db4777 100644
 --- a/ruby.c
 +++ b/ruby.c
 @@ -116,10 +116,7 @@ static NODE *load_file(VALUE, const char *, int, struct cmdline_options *);
@@ -2639,7 +2669,7 @@ index ed39f44..57bda3b 100644
  
  static void
  usage(const char *name)
-@@ -1854,6 +1851,17 @@ ruby_sysinit(int *argc, char ***argv)
+@@ -1873,6 +1870,17 @@ ruby_sysinit(int *argc, char ***argv)
  #endif
      origarg.argc = *argc;
      origarg.argv = *argv;
@@ -3517,6 +3547,138 @@ index 0000000..89afb5e
 +# We want to double-check we didn't mess up any pointers somewhere along
 +# the line.
 +at_exit { GC.start  }
+diff --git a/test/debugger-ext/test_trace_hook.rb b/test/debugger-ext/test_trace_hook.rb
+new file mode 100644
+index 0000000..2ae65ca
+--- /dev/null
++++ b/test/debugger-ext/test_trace_hook.rb
+@@ -0,0 +1,94 @@
++#!/usr/bin/env ruby
++require 'test/unit'
++
++# Testing RubyVM::TraceHook
++class TestTraceHook < Test::Unit::TestCase
++
++  def setup
++    set_trace_func(nil)
++  end
++
++  def test_trace_hooks
++    tt = RubyVM::TraceHook::trace_hooks
++    assert_equal([], tt)
++
++    set_trace_func(Proc.new { 1  })
++    tt = RubyVM::TraceHook::trace_hooks
++
++    assert_equal(1, tt.size)
++    assert tt[0].event_mask.is_a?(Fixnum)
++    
++    set_trace_func(Proc.new { }, 5)
++    tt = RubyVM::TraceHook::trace_hooks
++
++    assert_equal(1, tt.size)
++
++    set_trace_func(nil)
++    tt = RubyVM::TraceHook::trace_hooks
++    assert_equal([], tt)
++    
++  end
++
++  # Test getting and setting event mask of a trace hook
++  def test_event
++    set_trace_func(Proc.new { }, 5)
++    tt = RubyVM::TraceHook::trace_hooks
++    assert_equal(5, tt[0].event_mask)
++
++    tt[0].event_mask = 6;
++    assert_equal(6, tt[0].event_mask)
++
++    set_trace_func(nil)
++    assert_raises RubyVM::TraceHookError do 
++      tt[0].event_mask 
++    end
++
++    assert_raises RubyVM::TraceHookError do 
++      tt[0].event_mask = 10
++    end
++
++  end
++
++  # Test getting and setting proc of a trace hook
++  def test_proc
++    p = Proc.new { 1 }
++    set_trace_func(p)
++    tt = RubyVM::TraceHook::trace_hooks
++    assert_equal(p, tt[0].proc)
++    assert_equal 1, tt[0].proc.call
++
++    p2 = Proc.new { 2 }
++    assert_raises TypeError do
++      tt[0].proc = 5
++    end
++    tt[0].proc = p2
++
++    assert_equal(p2, tt[0].proc)
++    assert_equal 2, tt[0].proc.call
++
++    set_trace_func(nil)
++    assert_raises RubyVM::TraceHookError do 
++      tt[0].proc
++    end
++
++    assert_raises TypeError do 
++      tt[0].proc = 6
++    end
++
++    # Test valid?
++    def test_valid
++      tt = RubyVM::TraceHook::trace_hooks
++      assert_equal(true, tt[0].valid?)
++      set_trace_func(Proc.new {} )
++      tt = RubyVM::TraceHook::trace_hooks
++      assert_equal(true, tt[0].valid?)
++      set_trace_func(Proc.new { 1 } )
++      assert_equal(false, tt[0].valid?)
++      tt = RubyVM::TraceHook::trace_hooks
++      assert_equal(true, tt[0].valid?)
++      set_trace_func(nil)
++      GC.start
++      assert_equal(false, tt[0].valid?)
++    end
++  end
++end
+diff --git a/test/debugger-ext/test_tracefunc_raise.rb b/test/debugger-ext/test_tracefunc_raise.rb
+new file mode 100644
+index 0000000..d22674a
+--- /dev/null
++++ b/test/debugger-ext/test_tracefunc_raise.rb
+@@ -0,0 +1,26 @@
++require 'test/unit'
++
++# tests that we a trace hook has access to the runtime exception Object
++# when it is called through a raise event
++
++class TestTracefuncRaise < Test::Unit::TestCase
++
++  def test_basic
++    tuples = []
++    p = Proc.new { 
++      |event, file, lineno, mid, binding, klass|
++      tuples << klass
++    }
++    msg = 'this is a message'
++    set_trace_func(p, 0x0080)
++    begin ; x = 1/0; rescue; end
++    begin ; raise RuntimeError, msg; rescue; end
++    clear_trace_func
++    assert_equal(2, tuples.size, 
++                 "Wrong number of tuples captured #{tuples.inspect}")
++    assert_equal msg, tuples[1].message
++    assert_equal([ZeroDivisionError, RuntimeError], tuples.map{|t| t.class},
++                 "Mismatched tuples classes in #{tuples.inspect}")
++    
++  end
++end
 diff --git a/test/debugger-ext/test_tracemask.rb b/test/debugger-ext/test_tracemask.rb
 new file mode 100644
 index 0000000..2221729
@@ -3673,11 +3835,34 @@ index 0000000..ab610a2
 +    # echo ../../miniruby -I../../lib -I../.. $t
 +    # gdb ../../miniruby
 +done
+diff --git a/test/ruby/test_settracefunc.rb b/test/ruby/test_settracefunc.rb
+index d6c6d06..fd4a75c 100644
+--- a/test/ruby/test_settracefunc.rb
++++ b/test/ruby/test_settracefunc.rb
+@@ -220,7 +220,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
+      3: })
+      4: begin
+      5:   raise TypeError, "error"
+-     6: rescue TypeError
++     6: rescue TypeError => $e
+      7: end
+      8: set_trace_func(nil)
+     EOF
+@@ -248,8 +248,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
+                  events.shift)
+     assert_equal(["c-return", 5, :set_backtrace, Exception],
+                  events.shift)
+-    assert_equal(["raise", 5, :test_raise, TestSetTraceFunc],
+-                 events.shift)
++    assert_equal(["raise", 5, :test_raise, $e], events.shift)
+     assert_equal(["c-return", 5, :raise, Kernel],
+                  events.shift)
+     assert_equal(["c-call", 6, :===, Module],
 diff --git a/thread.c b/thread.c
-index 2cf1064..16a94af 100644
+index 93a8925..4d1d4b1 100644
 --- a/thread.c
 +++ b/thread.c
-@@ -4108,7 +4108,7 @@ set_threads_event_flags_i(st_data_t key, st_data_t val, st_data_t flag)
+@@ -4121,7 +4121,7 @@ set_threads_event_flags_i(st_data_t key, st_data_t val, st_data_t flag)
      GetThreadPtr(thval, th);
  
      if (flag) {
@@ -3686,7 +3871,7 @@ index 2cf1064..16a94af 100644
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -4147,31 +4147,40 @@ thread_exec_event_hooks(VALUE args, int running)
+@@ -4160,31 +4160,40 @@ thread_exec_event_hooks(VALUE args, int running)
      rb_thread_t *th = argp->th;
      rb_event_flag_t flag = argp->event;
      VALUE self = argp->self;
@@ -3748,7 +3933,7 @@ index 2cf1064..16a94af 100644
  	    }
  	}
      }
-@@ -4333,19 +4342,48 @@ clear_trace_func_i(st_data_t key, st_data_t val, st_data_t flag)
+@@ -4346,19 +4355,48 @@ clear_trace_func_i(st_data_t key, st_data_t val, st_data_t flag)
      return ST_CONTINUE;
  }
  
@@ -3800,7 +3985,7 @@ index 2cf1064..16a94af 100644
   *
   *  Establishes _proc_ as the handler for tracing, or disables
   *  tracing if the parameter is +nil+. _proc_ takes up
-@@ -4359,6 +4397,8 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
+@@ -4372,6 +4410,8 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
   *  <code>line</code> (execute code on a new line), <code>raise</code>
   *  (raise an exception), and <code>return</code> (return from a Ruby
   *  method). Tracing is disabled within the context of _proc_.
@@ -3809,7 +3994,7 @@ index 2cf1064..16a94af 100644
   *
   *      class Test
   *	def test
-@@ -4383,13 +4423,29 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
+@@ -4396,13 +4436,29 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
   *	  line prog.rb:3        test     Test
   *	  line prog.rb:4        test     Test
   *      return prog.rb:4        test     Test
@@ -3840,7 +4025,7 @@ index 2cf1064..16a94af 100644
      if (NIL_P(trace)) {
  	GET_THREAD()->tracing = EVENT_RUNNING_NOTHING;
  	return Qnil;
-@@ -4399,18 +4455,18 @@ set_trace_func(VALUE obj, VALUE trace)
+@@ -4412,18 +4468,18 @@ set_trace_func(VALUE obj, VALUE trace)
  	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
      }
  
@@ -3862,7 +4047,7 @@ index 2cf1064..16a94af 100644
  }
  
  /*
-@@ -4422,18 +4478,26 @@ thread_add_trace_func(rb_thread_t *th, VALUE trace)
+@@ -4435,18 +4491,26 @@ thread_add_trace_func(rb_thread_t *th, VALUE trace)
   */
  
  static VALUE
@@ -3892,7 +4077,7 @@ index 2cf1064..16a94af 100644
   *
   *  Establishes _proc_ on _thr_ as the handler for tracing, or
   *  disables tracing if the parameter is +nil+.
-@@ -4441,9 +4505,17 @@ thread_add_trace_func_m(VALUE obj, VALUE trace)
+@@ -4454,9 +4518,17 @@ thread_add_trace_func_m(VALUE obj, VALUE trace)
   */
  
  static VALUE
@@ -3911,7 +4096,7 @@ index 2cf1064..16a94af 100644
      GetThreadPtr(obj, th);
      rb_threadptr_remove_event_hook(th, call_trace_func);
  
-@@ -4451,7 +4523,7 @@ thread_set_trace_func_m(VALUE obj, VALUE trace)
+@@ -4464,7 +4536,7 @@ thread_set_trace_func_m(VALUE obj, VALUE trace)
  	th->tracing = EVENT_RUNNING_NOTHING;
  	return Qnil;
      }
@@ -3920,7 +4105,7 @@ index 2cf1064..16a94af 100644
      return trace;
  }
  
-@@ -4465,6 +4537,8 @@ get_event_name(rb_event_flag_t event)
+@@ -4478,6 +4550,8 @@ get_event_name(rb_event_flag_t event)
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -3929,7 +4114,42 @@ index 2cf1064..16a94af 100644
        case RUBY_EVENT_CALL:
  	return "call";
        case RUBY_EVENT_RETURN:
-@@ -4579,6 +4653,37 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
+@@ -4488,6 +4562,12 @@ get_event_name(rb_event_flag_t event)
+ 	return "c-return";
+       case RUBY_EVENT_RAISE:
+ 	return "raise";
++      case RUBY_EVENT_SWITCH:
++        return "switch";
++      case RUBY_EVENT_COVERAGE:
++        return "coverage";
++      case RUBY_EVENT_VM:
++        return "vm";
+       default:
+ 	return "unknown";
+     }
+@@ -4505,11 +4585,18 @@ call_trace_proc(VALUE args, int tracing)
+     ID id = 0;
+     VALUE klass = 0;
+ 
+-    if (p->klass != 0) {
++    if (p->event == RUBY_EVENT_RAISE) {
++        /* rb_thread_method_and_id() wants a place to store a klass
++	   value which subsequently we will not use.  */
++        VALUE junk_klass; 
++	rb_thread_method_id_and_class(GET_THREAD(), &id, &junk_klass);
++	/* When the event is RUBY_EVENT_RAISE, we have stored the raise
++	   message as the trace-hook klass parameter. */ 
++	klass = p->klass;
++    } else if (p->klass != 0) {
+ 	id = p->id;
+ 	klass = p->klass;
+-    }
+-    else {
++    } else {
+ 	rb_thread_method_id_and_class(p->th, &id, &klass);
+     }
+     if (id == ID_ALLOCATOR)
+@@ -4592,6 +4679,37 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
      return result;
  }
  
@@ -3967,7 +4187,7 @@ index 2cf1064..16a94af 100644
  /*
   *  call-seq:
   *     thr.backtrace    -> array
-@@ -4696,9 +4801,15 @@ Init_Thread(void)
+@@ -4709,9 +4827,15 @@ Init_Thread(void)
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -3986,16 +4206,200 @@ index 2cf1064..16a94af 100644
  
      /* init thread core */
      {
-@@ -4832,4 +4943,3 @@ rb_reset_coverages(void)
+@@ -4846,4 +4970,3 @@ rb_reset_coverages(void)
      GET_VM()->coverages = Qfalse;
      rb_remove_event_hook(update_coverage);
  }
 -
+diff --git a/tracehook.c b/tracehook.c
+new file mode 100644
+index 0000000..2f4ca65
+--- /dev/null
++++ b/tracehook.c
+@@ -0,0 +1,165 @@
++/**********************************************************************
++
++  tracehook.c -
++
++  Copyright (C) 2012 Rocky Bernstein
++
++**********************************************************************/
++
++#include "vm_core.h" 
++
++extern VALUE rb_cRubyVM;   /* RubyVM class */
++extern rb_vm_t *ruby_current_vm;
++extern VALUE rb_obj_is_proc(VALUE proc);
++
++VALUE rb_cTraceHook;       /* TraceHook class */
++VALUE rb_eTraceHookError;  /* Exception raised by TraceHook class */
++
++/* Extra information we need to save about a hook. 
++   FIXME: For now we will work only with vm hooks. When this
++   extends to thread hooks, we will need to use this.
++ */
++typedef struct 
++{
++  rb_thread_t *th;         /* If NULL, hook is in vm. Otherwise, this
++			      is the thread the hook belongs to. */
++  rb_event_hook_t *hook;
++} hook_info_t;
++
++static int is_hook_member(rb_event_hook_t *check_hook, rb_event_hook_t *hook);
++
++static void
++check_hook_valid(rb_event_hook_t *check_hook)
++{
++  /* FIXME: in the future use check_hook to find the hook head. */
++  rb_event_hook_t *hook_head = GET_VM()->event_hooks;
++  
++  if (!is_hook_member(check_hook, hook_head))
++    rb_raise(rb_eTraceHookError, "hook not found");
++}
++
++/* Return an Array of vm event hooks found from hook. */
++VALUE
++get_trace_hooks(rb_event_hook_t *hook)
++{
++    VALUE ary;
++    for (ary = rb_ary_new(); hook; hook = hook->next)
++	rb_ary_push(ary, Data_Wrap_Struct(rb_cTraceHook, NULL, NULL, hook));
++    return ary;
++}
++
++/* Return 1 if check_hook is found in the list of hooks pointed to by
++ 'hook', or 0 if not found. */
++static int 
++is_hook_member(rb_event_hook_t *check_hook, rb_event_hook_t *hook) 
++{
++    for (; hook; hook = hook->next) if (check_hook == hook) return 1;
++    return 0;  /* Not found */
++}
++
++/* Return an Array of VM event hooks objects. */
++VALUE
++trace_hook_s_trace_hooks()
++{
++  return get_trace_hooks(GET_VM()->event_hooks);
++}
++
++/*
++  Return the event mask value for a given hook. If no hook, then return nil.
++ */
++static VALUE
++trace_hook_event_mask(VALUE klass)
++{
++    rb_event_hook_t *hook;
++    Data_Get_Struct(klass, rb_event_hook_t, hook);
++    if (!hook) return Qnil;
++    check_hook_valid(hook);
++    return INT2FIX(hook->flag);
++}
++
++/* Set a new mask value for given hook and return the old mask
++   value. Can raise an error if there is no hook installed.  */
++static VALUE
++trace_hook_event_mask_set(VALUE klass, VALUE maskval)
++{
++    rb_event_hook_t *hook;
++    rb_event_flag_t flag;
++    Data_Get_Struct(klass, rb_event_hook_t, hook);
++    if (!hook) 
++	rb_raise(rb_eTraceHookError, "No hook installed");
++    if (!FIXNUM_P(maskval)) {
++	rb_raise(rb_eTypeError, "integer argument expected");
++    } 
++    check_hook_valid(hook);
++    flag = hook->flag;
++    hook->flag = FIX2INT(maskval);
++    return INT2FIX(flag);
++}
++
++/*
++  Return the event mask value for a given hook. If no hook, then return nil.
++ */
++static VALUE
++trace_hook_proc(VALUE klass)
++{
++    rb_event_hook_t *hook;
++    Data_Get_Struct(klass, rb_event_hook_t, hook);
++    if (!hook) return Qnil;
++    check_hook_valid(hook);
++    return hook->data;
++}
++
++/*
++  Return the event mask value for a given hook. If no hook, then return nil.
++ */
++static VALUE
++trace_hook_proc_set(VALUE klass, VALUE trace_proc)
++{
++    rb_event_hook_t *hook;
++    if (!rb_obj_is_proc(trace_proc)) {
++	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
++    }
++
++    Data_Get_Struct(klass, rb_event_hook_t, hook);
++    if (!hook) return Qnil;
++    check_hook_valid(hook);
++    hook->data = trace_proc;
++    return trace_proc;
++}
++
++/*
++  Return true if hook is still valid or is nil), false otherwise.
++ */
++static VALUE
++trace_hook_valid(VALUE klass)
++{
++    rb_event_hook_t *hook;
++    Data_Get_Struct(klass, rb_event_hook_t, hook);
++    /* FIXME in the future we will need to extract whether this hook is
++       part of a thread or from the vm.
++    */
++    return is_hook_member(hook, GET_VM()->event_hooks) ? Qtrue : Qfalse;
++}
++
++void
++Init_TraceHook(void)
++{
++  rb_eTraceHookError = rb_define_class_under(rb_cRubyVM, "TraceHookError",
++					     rb_eStandardError);
++  rb_cTraceHook      = rb_define_class_under(rb_cRubyVM, "TraceHook", 
++					     rb_cObject);
++
++  rb_define_singleton_method(rb_cTraceHook, "trace_hooks", 
++			     trace_hook_s_trace_hooks, 0);
++  
++  rb_define_method(rb_cTraceHook, "event_mask", 
++		   trace_hook_event_mask, 0);
++  rb_define_method(rb_cTraceHook, "event_mask=", 
++		   trace_hook_event_mask_set, 1);
++  rb_define_method(rb_cTraceHook, "proc", 
++		   trace_hook_proc, 0);
++  rb_define_method(rb_cTraceHook, "proc=", 
++		   trace_hook_proc_set, 1);
++  rb_define_method(rb_cTraceHook, "valid?", 
++		   trace_hook_valid, 0);
++}
+diff --git a/version.h b/version.h
+index b2b42e1..124b6a6 100644
+--- a/version.h
++++ b/version.h
+@@ -42,7 +42,7 @@
+ # define RUBY_DESCRIPTION	    \
+     "ruby "RUBY_VERSION		    \
+     RUBY_PATCHLEVEL_STR             \
+-    " ("RUBY_RELEASE_DATE	    \
++    " with debugger support ("RUBY_RELEASE_DATE	    \
+     RUBY_REVISION_STR") "	    \
+     "["RUBY_PLATFORM"]"
+ # define RUBY_COPYRIGHT 	    \
 diff --git a/vm.c b/vm.c
-index c8e9569..463bc4a 100644
+index dd026cb..b0ea5fa 100644
 --- a/vm.c
 +++ b/vm.c
-@@ -2070,6 +2070,8 @@ nsdr(void)
+@@ -2073,6 +2073,8 @@ nsdr(void)
      return ary;
  }
  
@@ -4004,7 +4408,7 @@ index c8e9569..463bc4a 100644
  void
  Init_VM(void)
  {
-@@ -2082,6 +2084,21 @@ Init_VM(void)
+@@ -2085,6 +2087,21 @@ Init_VM(void)
      rb_undef_alloc_func(rb_cRubyVM);
      rb_undef_method(CLASS_OF(rb_cRubyVM), "new");
  
@@ -4027,16 +4431,20 @@ index c8e9569..463bc4a 100644
      fcore = rb_class_new(rb_cBasicObject);
      RBASIC(fcore)->flags = T_ICLASS;
 diff --git a/vm_core.h b/vm_core.h
-index b28a222..fd2f2e0 100644
+index ea6b1d4..2562f95 100644
 --- a/vm_core.h
 +++ b/vm_core.h
-@@ -259,6 +259,19 @@ struct rb_iseq_struct {
-     /* If this instruction sequence came from eval, the string of the
-        source as a String. */
-     VALUE source;
+@@ -255,6 +255,23 @@ struct rb_iseq_struct {
+ 
+     /* used at compile time */
+     struct iseq_compile_data *compile_data;
 +
 +    /* Used to set a breakpoint at a VM instruction */
 +    unsigned char *breakpoints; 
++
++    /* If this instruction sequence came from eval, the string of the
++       source as a String. */
++    VALUE source;
 +
 +    /* If we are saving tree nodes (a compile option), then tree_node
 +       is the internal parse tree node representation for this
@@ -4084,22 +4492,8 @@ index b28a222..fd2f2e0 100644
  /* other frame flag */
  #define VM_FRAME_FLAG_PASSED 0x0100
  
-@@ -686,8 +707,13 @@
- /* for thread */
- 
- #if RUBY_VM_THREAD_MODEL == 2
-+#if defined __GNUC__ && __GNUC__ >= 4
-+#pragma GCC visibility push(default)
- RUBY_EXTERN rb_thread_t *ruby_current_thread;
-+
- extern rb_vm_t *ruby_current_vm;
-+#pragma GCC visibility pop
-+#endif
- 
- #define GET_VM() ruby_current_vm
- #define GET_THREAD() ruby_current_thread
 diff --git a/vm_eval.c b/vm_eval.c
-index 65bec06..dccb78b 100644
+index 46fee41..b20fce2 100644
 --- a/vm_eval.c
 +++ b/vm_eval.c
 @@ -68,22 +68,32 @@ vm_call0(rb_thread_t* th, VALUE recv, VALUE id, int argc, const VALUE *argv,
@@ -4275,3 +4669,16 @@ index b707c4b..fcb3761 100755
  
  versions = {}
  IO.foreach(File.join(srcdir, "version.h")) do |l|
+diff --git a/version.h b/version.h
+index b2b42e1..124b6a6 100644
+--- a/version.h
++++ b/version.h
+@@ -42,7 +42,7 @@
+ # define RUBY_DESCRIPTION	    \
+     "ruby "RUBY_VERSION		    \
+     RUBY_PATCHLEVEL_STR             \
+-    " ("RUBY_RELEASE_DATE	    \
++    " with debugger support ("RUBY_RELEASE_DATE	    \
+     RUBY_REVISION_STR") "	    \
+     "["RUBY_PLATFORM"]"
+ # define RUBY_COPYRIGHT 	    \

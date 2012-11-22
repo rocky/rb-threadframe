@@ -5,7 +5,7 @@ require 'rubygems' unless
   Object.const_defined?(:Gem)
 
 
-PACKAGE_VERSION = open("ext/1.9.2/thread_frame.c") do |f| 
+PACKAGE_VERSION = open('ext/1.9.2/thread_frame.c') do |f| 
   f.grep(/^#define THREADFRAME_VERSION/).first[/"(.+)"/,1]
 end
 
@@ -31,16 +31,16 @@ Gem::Specification.new do |spec|
 rb-threadframe gives introspection access for frames of a thread.
 EOF
   spec.email        = 'rockyb@rubyforge.net'
-  spec.extensions   = ["ext/extconf.rb"] if '1.9.2' == RUBY_VERSION
+  spec.extensions   = ['ext/extconf.rb'] if '1.9.2' == RUBY_VERSION
   spec.files        = FILES.to_a  
   spec.has_rdoc     = false
-  spec.homepage     = "http://github.com/rocky/rb-threadframe/tree/master"
-  spec.name         = "rb-threadframe"
+  spec.homepage     = 'http://github.com/rocky/rb-threadframe/tree/master'
+  spec.name         = 'rb-threadframe'
   spec.license      = 'MIT'
   spec.platform     = Gem::Platform::RUBY
   spec.require_path = 'lib'
   spec.required_ruby_version = '~> 1.9.2frame'
-  spec.summary      = "Frame introspection"
+  spec.summary      = 'Frame introspection'
 
   spec.version      = PACKAGE_VERSION
   spec.extra_rdoc_files = ['README.md', 'threadframe.rd']

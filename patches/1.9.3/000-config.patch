@@ -12,3 +12,16 @@ index b707c4b..fcb3761 100755
  
  versions = {}
  IO.foreach(File.join(srcdir, "version.h")) do |l|
+diff --git a/version.h b/version.h
+index b2b42e1..124b6a6 100644
+--- a/version.h
++++ b/version.h
+@@ -42,7 +42,7 @@
+ # define RUBY_DESCRIPTION	    \
+     "ruby "RUBY_VERSION		    \
+     RUBY_PATCHLEVEL_STR             \
+-    " ("RUBY_RELEASE_DATE	    \
++    " with debugger support ("RUBY_RELEASE_DATE	    \
+     RUBY_REVISION_STR") "	    \
+     "["RUBY_PLATFORM"]"
+ # define RUBY_COPYRIGHT 	    \
