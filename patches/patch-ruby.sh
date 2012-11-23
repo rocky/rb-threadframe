@@ -13,6 +13,7 @@ patchfile=${1:-'1.9.2'}
 case $patchfile in
     1.9.3 | head | trunk )
 	for file in \
+	    000-config.patch \
 	    000-testit.patch \
 	    110-thread-tracing.patch \
 	    120-frame-tracing.patch \

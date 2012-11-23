@@ -1,4 +1,5 @@
-Notes in RbConfig an that we have threadframe support.
+Notes in RbConfig and in ruby --version an that we have debugger or
+threadframe support.
 
 diff --git a/tool/mkconfig.rb b/tool/mkconfig.rb
 index b707c4b..fcb3761 100755

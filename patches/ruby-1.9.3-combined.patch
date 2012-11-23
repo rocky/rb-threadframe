@@ -1413,7 +1413,7 @@ index 59c9284..db5406a 100644
  VALUE rb_get_coverages(void);
  
 diff --git a/iseq.c b/iseq.c
-index 28cc1e5..fb6f052 100644
+index 28cc1e5..017ca2a 100644
 --- a/iseq.c
 +++ b/iseq.c
 @@ -27,6 +27,38 @@ VALUE rb_cISeq;
@@ -1865,7 +1865,7 @@ index 28cc1e5..fb6f052 100644
 + * recorded, 0 (or false) is returned.
 + */
 +VALUE
-+rb_iseq_source(VALUE self)
++rb_iseq_eval_source(VALUE self)
 +{
 +    rb_iseq_t *iseq = iseq_check(self);
 +    rb_secure(1);
@@ -2320,7 +2320,7 @@ index 28cc1e5..fb6f052 100644
 +
      rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
      rb_define_method(rb_cISeq, "eval", iseq_eval, 0);
-+    rb_define_method(rb_cISeq, "source", rb_iseq_source, 0);
++    rb_define_method(rb_cISeq, "eval_source",      rb_iseq_eval_source, 0);
 +    rb_define_method(rb_cISeq, "source_container", rb_iseq_source_container, 0) ;
  
  #if 0 /* TBD */
@@ -3875,7 +3875,7 @@ index d6c6d06..fd4a75c 100644
                   events.shift)
      assert_equal(["c-call", 6, :===, Module],
 diff --git a/thread.c b/thread.c
-index 93a8925..16b6378 100644
+index 93a8925..f57e372 100644
 --- a/thread.c
 +++ b/thread.c
 @@ -4121,7 +4121,7 @@ set_threads_event_flags_i(st_data_t key, st_data_t val, st_data_t flag)
@@ -4116,7 +4116,7 @@ index 93a8925..16b6378 100644
   *
   *  Establishes _proc_ on _thr_ as the handler for tracing, or
   *  disables tracing if the parameter is +nil+.
-@@ -4454,17 +4541,26 @@ thread_add_trace_func_m(VALUE obj, VALUE trace)
+@@ -4454,9 +4541,17 @@ thread_add_trace_func_m(VALUE obj, VALUE trace)
   */
  
  static VALUE
@@ -4135,8 +4135,7 @@ index 93a8925..16b6378 100644
      GetThreadPtr(obj, th);
      rb_threadptr_remove_event_hook(th, call_trace_func);
  
-+    GET_THREAD()->exec_event_tracing = 0;
-     if (NIL_P(trace)) {
+@@ -4464,7 +4559,7 @@ thread_set_trace_func_m(VALUE obj, VALUE trace)
  	th->tracing = EVENT_RUNNING_NOTHING;
  	return Qnil;
      }
@@ -4145,7 +4144,7 @@ index 93a8925..16b6378 100644
      return trace;
  }
  
-@@ -4478,6 +4574,8 @@ get_event_name(rb_event_flag_t event)
+@@ -4478,6 +4573,8 @@ get_event_name(rb_event_flag_t event)
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -4154,7 +4153,7 @@ index 93a8925..16b6378 100644
        case RUBY_EVENT_CALL:
  	return "call";
        case RUBY_EVENT_RETURN:
-@@ -4488,6 +4586,12 @@ get_event_name(rb_event_flag_t event)
+@@ -4488,6 +4585,12 @@ get_event_name(rb_event_flag_t event)
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -4167,7 +4166,7 @@ index 93a8925..16b6378 100644
        default:
  	return "unknown";
      }
-@@ -4505,11 +4609,18 @@ call_trace_proc(VALUE args, int tracing)
+@@ -4505,11 +4608,18 @@ call_trace_proc(VALUE args, int tracing)
      ID id = 0;
      VALUE klass = 0;
  
@@ -4189,7 +4188,7 @@ index 93a8925..16b6378 100644
  	rb_thread_method_id_and_class(p->th, &id, &klass);
      }
      if (id == ID_ALLOCATOR)
-@@ -4592,6 +4703,67 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
+@@ -4592,6 +4702,67 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
      return result;
  }
  
@@ -4257,7 +4256,7 @@ index 93a8925..16b6378 100644
  /*
   *  call-seq:
   *     thr.backtrace    -> array
-@@ -4709,9 +4881,19 @@ Init_Thread(void)
+@@ -4709,9 +4880,19 @@ Init_Thread(void)
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -4280,7 +4279,7 @@ index 93a8925..16b6378 100644
  
      /* init thread core */
      {
-@@ -4846,4 +5028,3 @@ rb_reset_coverages(void)
+@@ -4846,4 +5027,3 @@ rb_reset_coverages(void)
      GET_VM()->coverages = Qfalse;
      rb_remove_event_hook(update_coverage);
  }
@@ -4457,7 +4456,7 @@ index 0000000..2f4ca65
 +		   trace_hook_valid, 0);
 +}
 diff --git a/version.h b/version.h
-index b2b42e1..124b6a6 100644
+index b2b42e1..7a76f49 100644
 --- a/version.h
 +++ b/version.h
 @@ -42,7 +42,7 @@

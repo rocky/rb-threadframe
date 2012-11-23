@@ -1,7 +1,7 @@
 Adds Instruction#source method. If this instruction sequence came from
 eval(), the string of the source is returned from this method.
 
-TODO: figure out how to have this "source" field filled out more
+TODO: figure out how to have this "eval_source" field filled out more
 often.
 
 diff --git a/iseq.c b/iseq.c
@@ -17,7 +17,7 @@ index ec66a69..a51a19e 100644
 + * recorded, 0 (or false) is returned.
 + */
 +VALUE
-+rb_iseq_source(VALUE self)
++rb_iseq_eval_source(VALUE self)
 +{
 +    rb_iseq_t *iseq = iseq_check(self);
 +    rb_secure(1);
@@ -31,7 +31,7 @@ index ec66a69..a51a19e 100644
      rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
      rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
      rb_define_method(rb_cISeq, "eval", iseq_eval, 0);
-+    rb_define_method(rb_cISeq, "source", rb_iseq_source, 0);
++    rb_define_method(rb_cISeq, "eval_source",      rb_iseq_eval_source, 0);
  
  #if 0 /* TBD */
      rb_define_method(rb_cISeq, "marshal_dump", iseq_marshal_dump, 0);

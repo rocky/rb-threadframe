@@ -348,7 +348,7 @@ index 216e158..16a94af 100644
      GetThreadPtr(obj, th);
      rb_threadptr_remove_event_hook(th, call_trace_func);
  
-@@ -4496,7 +4559,7 @@ thread_set_trace_func_m(VALUE obj, VALUE trace)
+@@ -4495,7 +4558,7 @@ thread_set_trace_func_m(VALUE obj, VALUE trace)
  	th->tracing = EVENT_RUNNING_NOTHING;
  	return Qnil;
      }
@@ -357,7 +357,7 @@ index 216e158..16a94af 100644
      return trace;
  }
  
-@@ -4804,9 +4866,11 @@ Init_Thread(void)
+@@ -4803,9 +4865,11 @@ Init_Thread(void)
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */

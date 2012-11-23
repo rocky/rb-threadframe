@@ -27,6 +27,12 @@ I have not put a lot of effort into ensuring arbitrary intermediate
 patches can be skipped. 
 
 -------------------
+000-config.patch:
+
+Notes in RbConfig and in ruby --version an that we have debugger or
+threadframe support.
+
+-------------------
 000-testit.patch:
 
 Adds a script that helps me run the debugger-extension unit tests

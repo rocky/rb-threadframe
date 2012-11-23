@@ -26,7 +26,7 @@ Index: iseq.c
 + * recorded, 0 (or false) is returned.
 + */
 +VALUE
-+rb_iseq_source(VALUE self)
++rb_iseq_eval_source(VALUE self)
 +{
 +    rb_iseq_t *iseq = iseq_check(self);
 +    rb_secure(1);
@@ -40,7 +40,7 @@ Index: iseq.c
      rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
      rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
      rb_define_method(rb_cISeq, "eval", iseq_eval, 0);
-+    rb_define_method(rb_cISeq, "source", rb_iseq_source, 0);
++    rb_define_method(rb_cISeq, "eval_source", rb_iseq_eval_source, 0);
  
      /* disable this feature because there is no verifier. */
      /* rb_define_singleton_method(rb_cISeq, "load", iseq_s_load, -1); */
