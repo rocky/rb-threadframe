@@ -9,7 +9,7 @@ diff --git a/vm_core.h b/vm_core.h
 index f6f42ca..4d97118 100644
 --- a/vm_core.h
 +++ b/vm_core.h
-@@ -410,6 +410,16 @@ typedef struct rb_thread_struct {
+@@ -410,6 +410,18 @@ typedef struct rb_thread_struct {
  
      int waiting_fd;
  
@@ -18,6 +18,8 @@ index f6f42ca..4d97118 100644
 +    rb_event_flag_t event_flags;
 +    int tracing;  /* 0 if not tracing. If less than 0, skip that many
 +		     C call/return pairs */
++
++    int exec_event_tracing;  /* 0 if not in rb_threadptr_evec_event_hooks. */
 +
 +    /* misc */
 +    int method_missing_reason;

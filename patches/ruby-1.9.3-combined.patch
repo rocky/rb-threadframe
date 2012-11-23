@@ -1,13 +1,13 @@
 diff --git a/brkpt.c b/brkpt.c
 new file mode 100644
-index 0000000..4d6eb8f
+index 0000000..4f6ea93
 --- /dev/null
 +++ b/brkpt.c
 @@ -0,0 +1,234 @@
 +/**********************************************************************
 +  brkpt.c - VM-assisted Breakpoint support 
-+  Copyright (C) 2012 Rocky Bernstein
 +
++  Copyright (C) 2012 Rocky Bernstein
 +
 +**********************************************************************/
 +
@@ -239,7 +239,7 @@ index 0000000..4d6eb8f
 +    rb_define_method(rb_cISeq, "brkpts",           iseq_brkpts, 0);
 +}
 diff --git a/common.mk b/common.mk
-index c9ef641..22067b2 100644
+index c9ef641..fd3df30 100644
 --- a/common.mk
 +++ b/common.mk
 @@ -41,6 +41,7 @@ ENC_MK        = enc.mk
@@ -250,7 +250,7 @@ index c9ef641..22067b2 100644
  		class.$(OBJEXT) \
  		compar.$(OBJEXT) \
  		complex.$(OBJEXT) \
-@@ -84,6 +84,7 @@ COMMONOBJS    = array.$(OBJEXT) \
+@@ -84,6 +85,7 @@ COMMONOBJS    = array.$(OBJEXT) \
  		string.$(OBJEXT) \
  		struct.$(OBJEXT) \
  		time.$(OBJEXT) \
@@ -258,7 +258,7 @@ index c9ef641..22067b2 100644
  		transcode.$(OBJEXT) \
  		util.$(OBJEXT) \
  		variable.$(OBJEXT) \
-@@ -93,6 +94,7 @@ COMMONOBJS    = array.$(OBJEXT) \
+@@ -93,6 +95,7 @@ COMMONOBJS    = array.$(OBJEXT) \
  		vm.$(OBJEXT) \
  		vm_dump.$(OBJEXT) \
  		thread.$(OBJEXT) \
@@ -2931,7 +2931,7 @@ new file mode 100644
 index 0000000..ac63ae3
 --- /dev/null
 +++ b/test/debugger-ext/test_frame.rb
-@@ -0,0 +1,117 @@
+@@ -0,0 +1,125 @@
 +require 'test/unit'
 +
 +class TestFrame < Test::Unit::TestCase
@@ -2963,6 +2963,14 @@ index 0000000..ac63ae3
 +    assert_equal(5, tf.sp(1), 'checking value of recently-set sp(1)')
 +  end
 +
++  def test_thread_exec_event_tracing
++    assert_equal(false, Thread.current.exec_event_tracing)
++    Thread.current.exec_event_tracing = true
++    assert_equal(true, Thread.current.exec_event_tracing)
++    Thread.current.exec_event_tracing = false
++    assert_equal(false, Thread.current.exec_event_tracing)
++  end    
++    
 +  def test_fields(notused=nil)
 +    tf = RubyVM::Frame::current
 +    pc1 = tf.pc_offset
@@ -3867,7 +3875,7 @@ index d6c6d06..fd4a75c 100644
                   events.shift)
      assert_equal(["c-call", 6, :===, Module],
 diff --git a/thread.c b/thread.c
-index 93a8925..4d1d4b1 100644
+index 93a8925..16b6378 100644
 --- a/thread.c
 +++ b/thread.c
 @@ -4121,7 +4121,7 @@ set_threads_event_flags_i(st_data_t key, st_data_t val, st_data_t flag)
@@ -3879,7 +3887,7 @@ index 93a8925..4d1d4b1 100644
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -4160,31 +4160,40 @@ thread_exec_event_hooks(VALUE args, int running)
+@@ -4160,31 +4160,62 @@ thread_exec_event_hooks(VALUE args, int running)
      rb_thread_t *th = argp->th;
      rb_event_flag_t flag = argp->event;
      VALUE self = argp->self;
@@ -3932,16 +3940,38 @@ index 93a8925..4d1d4b1 100644
 +		th->event_flags &= (~RUBY_EVENT_VM);
 +	    }
 +	    else if (!(running & EVENT_RUNNING_VM)) {
-+		th->tracing |= EVENT_RUNNING_VM;
-+		removed = exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
-+		th->tracing &= ~EVENT_RUNNING_VM;
-+		if (removed) {
-+		    remove_defered_event_hook(&th->vm->event_hooks);
++		if (0 == th->exec_event_tracing) {
++		    /* Modified from ruby_suppress_tracing */
++		    int state;
++		    volatile int raised = rb_threadptr_reset_raised(th);
++		    rb_block_t * base_block_save = th->base_block;
++		    th->exec_event_tracing = 1;
++		    
++		    PUSH_TAG();
++		    if ((state = EXEC_TAG()) == 0) {
++			th->tracing |= EVENT_RUNNING_VM;
++			removed = exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
++			th->tracing &= ~EVENT_RUNNING_VM;
++			if (removed) {
++			    remove_defered_event_hook(&th->vm->event_hooks);
++			}
++		    }
++		    
++		    th->base_block = base_block_save;
++		    if (raised) {
++			rb_threadptr_set_raised(th);
++		    }
++		    POP_TAG();
++			
++		    th->exec_event_tracing = 0;
++		    if (state) {
++			JUMP_TAG(state);
++		    }
 +		}
  	    }
  	}
      }
-@@ -4346,19 +4355,48 @@ clear_trace_func_i(st_data_t key, st_data_t val, st_data_t flag)
+@@ -4346,19 +4377,48 @@ clear_trace_func_i(st_data_t key, st_data_t val, st_data_t flag)
      return ST_CONTINUE;
  }
  
@@ -3993,7 +4023,7 @@ index 93a8925..4d1d4b1 100644
   *
   *  Establishes _proc_ as the handler for tracing, or disables
   *  tracing if the parameter is +nil+. _proc_ takes up
-@@ -4372,6 +4410,8 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
+@@ -4372,6 +4432,8 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
   *  <code>line</code> (execute code on a new line), <code>raise</code>
   *  (raise an exception), and <code>return</code> (return from a Ruby
   *  method). Tracing is disabled within the context of _proc_.
@@ -4002,7 +4032,7 @@ index 93a8925..4d1d4b1 100644
   *
   *      class Test
   *	def test
-@@ -4396,13 +4436,29 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
+@@ -4396,13 +4458,30 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
   *	  line prog.rb:3        test     Test
   *	  line prog.rb:4        test     Test
   *      return prog.rb:4        test     Test
@@ -4030,10 +4060,11 @@ index 93a8925..4d1d4b1 100644
 +        events = NUM2INT(event_maskval);
 +    }
 +
++    GET_THREAD()->exec_event_tracing = 0;
      if (NIL_P(trace)) {
  	GET_THREAD()->tracing = EVENT_RUNNING_NOTHING;
  	return Qnil;
-@@ -4412,18 +4468,18 @@ set_trace_func(VALUE obj, VALUE trace)
+@@ -4412,18 +4491,18 @@ set_trace_func(VALUE obj, VALUE trace)
  	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
      }
  
@@ -4055,7 +4086,7 @@ index 93a8925..4d1d4b1 100644
  }
  
  /*
-@@ -4435,18 +4491,26 @@ thread_add_trace_func(rb_thread_t *th, VALUE trace)
+@@ -4435,18 +4514,26 @@ thread_add_trace_func(rb_thread_t *th, VALUE trace)
   */
  
  static VALUE
@@ -4085,7 +4116,7 @@ index 93a8925..4d1d4b1 100644
   *
   *  Establishes _proc_ on _thr_ as the handler for tracing, or
   *  disables tracing if the parameter is +nil+.
-@@ -4454,9 +4518,17 @@ thread_add_trace_func_m(VALUE obj, VALUE trace)
+@@ -4454,17 +4541,26 @@ thread_add_trace_func_m(VALUE obj, VALUE trace)
   */
  
  static VALUE
@@ -4104,7 +4135,8 @@ index 93a8925..4d1d4b1 100644
      GetThreadPtr(obj, th);
      rb_threadptr_remove_event_hook(th, call_trace_func);
  
-@@ -4464,7 +4536,7 @@ thread_set_trace_func_m(VALUE obj, VALUE trace)
++    GET_THREAD()->exec_event_tracing = 0;
+     if (NIL_P(trace)) {
  	th->tracing = EVENT_RUNNING_NOTHING;
  	return Qnil;
      }
@@ -4113,7 +4145,7 @@ index 93a8925..4d1d4b1 100644
      return trace;
  }
  
-@@ -4478,6 +4550,8 @@ get_event_name(rb_event_flag_t event)
+@@ -4478,6 +4574,8 @@ get_event_name(rb_event_flag_t event)
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -4122,7 +4154,7 @@ index 93a8925..4d1d4b1 100644
        case RUBY_EVENT_CALL:
  	return "call";
        case RUBY_EVENT_RETURN:
-@@ -4488,6 +4562,12 @@ get_event_name(rb_event_flag_t event)
+@@ -4488,6 +4586,12 @@ get_event_name(rb_event_flag_t event)
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -4135,7 +4167,7 @@ index 93a8925..4d1d4b1 100644
        default:
  	return "unknown";
      }
-@@ -4505,11 +4585,18 @@ call_trace_proc(VALUE args, int tracing)
+@@ -4505,11 +4609,18 @@ call_trace_proc(VALUE args, int tracing)
      ID id = 0;
      VALUE klass = 0;
  
@@ -4157,7 +4189,7 @@ index 93a8925..4d1d4b1 100644
  	rb_thread_method_id_and_class(p->th, &id, &klass);
      }
      if (id == ID_ALLOCATOR)
-@@ -4592,6 +4679,37 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
+@@ -4592,6 +4703,67 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
      return result;
  }
  
@@ -4192,10 +4224,40 @@ index 93a8925..4d1d4b1 100644
 +    return th->tracing;
 +}
 +
++/* 
++ *  call-seq:
++ *  Thread#exec_event_tracing -> bool
++ *
++ *  Returns the value of the thread event-hook tracing.
++ */
++VALUE
++rb_thread_exec_event_tracing(VALUE self)
++{
++    rb_thread_t *th;
++    GetThreadPtr(self, th);
++    return th->exec_event_tracing ? Qtrue : Qfalse;
++}
++
++/* 
++ *  call-seq:
++ *  Thread#exec_event_tracing=(new_value)
++ * 
++ *  Sets the value of thread event-hook tracing.
++ */
++VALUE
++rb_thread_exec_event_tracing_set(VALUE self, VALUE new_value)
++{
++    rb_thread_t *th;
++    GetThreadPtr(self, th);
++
++    th->exec_event_tracing = RTEST(new_value) ? Qtrue : Qfalse;
++    return th->exec_event_tracing;
++}
++
  /*
   *  call-seq:
   *     thr.backtrace    -> array
-@@ -4709,9 +4827,15 @@ Init_Thread(void)
+@@ -4709,9 +4881,19 @@ Init_Thread(void)
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -4211,10 +4273,14 @@ index 93a8925..4d1d4b1 100644
 +    rb_define_method(rb_cThread, "tracing=",  rb_thread_tracing_set, 1);
 +    rb_define_method(rb_cThread, "tracing?",  rb_thread_tracing, 0);
 +
++    rb_define_method(rb_cThread, "exec_event_tracing=",  
++		     rb_thread_exec_event_tracing_set, 1);
++    rb_define_method(rb_cThread, "exec_event_tracing",   
++		     rb_thread_exec_event_tracing, 0);
  
      /* init thread core */
      {
-@@ -4846,4 +4970,3 @@ rb_reset_coverages(void)
+@@ -4846,4 +5028,3 @@ rb_reset_coverages(void)
      GET_VM()->coverages = Qfalse;
      rb_remove_event_hook(update_coverage);
  }
@@ -4439,7 +4505,7 @@ index dd026cb..b0ea5fa 100644
      fcore = rb_class_new(rb_cBasicObject);
      RBASIC(fcore)->flags = T_ICLASS;
 diff --git a/vm_core.h b/vm_core.h
-index ea6b1d4..2562f95 100644
+index ea6b1d4..02da93d 100644
 --- a/vm_core.h
 +++ b/vm_core.h
 @@ -255,6 +255,23 @@ struct rb_iseq_struct {
@@ -4476,7 +4542,19 @@ index ea6b1d4..2562f95 100644
  } rb_control_frame_t;
  
  typedef struct rb_block_struct {
-@@ -500,10 +520,11 @@ VALUE rb_iseq_new(NODE*, VALUE, VALUE, VALUE, VALUE, enum iseq_type);
+@@ -476,7 +496,10 @@ typedef struct rb_thread_struct {
+     /* tracer */
+     rb_event_hook_t *event_hooks;
+     rb_event_flag_t event_flags;
+-    int tracing;
++    int tracing;  /* 0 if not tracing. If less than 0, skip that many
++		     C call/return pairs */
++
++    int exec_event_tracing;  /* 0 if not in rb_threadptr_evec_event_hooks. */
+ 
+     /* fiber */
+     VALUE fiber;
+@@ -500,10 +523,11 @@ VALUE rb_iseq_new(NODE*, VALUE, VALUE, VALUE, VALUE, enum iseq_type);
  VALUE rb_iseq_new_top(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE parent);
  VALUE rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath);
  VALUE rb_iseq_new_with_bopt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, VALUE);
@@ -4489,7 +4567,7 @@ index ea6b1d4..2562f95 100644
  int rb_iseq_disasm_insn(VALUE str, VALUE *iseqval, size_t pos, rb_iseq_t *iseq, VALUE child);
  const char *ruby_node_name(int node);
  int rb_iseq_first_lineno(rb_iseq_t *iseq);
-@@ -583,6 +604,10 @@ enum vm_special_object_type {
+@@ -583,6 +607,10 @@ enum vm_special_object_type {
  
  #define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)
  

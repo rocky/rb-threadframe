@@ -324,7 +324,7 @@ diff --git a/vm_core.h b/vm_core.h
 index 26a2637..ead4380 100644
 --- a/vm_core.h
 +++ b/vm_core.h
-@@ -524,6 +524,7 @@ VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_t
+@@ -527,6 +527,7 @@ VALUE rb_iseq_new_with_opt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_t
  VALUE rb_iseq_compile(VALUE src, VALUE file, VALUE line);
  VALUE rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, VALUE opt);
  VALUE rb_iseq_disasm(VALUE self);

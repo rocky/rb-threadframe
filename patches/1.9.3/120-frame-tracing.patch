@@ -26,72 +26,75 @@ cumbersome and frail. With this patch the set_trace() call can
 be placed anywhere in the debugger() method anywhere after the frame
 tracing is turned off in the debugger() method.
 
-diff --git a/thread.c b/thread.c
-index 69e6daa..fc6b152 100644
---- a/thread.c
-+++ b/thread.c
-@@ -4160,31 +4160,40 @@ thread_exec_event_hooks(VALUE args, int running)
-     rb_thread_t *th = argp->th;
-     rb_event_flag_t flag = argp->event;
-     VALUE self = argp->self;
--    ID id = argp->id;
--    VALUE klass = argp->klass;
--    const rb_event_flag_t wait_event = th->event_flags;
--    int removed;
-+    int do_tracing;
+# The below is folded into 110-thread-tracing.patch. Separating them is just too
+# complicated.
+
+# diff --git a/thread.c b/thread.c
+# index 69e6daa..fc6b152 100644
+# --- a/thread.c
+# +++ b/thread.c
+# @@ -4160,31 +4160,40 @@ thread_exec_event_hooks(VALUE args, int running)
+#      rb_thread_t *th = argp->th;
+#      rb_event_flag_t flag = argp->event;
+#      VALUE self = argp->self;
+# -    ID id = argp->id;
+# -    VALUE klass = argp->klass;
+# -    const rb_event_flag_t wait_event = th->event_flags;
+# -    int removed;
+# +    int do_tracing;
  
-     if (self == rb_mRubyVMFrozenCore) return 0;
+#      if (self == rb_mRubyVMFrozenCore) return 0;
  
--    if ((wait_event & flag) && !(running & EVENT_RUNNING_THREAD)) {
--	th->tracing |= EVENT_RUNNING_THREAD;
--	removed = exec_event_hooks(th->event_hooks, flag, self, id, klass);
--	th->tracing &= ~EVENT_RUNNING_THREAD;
--	if (removed) {
--	    remove_defered_event_hook(&th->event_hooks);
--	}
--    }
--    if (wait_event & RUBY_EVENT_VM) {
--	if (th->vm->event_hooks == NULL) {
--	    th->event_flags &= (~RUBY_EVENT_VM);
--	}
--	else if (!(running & EVENT_RUNNING_VM)) {
--	    th->tracing |= EVENT_RUNNING_VM;
--	    removed = exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
--	    th->tracing &= ~EVENT_RUNNING_VM;
-+    /* Either we haven't turned off tracing via the thread mechanism
-+       or we set a return trace and the event is a some kind of return. */
-+    do_tracing = UNLIKELY( !(th->cfp->tracing & VM_FRAME_TRACE_OFF) ||
-+			   ((flag & (RUBY_EVENT_C_RETURN | RUBY_EVENT_RETURN))
-+			    && th->cfp->tracing & VM_FRAME_TRACE_RETURN) );
-+
-+    if (do_tracing) {
-+	const rb_event_flag_t wait_event = th->event_flags;
-+	ID id = argp->id;
-+	int removed;
-+	VALUE klass = argp->klass;
-+	if ((wait_event & flag) && !(running & EVENT_RUNNING_THREAD)) {
-+	    th->tracing |= EVENT_RUNNING_THREAD;
-+	    removed = exec_event_hooks(th->event_hooks, flag, self, id, klass);
-+	    th->tracing &= ~EVENT_RUNNING_THREAD;
- 	    if (removed) {
--		remove_defered_event_hook(&th->vm->event_hooks);
-+		remove_defered_event_hook(&th->event_hooks);
-+	    }
-+	}
-+	if (wait_event & RUBY_EVENT_VM) {
-+	    if (th->vm->event_hooks == NULL) {
-+		th->event_flags &= (~RUBY_EVENT_VM);
-+	    }
-+	    else if (!(running & EVENT_RUNNING_VM)) {
-+		th->tracing |= EVENT_RUNNING_VM;
-+		removed = exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
-+		th->tracing &= ~EVENT_RUNNING_VM;
-+		if (removed) {
-+		    remove_defered_event_hook(&th->vm->event_hooks);
-+		}
- 	    }
- 	}
-     }
+# -    if ((wait_event & flag) && !(running & EVENT_RUNNING_THREAD)) {
+# -	th->tracing |= EVENT_RUNNING_THREAD;
+# -	removed = exec_event_hooks(th->event_hooks, flag, self, id, klass);
+# -	th->tracing &= ~EVENT_RUNNING_THREAD;
+# -	if (removed) {
+# -	    remove_defered_event_hook(&th->event_hooks);
+# -	}
+# -    }
+# -    if (wait_event & RUBY_EVENT_VM) {
+# -	if (th->vm->event_hooks == NULL) {
+# -	    th->event_flags &= (~RUBY_EVENT_VM);
+# -	}
+# -	else if (!(running & EVENT_RUNNING_VM)) {
+# -	    th->tracing |= EVENT_RUNNING_VM;
+# -	    removed = exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
+# -	    th->tracing &= ~EVENT_RUNNING_VM;
+# +    /* Either we haven't turned off tracing via the thread mechanism
+# +       or we set a return trace and the event is a some kind of return. */
+# +    do_tracing = UNLIKELY( !(th->cfp->tracing & VM_FRAME_TRACE_OFF) ||
+# +			   ((flag & (RUBY_EVENT_C_RETURN | RUBY_EVENT_RETURN))
+# +			    && th->cfp->tracing & VM_FRAME_TRACE_RETURN) );
+# +
+# +    if (do_tracing) {
+# +	const rb_event_flag_t wait_event = th->event_flags;
+# +	ID id = argp->id;
+# +	int removed;
+# +	VALUE klass = argp->klass;
+# +	if ((wait_event & flag) && !(running & EVENT_RUNNING_THREAD)) {
+# +	    th->tracing |= EVENT_RUNNING_THREAD;
+# +	    removed = exec_event_hooks(th->event_hooks, flag, self, id, klass);
+# +	    th->tracing &= ~EVENT_RUNNING_THREAD;
+#  	    if (removed) {
+# -		remove_defered_event_hook(&th->vm->event_hooks);
+# +		remove_defered_event_hook(&th->event_hooks);
+# +	    }
+# +	}
+# +	if (wait_event & RUBY_EVENT_VM) {
+# +	    if (th->vm->event_hooks == NULL) {
+# +		th->event_flags &= (~RUBY_EVENT_VM);
+# +	    }
+# +	    else if (!(running & EVENT_RUNNING_VM)) {
+# +		th->tracing |= EVENT_RUNNING_VM;
+# +		removed = exec_event_hooks(th->vm->event_hooks, flag, self, id, klass);
+# +		th->tracing &= ~EVENT_RUNNING_VM;
+# +		if (removed) {
+# +		    remove_defered_event_hook(&th->vm->event_hooks);
+# +		}
+#  	    }
+#  	}
+#      }
 diff --git a/vm_core.h b/vm_core.h
 index b28a222..8abccf3 100644
 --- a/vm_core.h
@@ -106,6 +109,18 @@ index b28a222..8abccf3 100644
  } rb_control_frame_t;
  
  typedef struct rb_block_struct {
+@@ -476,7 +496,10 @@ typedef struct rb_thread_struct {
+     /* tracer */
+     rb_event_hook_t *event_hooks;
+     rb_event_flag_t event_flags;
+-    int tracing;
++    int tracing;  /* 0 if not tracing. If less than 0, skip that many
++		     C call/return pairs */
++
++    int exec_event_tracing;  /* 0 if not in rb_threadptr_evec_event_hooks. */
+ 
+     /* fiber */
+     VALUE fiber;
 @@ -583,6 +586,10 @@ enum vm_special_object_type {
  
  #define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)

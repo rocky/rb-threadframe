@@ -1228,7 +1228,7 @@ new file mode 100644
 index 0000000..94b9d41
 --- /dev/null
 +++ b/test/debugger-ext/test_frame.rb
-@@ -0,0 +1,121 @@
+@@ -0,0 +1,129 @@
 +require 'test/unit'
 +
 +class TestFrame < Test::Unit::TestCase
@@ -1260,6 +1260,14 @@ index 0000000..94b9d41
 +    assert_equal(5, tf.sp(1), 'checking value of recently-set sp(1)')
 +  end
 +
++  def test_thread_exec_event_tracing
++    assert_equal(false, Thread.current.exec_event_tracing)
++    Thread.current.exec_event_tracing = true
++    assert_equal(true, Thread.current.exec_event_tracing)
++    Thread.current.exec_event_tracing = false
++    assert_equal(false, Thread.current.exec_event_tracing)
++  end    
++    
 +  def test_fields(notused=nil)
 +    tf = RubyVM::Frame::current
 +    pc1 = tf.pc_offset
