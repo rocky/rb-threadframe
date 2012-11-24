@@ -2934,7 +2934,7 @@ index 0000000..05cb775
 +end
 diff --git a/test/debugger-ext/test_frame.rb b/test/debugger-ext/test_frame.rb
 new file mode 100644
-index 0000000..ac63ae3
+index 0000000..cba63e8
 --- /dev/null
 +++ b/test/debugger-ext/test_frame.rb
 @@ -0,0 +1,125 @@
@@ -3068,12 +3068,11 @@ new file mode 100644
 index 0000000..dd7bfd7
 --- /dev/null
 +++ b/test/debugger-ext/test_invalid.rb
-@@ -0,0 +1,40 @@
+@@ -0,0 +1,39 @@
 +require 'test/unit'
 +
 +class TestInvalid < Test::Unit::TestCase
 +  def test_basic
-+
 +    @tf = RubyVM::Frame::current
 +    assert_equal(false, @tf.invalid?, 
 +                 'Frame should be valid right after RubyVM::Frame::current')
@@ -4182,7 +4181,7 @@ index d6c6d06..fdf7920 100644
        assert_equal(e, events.shift)
      }
 diff --git a/thread.c b/thread.c
-index 93a8925..0dbd52d 100644
+index 93a8925..7c029f1 100644
 --- a/thread.c
 +++ b/thread.c
 @@ -4121,7 +4121,7 @@ set_threads_event_flags_i(st_data_t key, st_data_t val, st_data_t flag)
@@ -4339,7 +4338,7 @@ index 93a8925..0dbd52d 100644
   *
   *      class Test
   *	def test
-@@ -4396,13 +4458,30 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
+@@ -4396,14 +4458,31 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
   *	  line prog.rb:3        test     Test
   *	  line prog.rb:4        test     Test
   *      return prog.rb:4        test     Test
@@ -4367,10 +4366,11 @@ index 93a8925..0dbd52d 100644
 +        events = NUM2INT(event_maskval);
 +    }
 +
-+    GET_THREAD()->exec_event_tracing = 0;
      if (NIL_P(trace)) {
++	GET_THREAD()->exec_event_tracing = 0;
  	GET_THREAD()->tracing = EVENT_RUNNING_NOTHING;
  	return Qnil;
+     }
 @@ -4412,18 +4491,18 @@ set_trace_func(VALUE obj, VALUE trace)
  	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
      }
@@ -4423,7 +4423,7 @@ index 93a8925..0dbd52d 100644
   *
   *  Establishes _proc_ on _thr_ as the handler for tracing, or
   *  disables tracing if the parameter is +nil+.
-@@ -4454,9 +4541,17 @@ thread_add_trace_func_m(VALUE obj, VALUE trace)
+@@ -4454,17 +4541,26 @@ thread_add_trace_func_m(VALUE obj, VALUE trace)
   */
  
  static VALUE
@@ -4442,7 +4442,8 @@ index 93a8925..0dbd52d 100644
      GetThreadPtr(obj, th);
      rb_threadptr_remove_event_hook(th, call_trace_func);
  
-@@ -4464,7 +4559,7 @@ thread_set_trace_func_m(VALUE obj, VALUE trace)
+     if (NIL_P(trace)) {
++	GET_THREAD()->exec_event_tracing = 0;
  	th->tracing = EVENT_RUNNING_NOTHING;
  	return Qnil;
      }
@@ -4451,7 +4452,7 @@ index 93a8925..0dbd52d 100644
      return trace;
  }
  
-@@ -4478,6 +4573,8 @@ get_event_name(rb_event_flag_t event)
+@@ -4478,6 +4574,8 @@ get_event_name(rb_event_flag_t event)
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -4460,7 +4461,7 @@ index 93a8925..0dbd52d 100644
        case RUBY_EVENT_CALL:
  	return "call";
        case RUBY_EVENT_RETURN:
-@@ -4488,6 +4585,20 @@ get_event_name(rb_event_flag_t event)
+@@ -4488,6 +4586,20 @@ get_event_name(rb_event_flag_t event)
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -4481,7 +4482,7 @@ index 93a8925..0dbd52d 100644
        default:
  	return "unknown";
      }
-@@ -4505,11 +4616,18 @@ call_trace_proc(VALUE args, int tracing)
+@@ -4505,11 +4617,18 @@ call_trace_proc(VALUE args, int tracing)
      ID id = 0;
      VALUE klass = 0;
  
@@ -4503,7 +4504,7 @@ index 93a8925..0dbd52d 100644
  	rb_thread_method_id_and_class(p->th, &id, &klass);
      }
      if (id == ID_ALLOCATOR)
-@@ -4592,6 +4710,67 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
+@@ -4592,6 +4711,67 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
      return result;
  }
  
@@ -4571,7 +4572,7 @@ index 93a8925..0dbd52d 100644
  /*
   *  call-seq:
   *     thr.backtrace    -> array
-@@ -4709,9 +4888,19 @@ Init_Thread(void)
+@@ -4709,9 +4889,19 @@ Init_Thread(void)
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -4589,12 +4590,12 @@ index 93a8925..0dbd52d 100644
 +
 +    rb_define_method(rb_cThread, "exec_event_tracing=",  
 +		     rb_thread_exec_event_tracing_set, 1);
-+    rb_define_method(rb_cThread, "exec_event_tracing?",   
++    rb_define_method(rb_cThread, "exec_event_tracing?",
 +		     rb_thread_exec_event_tracing, 0);
  
      /* init thread core */
      {
-@@ -4846,4 +5035,3 @@ rb_reset_coverages(void)
+@@ -4846,4 +5036,3 @@ rb_reset_coverages(void)
      GET_VM()->coverages = Qfalse;
      rb_remove_event_hook(update_coverage);
  }

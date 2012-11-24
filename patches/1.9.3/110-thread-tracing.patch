@@ -92,6 +92,14 @@ index 2cf1064..69e6daa 100644
  	    }
  	}
      }
+@@ -4404,6 +4435,7 @@ set_trace_func(int argc, VALUE *argv)
+     }
+ 
+     if (NIL_P(trace)) {
++	GET_THREAD()->exec_event_tracing = 0;
+ 	GET_THREAD()->tracing = EVENT_RUNNING_NOTHING;
+ 	return Qnil;
+     }
 @@ -4592,6 +4592,67 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
      return result;
  }

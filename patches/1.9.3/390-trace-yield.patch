@@ -331,7 +331,7 @@ diff --git a/thread.c b/thread.c
 index f57e372..0dbd52d 100644
 --- a/thread.c
 +++ b/thread.c
-@@ -4584,6 +4584,14 @@ get_event_name(rb_event_flag_t event)
+@@ -4585,6 +4585,14 @@ get_event_name(rb_event_flag_t event)
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
