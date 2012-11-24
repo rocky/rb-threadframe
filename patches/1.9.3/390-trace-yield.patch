@@ -328,10 +328,10 @@ index fd4a75c..fdf7920 100644
        assert_equal(e, events.shift)
      }
 diff --git a/thread.c b/thread.c
-index f57e372..0dbd52d 100644
+index ad8d572..7c029f1 100644
 --- a/thread.c
 +++ b/thread.c
-@@ -4585,6 +4585,14 @@ get_event_name(rb_event_flag_t event)
+@@ -4586,6 +4586,14 @@ get_event_name(rb_event_flag_t event)
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";

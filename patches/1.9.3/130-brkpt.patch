@@ -382,7 +382,7 @@ index fc6b152..216e158 100644
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -4510,6 +4510,8 @@ get_event_name(rb_event_flag_t event)
+@@ -4511,6 +4511,8 @@ get_event_name(rb_event_flag_t event)
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
