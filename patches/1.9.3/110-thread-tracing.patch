@@ -169,7 +169,7 @@ index 2cf1064..69e6daa 100644
 +
 +    rb_define_method(rb_cThread, "exec_event_tracing=",  
 +		     rb_thread_exec_event_tracing_set, 1);
-+    rb_define_method(rb_cThread, "exec_event_tracing",   
++    rb_define_method(rb_cThread, "exec_event_tracing?",
 +		     rb_thread_exec_event_tracing, 0);
 +
      /* init thread core */

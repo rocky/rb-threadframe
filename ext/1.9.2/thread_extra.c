@@ -77,7 +77,7 @@ Init_thread_extra(void)
     /* Additions to Thread class */
     rb_define_method(rb_cThread, "exec_event_tracing=",  
 		     thread_exec_event_tracing_set, 1);
-    rb_define_method(rb_cThread, "exec_event_tracing",   
+    rb_define_method(rb_cThread, "exec_event_tracing?",   
 		     thread_exec_event_tracing, 0);
     rb_define_method(rb_cThread, "tracing=",  thread_tracing_set, 1);
     rb_define_method(rb_cThread, "tracing?",  thread_tracing, 0);
