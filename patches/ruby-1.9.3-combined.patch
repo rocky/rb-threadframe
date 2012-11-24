@@ -2970,11 +2970,11 @@ index 0000000..ac63ae3
 +  end
 +
 +  def test_thread_exec_event_tracing
-+    assert_equal(false, Thread.current.exec_event_tracing)
++    assert_equal(false, Thread.current.exec_event_tracing?)
 +    Thread.current.exec_event_tracing = true
-+    assert_equal(true, Thread.current.exec_event_tracing)
++    assert_equal(true, Thread.current.exec_event_tracing?)
 +    Thread.current.exec_event_tracing = false
-+    assert_equal(false, Thread.current.exec_event_tracing)
++    assert_equal(false, Thread.current.exec_event_tracing?)
 +  end    
 +    
 +  def test_fields(notused=nil)
