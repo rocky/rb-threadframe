@@ -6,7 +6,7 @@
  */
 
 /* What release we got? */
-#define THREADFRAME_VERSION "0.40dev"
+#define THREADFRAME_VERSION "0.39.9"
 
 #include <string.h>
 #include "../include/vm_core_mini.h"   /* Pulls in ruby.h and node.h */
