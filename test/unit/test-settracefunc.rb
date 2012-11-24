@@ -46,26 +46,17 @@ class TestSetTraceFunc < Test::Unit::TestCase
     EOF
 
     expected = 
-      if '1.9.3' == RUBY_VERSION then 
-        [
-         [5, 'c-return', :set_trace_func, Kernel],
-         [4, 'line',     __method__, self.class],
-         [4, "c-call",   :+,         Fixnum],
-         [4, "c-return", :+,         Fixnum],
-         [5, "line",     __method__, self.class],
-         [5, "c-call",   :set_trace_func, Kernel]
-        ] 
-      else 
-        [
-         [4, 'line',     __method__, self.class],
-         [4, 'send',     __method__, self.class],
-         [4, "c-call",   :+,         Fixnum],
-         [4, "c-return", :+,         Fixnum],
-         [5, "line",     __method__, self.class],
-         [5, "send",     __method__, self.class],
-         [5, "c-call",   :set_trace_func, Kernel]
-        ]
-      end
+      [
+       [4, 'line',     __method__, self.class],
+       [4, 'send',     __method__, self.class],
+       [4, "c-call",   :+,         Fixnum],
+       [4, "c-return", :+,         Fixnum],
+       [5, "line",     __method__, self.class],
+       [5, "send",     __method__, self.class],
+       [5, "c-call",   :set_trace_func, Kernel]
+      ]
+    expected.unshift [5, 'c-return', :set_trace_func, Kernel] if 
+      '1.9.3' == RUBY_VERSION
     checkit(@events, expected)
   end
 
@@ -82,41 +73,26 @@ class TestSetTraceFunc < Test::Unit::TestCase
     EOF
 
     expected = 
-      if '1.9.3' == RUBY_VERSION then 
-        [
-         [3, 'c-return', :set_trace_func, Kernel],
-         [4, 'line',     __method__,    self.class],
-         [4, 'c-call',   :method_added, Module],
-         [4, 'c-return', :method_added, Module],
-         [7, 'line',     __method__,    self.class],
-         [4, 'call',     :add,          self.class],
-         [5, 'line',     :add,          self.class],
-         [5, 'c-call',   :+,            Fixnum],
-         [5, 'c-return', :+,            Fixnum],
-         [6, 'return',   :add,          self.class],
-         [8, 'line',      __method__,   self.class],
-         [8, 'c-call',   :set_trace_func, Kernel]
-        ]
-      else 
-        [
-         [4, 'line',     __method__,    self.class],
-         [4, 'send',     __method__,    self.class],
-         [4, 'c-call',   :method_added, Module],
-         [4, 'c-return', :method_added, Module],
-         [7, 'line',     __method__,    self.class],
-         [7, 'send',     __method__,    self.class],
-         [4, 'call',     :add,          self.class],
-         [5, 'line',     :add,          self.class],
-         [5, 'send',     :add,          self.class],
-         [5, 'c-call',   :+,            Fixnum],
-         [5, 'c-return', :+,            Fixnum],
-         [6, 'return',   :add,          self.class],
-         [6, 'leave',    :add,          self.class],
-         [8, 'line',      __method__,   self.class],
-         [8, 'send',      __method__,   self.class],
-         [8, 'c-call',   :set_trace_func, Kernel]
-        ]
-      end
+      [
+       [4, 'line',     __method__,    self.class],
+       [4, 'send',     __method__,    self.class],
+       [4, 'c-call',   :method_added, Module],
+       [4, 'c-return', :method_added, Module],
+       [7, 'line',     __method__,    self.class],
+       [7, 'send',     __method__,    self.class],
+       [4, 'call',     :add,          self.class],
+       [5, 'line',     :add,          self.class],
+       [5, 'send',     :add,          self.class],
+       [5, 'c-call',   :+,            Fixnum],
+       [5, 'c-return', :+,            Fixnum],
+       [6, 'return',   :add,          self.class],
+       [6, 'leave',    :add,          self.class],
+       [8, 'line',      __method__,   self.class],
+       [8, 'send',      __method__,   self.class],
+       [8, 'c-call',   :set_trace_func, Kernel]
+      ]
+    expected.unshift [3, 'c-return', :set_trace_func, Kernel] if 
+      '1.9.3' == RUBY_VERSION
 
     checkit(@events, expected)
   end
@@ -134,54 +110,33 @@ class TestSetTraceFunc < Test::Unit::TestCase
      9: clear_trace_func()
     EOF
     expected = 
-      if '1.9.3' == RUBY_VERSION then 
-        [
-         [3, 'c-return', :set_trace_func, Kernel],
-         [4, 'line',     __method__,   self.class],
-         [4, 'c-call',   :inherited,   Class],
-         [4, 'c-return', :inherited,   Class],
-         [4, 'class',    nil,           nil],
-         [5, 'line',     nil,           nil],
-         [5, 'c-call',   :method_added, Module],
-         [5, 'c-return', :method_added, Module],
-         [7, 'end',      nil,           nil],
-         [8, 'line',     __method__,    self.class],
-         [8, 'c-call',   :new,          Class],
-         [8, 'c-call',   :initialize,   BasicObject],
-         [8, 'c-return', :initialize,   BasicObject],
-         [8, 'c-return', :new,          Class],
-         [5, 'call',     :bar,          Foo],
-         [6, 'return',   :bar,          Foo],
-         [9, 'line',     __method__,    self.class],
-         [9, 'c-call',   :clear_trace_func, Kernel]
-        ]
-      else
-        [
-         [4, 'line',     __method__,   self.class],
-         [4, 'c-call',   :inherited,   Class],
-         [4, 'c-return', :inherited,   Class],
-         [4, 'class',    nil,           nil],
-         [5, 'line',     nil,           nil],
-         [5, 'send',     nil,           nil],
-         [5, 'c-call',   :method_added, Module],
-         [5, 'c-return', :method_added, Module],
-         [7, 'end',      nil,           nil],
-         [7, 'leave',    nil,           nil],
-         [8, 'line',     __method__,    self.class],
-         [8, 'send',     __method__,    self.class],
-         [8, 'c-call',   :new,          Class],
-         [8, 'c-call',   :initialize,   BasicObject],
-         [8, 'c-return', :initialize,   BasicObject],
-         [8, 'c-return', :new,          Class],
-         [8, 'send',     __method__,          Class],
-         [5, 'call',     :bar,          Foo],
-         [6, 'return',   :bar,          Foo],
-         [6, 'leave',    :bar,          Foo],
-         [9, 'line',     __method__,    self.class],
-         [9, 'send',     __method__,    self.class],
-         [9, 'c-call',   :clear_trace_func, Kernel]
-        ]
-      end
+      [
+       [4, 'line',     __method__,   self.class],
+       [4, 'c-call',   :inherited,   Class],
+       [4, 'c-return', :inherited,   Class],
+       [4, 'class',    nil,           nil],
+       [5, 'line',     nil,           nil],
+       [5, 'send',     nil,           nil],
+       [5, 'c-call',   :method_added, Module],
+       [5, 'c-return', :method_added, Module],
+       [7, 'end',      nil,           nil],
+       [7, 'leave',    nil,           nil],
+       [8, 'line',     __method__,    self.class],
+       [8, 'send',     __method__,    self.class],
+       [8, 'c-call',   :new,          Class],
+       [8, 'c-call',   :initialize,   BasicObject],
+       [8, 'c-return', :initialize,   BasicObject],
+       [8, 'c-return', :new,          Class],
+       [8, 'send',     __method__,          Class],
+       [5, 'call',     :bar,          Foo],
+       [6, 'return',   :bar,          Foo],
+       [6, 'leave',    :bar,          Foo],
+       [9, 'line',     __method__,    self.class],
+       [9, 'send',     __method__,    self.class],
+       [9, 'c-call',   :clear_trace_func, Kernel]
+      ]
+    expected.unshift [3, 'c-return', :set_trace_func, Kernel] if 
+      '1.9.3' == RUBY_VERSION
     checkit(@events, expected)
   end
 
@@ -199,43 +154,26 @@ class TestSetTraceFunc < Test::Unit::TestCase
     10: set_trace_func(nil)
     EOF
     expected = 
-      if '1.9.3' == RUBY_VERSION then 
-        [
-         [ 4, 'line',     __method__,   self.class],
-         [ 4, 'c-call',   :method_added, Module],
-         [ 4, 'c-return', :method_added, Module],
-         [ 8, 'line',     __method__,   self.class],
-         [ 4, 'call',     :foo,         self.class],
-         [ 5, 'line',     :foo,         self.class],
-         [ 5, 'return',   :foo,         self.class],
-         [ 9, 'line',     :test_return, self.class],
-         [ 4, 'call',     :foo,         self.class],
-         [ 5, 'line',     :foo,         self.class],
-         [ 7, 'return',   :foo,         self.class],
-         [10, 'line',     :test_return, self.class],
-         [10, 'c-call',   :set_trace_func, Kernel]]
-      else
-        [
-         [ 4, 'line',     __method__,   self.class],
-         [ 4, 'send',     __method__,   self.class],
-         [ 4, 'c-call',   :method_added, Module],
-         [ 4, 'c-return', :method_added, Module],
-         [ 8, 'line',     __method__,   self.class],
-         [ 8, 'send',     __method__,   self.class],
-         [ 4, 'call',     :foo,         self.class],
-         [ 5, 'line',     :foo,         self.class],
-         [ 5, 'return',   :foo,         self.class],
-         [ 5, 'leave',    :foo,         self.class],
-         [ 9, 'line',     :test_return, self.class],
-         [ 9, 'send',     :test_return, self.class],
-         [ 4, 'call',     :foo,         self.class],
-         [ 5, 'line',     :foo,         self.class],
-         [ 7, 'return',   :foo,         self.class],
-         [10, 'line',     :test_return, self.class],
-         [10, 'leave',    :test_return, self.class],
-         [10, 'send',     :test_return, self.class],
-         [10, 'c-call',   :set_trace_func, Kernel]]
-      end
+      [
+       [ 4, 'line',     __method__,   self.class],
+       [ 4, 'send',     __method__,   self.class],
+       [ 4, 'c-call',   :method_added, Module],
+       [ 4, 'c-return', :method_added, Module],
+       [ 8, 'line',     __method__,   self.class],
+       [ 8, 'send',     __method__,   self.class],
+       [ 4, 'call',     :foo,         self.class],
+       [ 5, 'line',     :foo,         self.class],
+       [ 5, 'return',   :foo,         self.class],
+       [ 5, 'leave',    :foo,         self.class],
+       [ 9, 'line',     :test_return, self.class],
+       [ 9, 'send',     :test_return, self.class],
+       [ 4, 'call',     :foo,         self.class],
+       [ 5, 'line',     :foo,         self.class],
+       [ 7, 'return',   :foo,         self.class],
+       [10, 'line',     :test_return, self.class],
+       [10, 'leave',    :test_return, self.class],
+       [10, 'send',     :test_return, self.class],
+       [10, 'c-call',   :set_trace_func, Kernel]]
     checkit(@events, expected)
   end
 
@@ -253,36 +191,24 @@ class TestSetTraceFunc < Test::Unit::TestCase
     EOF
 
     expected = 
-      if '1.9.3' == RUBY_VERSION then 
-        [
-         [3, 'c-return', :set_trace_func, Kernel],
-         [4, 'line',     __method__, self.class],
-         [4, 'c-call',   :method_added, Module],
-         [4, 'c-return', :method_added, Module],
-         [8, 'line',     __method__, self.class],
-         [4, 'call',     :foo, self.class],
-         [5, 'line',     :foo, self.class],
-         [6, 'line',     :foo, self.class],
-         [7, 'return',   :foo, self.class],
-         [9, 'line',     :test_return2, self.class],
-         [9, 'c-call',   :set_trace_func, Kernel]]
-      else
-        [
-         [4, 'line',     __method__, self.class],
-         [4, 'send',     __method__, self.class],
-         [4, 'c-call',   :method_added, Module],
-         [4, 'c-return', :method_added, Module],
-         [8, 'line',     __method__, self.class],
-         [8, 'send',     __method__, self.class],
-         [4, 'call',     :foo, self.class],
-         [5, 'line',     :foo, self.class],
-         [6, 'line',     :foo, self.class],
-         [7, 'return',   :foo, self.class],
-         [7, 'leave',    :foo, self.class],
-         [9, 'line',     :test_return2, self.class],
-         [9, 'send',     :test_return2, self.class],
-         [9, 'c-call',   :set_trace_func, Kernel]]
-      end
+      [
+       [4, 'line',     __method__, self.class],
+       [4, 'send',     __method__, self.class],
+       [4, 'c-call',   :method_added, Module],
+       [4, 'c-return', :method_added, Module],
+       [8, 'line',     __method__, self.class],
+       [8, 'send',     __method__, self.class],
+       [4, 'call',     :foo, self.class],
+       [5, 'line',     :foo, self.class],
+       [6, 'line',     :foo, self.class],
+       [7, 'return',   :foo, self.class],
+       [7, 'leave',    :foo, self.class],
+       [9, 'line',     :test_return2, self.class],
+       [9, 'send',     :test_return2, self.class],
+       [9, 'c-call',   :set_trace_func, Kernel]]
+    expected.unshift [3, 'c-return', :set_trace_func, Kernel] if 
+      '1.9.3' == RUBY_VERSION
+
     @events.each_with_index{|e, i|
       assert_equal(e, @events[i], showit(@events, expected))}
     assert_equal(expected.size, @events.size, showit(@events, expected))
@@ -302,52 +228,32 @@ class TestSetTraceFunc < Test::Unit::TestCase
     EOF
     
     expected = 
-      if '1.9.3' == RUBY_VERSION then 
-        [
-         [3, 'c-return', :set_trace_func, Kernel],
-         [4, 'line',     __method__,     self.class],
-         [5, 'line',     __method__,     self.class],
-         [5, 'c-call',   :raise,         Kernel],
-         [5, 'c-call',   :exception,     Exception],
-         [5, 'c-call',   :initialize,    Exception],
-         [5, 'c-return', :initialize,    Exception],
-         [5, 'c-return', :exception,     Exception],
-         [5, 'c-call',   :backtrace,     Exception],
-         [5, 'c-return', :backtrace,     Exception],
-         [5, 'c-call',   :set_backtrace, Exception],
-         [5, 'c-return', :set_backtrace, Exception],
-         [5, 'raise',    :test_raise,    $e], 
-         [5, 'c-return', :raise,         Kernel],
-         [6, 'c-call',   :===,           Module],
-         [6, 'c-return', :===,           Module],
-         [8, 'line',     __method__,     self.class],
-         [8, 'c-call',   :set_trace_func, Kernel]
-        ]
-      else
-        [
-         [4, 'line',     __method__,     self.class],
-         [5, 'line',     __method__,     self.class],
-         [5, 'send',     __method__,     Kernel],
-         [5, 'c-call',   :raise,         Kernel],
-         [5, 'c-call',   :exception,     Exception],
-         [5, 'c-call',   :initialize,    Exception],
-         [5, 'c-return', :initialize,    Exception],
-         [5, 'c-return', :exception,     Exception],
-         [5, 'c-call',   :backtrace,     Exception],
-         [5, 'c-return', :backtrace,     Exception],
-         [5, 'c-call',   :set_backtrace, Exception],
-         [5, 'c-return', :set_backtrace, Exception],
-         [5, 'raise',    :test_raise,    $e], 
-         [5, 'c-return', :raise,         Kernel],
-         [5, 'send',     __method__,     Kernel],
-         [6, 'c-call',   :===,           Module],
-         [6, 'c-return', :===,           Module],
-         [7, 'leave',    __method__,     Module],
-         [8, 'line',     __method__,     self.class],
-         [8, 'send',     __method__,     self.class],
-         [8, 'c-call',   :set_trace_func, Kernel]
-        ]
-      end
+      [
+       [4, 'line',     __method__,     self.class],
+       [5, 'line',     __method__,     self.class],
+       [5, 'send',     __method__,     Kernel],
+       [5, 'c-call',   :raise,         Kernel],
+       [5, 'c-call',   :exception,     Exception],
+       [5, 'c-call',   :initialize,    Exception],
+       [5, 'c-return', :initialize,    Exception],
+       [5, 'c-return', :exception,     Exception],
+       [5, 'c-call',   :backtrace,     Exception],
+       [5, 'c-return', :backtrace,     Exception],
+       [5, 'c-call',   :set_backtrace, Exception],
+       [5, 'c-return', :set_backtrace, Exception],
+       [5, 'raise',    :test_raise,    $e], 
+       [5, 'c-return', :raise,         Kernel],
+       [5, 'send',     __method__,     Kernel],
+       [6, 'c-call',   :===,           Module],
+       [6, 'c-return', :===,           Module],
+       [7, 'leave',    __method__,     Module],
+       [8, 'line',     __method__,     self.class],
+       [8, 'send',     __method__,     self.class],
+       [8, 'c-call',   :set_trace_func, Kernel]
+      ]
+    expected.unshift [3, 'c-return', :set_trace_func, Kernel] if 
+      '1.9.3' == RUBY_VERSION
+
     checkit(events, expected)
   end
 
@@ -362,33 +268,22 @@ class TestSetTraceFunc < Test::Unit::TestCase
     EOF
 
     expected = 
-      if '1.9.3' == RUBY_VERSION then 
-        [
-         [3, 'c-return', :set_trace_func, Kernel],
-         [4, 'line',     __method__, self.class],
-         [4, 'c-call',   :any?,      Enumerable],
-         [4, 'c-call',   :each,      Array],
-         [4, 'line',     __method__, self.class],
-         [4, 'c-return', :each,      Array],
-         [4, 'c-return', :any?,      Enumerable],
-         [5, 'send',     __method__, self.class],
-         [5, 'c-call',   :set_trace_func, Kernel]
-        ]
-      else
-        [
-         [4, 'line',     __method__, self.class],
-         [4, 'send',     __method__, self.class],
-         [4, 'c-call',   :any?,      Enumerable],
-         [4, 'c-call',   :each,      Array],
-         [4, 'line',     __method__, self.class],
-         [4, 'leave',    __method__, self.class],
-         [4, 'c-return', :each,      Array],
-         [4, 'c-return', :any?,      Enumerable],
-         [5, 'line',     __method__, self.class],
-         [5, 'send',     __method__, self.class],
-         [5, 'c-call',   :set_trace_func, Kernel]
-        ]
-      end
+      [
+       [4, 'line',     __method__, self.class],
+       [4, 'send',     __method__, self.class],
+       [4, 'c-call',   :any?,      Enumerable],
+       [4, 'c-call',   :each,      Array],
+       [4, 'line',     __method__, self.class],
+       [4, 'leave',    __method__, self.class],
+       [4, 'c-return', :each,      Array],
+       [4, 'c-return', :any?,      Enumerable],
+       [5, 'line',     __method__, self.class],
+       [5, 'send',     __method__, self.class],
+       [5, 'c-call',   :set_trace_func, Kernel]
+      ]
+    expected.unshift [3, 'c-return', :set_trace_func, Kernel] if 
+      '1.9.3' == RUBY_VERSION
+
       
     checkit(events, expected)
   end
@@ -403,7 +298,6 @@ class TestSetTraceFunc < Test::Unit::TestCase
   end
 
   def test_thread_trace
-    skip "reinstate this on 1.9.3" if '1.9.3' == RUBY_VERSION
     events = {:set => [], :add => []}
     prc = Proc.new { |event, file, lineno, mid, binding, klass|
       events[:set] << [lineno, event, mid, klass, :set]

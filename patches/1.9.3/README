@@ -298,3 +298,10 @@ Adds Proc#iseq
 380-method-extra.patch
 
 Add methods alias_count, original_id, and type to Method and UnboundMethod
+
+-------------------
+390-trace-yield.patch
+
+Adds events "send", "leave", "yield", and "insn".  Ruby "yield" context switching triggers these.
+"insn" is for instruction stepping.
+

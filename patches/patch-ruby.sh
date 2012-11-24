@@ -34,6 +34,7 @@ case $patchfile in
 	    360-save-compile-opts.patch \
 	    370-proc-iseq.patch \
 	    380-method-extra.patch \
+	    390-trace-yield.patch \
 	    400-trace-hook-extra.patch
 	do 
 	    patch_file=${dirname}/1.9.3/$file
