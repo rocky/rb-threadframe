@@ -52,7 +52,7 @@ new file mode 100644
 index 0000000..2221729
 --- /dev/null
 +++ b/test/debugger-ext/test_tracemask.rb
-@@ -0,0 +1,128 @@
+@@ -0,0 +1,127 @@
 +require 'test/unit'
 +
 +# tests set_trace_func with event bitmasks, clear_trace_func, 
@@ -154,7 +154,6 @@ index 0000000..2221729
 +  end
 +
 +  def test_chained_hook
-+    skip "FIX add_trace_func"
 +    tuples1 = []
 +    tuples2 = []
 +    cmd = <<-EOF.gsub(/^.*?: /, '')
