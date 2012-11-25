@@ -1,4 +1,5 @@
-(0.40) 
+Nov 25, 2012 (0.40) 
+ - Redone for Ruby 1.9.3 p327
  - RubyVM::ThreadFrame is now RubyVM::Frame. RubyVM::ThreadFrame is still 
    there for compatibility
 -  Some small administrative and bug fixes
