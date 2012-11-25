@@ -6,10 +6,10 @@
  */
 
 /* What release we got? */
-#define THREADFRAME_VERSION "0.39.9"
+#include "../version.h"
 
 #include <string.h>
-#include "../include/vm_core_mini.h"   /* Pulls in ruby.h and node.h */
+#include "../../include/vm_core_mini.h"   /* Pulls in ruby.h and node.h */
 #include "proc_extra.h"
 #include "iseq_extra.h"
 #include "thread_extra.h"
