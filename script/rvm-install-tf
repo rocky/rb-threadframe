@@ -1,5 +1,6 @@
 #!/bin/bash
-# Install threadframe 
+# Install threadframe in an rvm environment. This involves patching Ruby
+# 1.9.3
 
 ## Debugging 
 # DEBUG='--trace' 
@@ -34,7 +35,7 @@ doit() {
     }
 }
 
-branch_sans_ruby=1.9.2-head
+branch_sans_ruby=1.9.3-p327
 rvm_name=${branch_sans_ruby}
 rvm_name=${branch_sans_ruby}-nframe
 
@@ -64,7 +65,7 @@ for ((i=0; i<${#steps[@]}; i++)) ; do
 	    fi
 	    ;;
 	install-patched-ruby)
-	    doit "rvm $DEBUG install ${rvm_name} --patch patches/ruby-1.9.2-combined.patch%0" 
+	    doit "rvm $DEBUG install ${rvm_name} --patch patches/ruby-1.9.3-combined.patch%1" 
 	    ;;
 	# install-gem)
 	#     source ${rvm_path}/scripts/rvm
