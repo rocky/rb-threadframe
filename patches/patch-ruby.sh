@@ -1,7 +1,17 @@
 #!/usr/bin/env bash
+# Patches Ruby source. 
+
+# usage patch-ruby.sh [combined|1.9.2|1.9.3]
+
+# Environment variable PATCH can be set to specify which patch program
+# to use. (For example, on Solaris "patch" might not be the right
+# one).
+
+# 
 function __FILE__ {
     echo ${BASH_SOURCE[0]}
 }
+patch=${PATCH:-patch}
 file=$(__FILE__)
 dirname=${file%/*}
 
@@ -9,7 +19,7 @@ if cmp /bin/sh /bin/dash 2>/dev/null >/dev/null; then
     echo 'Warning your /bin/sh is dash. Making Ruby might not work!' 1>&2
 fi
 
-patchfile=${1:-'1.9.2'}
+patchfile=${1:-'combined'}
 case $patchfile in
     1.9.3 | head | trunk )
 	for file in \
@@ -46,7 +56,7 @@ case $patchfile in
 	file=ruby-1.9.3-combined.patch
 	patch_file=${dirname}/$file
 	echo -- Applying patches in $patch_file
-	patch -p1 < $patch_file
+	$patch -p1 < $patch_file
 	;;
     1.9.2-single )
 	# Up to 04-iseq-access.patch tested
@@ -70,13 +80,13 @@ case $patchfile in
 	do 
 	    patch_file=${dirname}/1.9.2/$file
 	    echo -- Applying patches in $patch_file ... | tee -a patches_applied.log
-	    patch -p0 < $patch_file
+	    $patch -p0 < $patch_file
 	done
 	;;
     1.9.2 | * )
 	file=ruby-1.9.2-combined.patch
 	patch_file=${dirname}/$file
 	echo -- Applying patches in $patch_file
-	patch -p0 < $patch_file
+	$patch -p0 < $patch_file
 	;;
     esac
