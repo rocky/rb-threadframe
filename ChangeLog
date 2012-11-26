@@ -1,3 +1,624 @@
+2012-11-25  rocky <rockyb@rubyforge.org>
+
+	* NEWS, ext/version.h: Get ready for release 0.40
+
+2012-11-25  rocky <rockyb@rubyforge.org>
+
+	* script/rvm-install-tf: Fix up rvm install script to use MRI 1.9.3
+
+
+2012-11-25  rocky <rockyb@rubyforge.org>
+
+	* patches/patch-ruby.sh: Allow environment variable PATCH specify
+	which "patch" program to use. Useful on Solaris.
+
+2012-11-25  rocky <rockyb@rubyforge.org>
+
+	* ext/1.9.2/thread_frame.c, ext/1.9.3/thread_frame.c,
+	ext/extconf.rb, ext/version.h, rb-threadframe.gemspec: Add bogus C
+	extension for 1.9.3 to work around Gem and mkmf limitations. Use a
+	common "version.h" for 1.9.2 and 1.9.3
+
+2012-11-24  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/340-trace-func-mask.patch,
+	patches/ruby-1.9.3-combined.patch: Reinstate another test.
+
+2012-11-24  rocky <rockyb@rubyforge.org>
+
+	* README.md: We now do 1.9.3
+
+2012-11-24  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/130-brkpt.patch,
+	patches/1.9.3/320-disasm-insns.patch,
+	patches/1.9.3/340-trace-func-mask.patch,
+	patches/1.9.3/345-raise-msg.patch,
+	patches/1.9.3/390-trace-yield.patch: Sync up patches.
+
+2012-11-24  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/110-thread-tracing.patch: Start to sync up
+	individual patches
+
+2012-11-24  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/110-thread-tracing.patch,
+	patches/1.9.3/130-brkpt.patch,
+	patches/1.9.3/340-trace-func-mask.patch,
+	patches/1.9.3/345-raise-msg.patch,
+	patches/1.9.3/390-trace-yield.patch,
+	patches/ruby-1.9.3-combined.patch,
+	test/unit/test-thread-trace-masks.rb: Reinstate another test. Zero
+	exec_event_tracing only on nil trace. Patch offsets yet again.
+
+2012-11-24  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/246-frame.patch, patches/ruby-1.9.3-combined.patch: 
+	tf#exec_event_tracing -> tf#exec_event_tracing? in tests
+
+2012-11-24  rocky <rockyb@rubyforge.org>
+
+	* ext/1.9.2/thread_frame.c: Change version number from 0.40.dev to
+	0.39.9
+
+2012-11-24  rocky <rockyb@rubyforge.org>
+
+	* ext/1.9.2/thread_extra.c, patches/1.9.3/110-thread-tracing.patch,
+	patches/ruby-1.9.3-combined.patch, test/unit/test-frame.rb: 
+	thread#exec_event_tracing => thread#exec_event_tracing?
+
+2012-11-23  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/390-trace-yield.patch, patches/1.9.3/README,
+	patches/patch-ruby.sh, patches/ruby-1.9.3-combined.patch,
+	test/unit/test-settracefunc.rb: Adds events "send", "leave",
+	"yield", and "insn".  Ruby "yield" context switching triggers these.
+	"insn" is for instruction stepping.
+
+2012-11-23  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.2/00-eval-source-save.patch,
+	patches/1.9.3/00-eval-source-save.patch,
+	patches/1.9.3/000-config.patch,
+	patches/1.9.3/110-thread-tracing.patch,
+	patches/1.9.3/130-brkpt.patch,
+	patches/1.9.3/220-iseq-eval-source-save.patch,
+	patches/1.9.3/246-frame.patch,
+	patches/1.9.3/340-trace-func-mask.patch,
+	patches/1.9.3/345-raise-msg.patch, patches/1.9.3/README,
+	patches/patch-ruby.sh, patches/ruby-1.9.3-combined.patch: Various
+	patch cleanup and synchronization.
+
+2012-11-22  rocky <rockyb@rubyforge.org>
+
+	* lib/thread_frame.rb, patches/1.9.3/00-extern-access.patch,
+	patches/1.9.3/110-thread-tracing.patch,
+	patches/1.9.3/120-frame-tracing.patch,
+	patches/1.9.3/130-brkpt.patch,
+	patches/1.9.3/240-iseq-SCRIPT_ISEQS__.patch,
+	patches/1.9.3/246-frame.patch, patches/1.9.3/247-c-argc.patch,
+	patches/1.9.3/320-disasm-insns.patch,
+	patches/1.9.3/340-trace-func-mask.patch,
+	patches/1.9.3/345-raise-msg.patch,
+	patches/1.9.3/360-save-compile-opts.patch,
+	patches/ruby-1.9.3-combined.patch: exec_event_tracing added to
+	broken-out patches. Make sure iseq_extra is included for 1.9.3
+
+2012-11-21  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/400-trace-hook-extra.patch,
+	patches/ruby-1.9.3-combined.patch: Fix up combined patch
+
+2012-11-21  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/110-thread-tracing.patch,
+	patches/1.9.3/120-frame-tracing.patch,
+	patches/1.9.3/130-brkpt.patch,
+	patches/1.9.3/245-method-arity.patch,
+	patches/1.9.3/246-frame.patch, patches/1.9.3/247-c-argc.patch,
+	patches/1.9.3/310-os-startup.patch,
+	patches/1.9.3/340-trace-func-mask.patch,
+	patches/1.9.3/345-raise-msg.patch,
+	patches/1.9.3/370-proc-iseq.patch,
+	patches/1.9.3/380-method-extra.patch: Rebase line offsets for p327
+	(patch 340 needs more work).
+
+2012-11-21  rocky <rockyb@rubyforge.org>
+
+	* Rakefile, lib/thread_frame.rb,
+	patches/1.9.3/00-extern-access.patch,
+	patches/1.9.3/000-config.patch, patches/1.9.3/130-brkpt.patch,
+	patches/1.9.3/400-trace-hook-extra.patch, patches/patch-ruby.sh,
+	patches/ruby-1.9.3-combined.patch, rb-threadframe.gemspec: Fold in
+	rb-trace(hook) C extensions. Update to p327.
+
+2012-11-19  rocky <rockyb@rubyforge.org>
+
+	* test/unit/test-lib-iseq-extra.rb: Put a #tf.type test back -- at
+	least provisionally.
+
+2012-11-19  rocky <rockyb@rubyforge.org>
+
+	* ext/extconf.rb, lib/iseq_extra.rb, lib/thread_frame.rb,
+	rb-threadframe.gemspec, test/unit/test-proc.rb: Get 1.9.2 and 1.9.3
+	gem packaging worked out now.
+
+2012-11-19  rocky <rockyb@rubyforge.org>
+
+	* ext/1.9.2/iseq_extra.c, ext/1.9.2/iseq_extra.h,
+	ext/1.9.2/iseq_mini.h, ext/1.9.2/node.h, ext/1.9.2/proc_extra.c,
+	ext/1.9.2/proc_extra.h, ext/1.9.2/thread_extra.c,
+	ext/1.9.2/thread_extra.h, ext/1.9.2/thread_frame.c,
+	ext/1.9.2/thread_pthread.h, ext/extconf.rb, ext/iseq_extra.c,
+	ext/iseq_extra.h, ext/iseq_mini.h, ext/node.h, ext/proc_extra.c,
+	ext/proc_extra.h, ext/thread_extra.c, ext/thread_extra.h,
+	ext/thread_frame.c, ext/thread_pthread.h,
+	patches/1.9.3/00-extern-access.patch,
+	patches/ruby-1.9.3-combined.patch, rb-threadframe.gemspec,
+	test/unit/test-proc.rb: Allow for separate rb-threadframe 1.9.2 C
+	code to be distinct from 1.9.3 code.
+
+2012-11-19  rocky <rockyb@rubyforge.org>
+
+	* lib/iseq_extra.rb, patches/1.9.3/246-frame.patch,
+	patches/ruby-1.9.3-combined.patch, test/unit/test-proc.rb: First
+	semblance of all tests working on 1.9.3. Much more is needed but we
+	can probably use this as a start.
+
+2012-11-16  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/000-config.patch, patches/ruby-1.9.3-combined.patch: 
+	Note that we have threadframe support in Rbconfig.
+
+2012-11-16  rocky <rockyb@rubyforge.org>
+
+	* test/unit/test-frame.rb, test/unit/test-settracefunc.rb,
+	test/unit/test-thread-trace-masks.rb: Adjust so test work fully.
+	Mostly skipped some tests.
+
+2012-11-15  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.3-combined.patch: Make combined patches work.
+	Need to see if they match individual patches though
+
+2012-09-05  rocky <rockyb@rubyforge.org>
+
+	Merge branch 'master' of github.com:rocky/rb-threadframe
+	Conflicts: 	patches/1.9.3/README
+
+2012-08-05  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/120-frame-tracing.patch,
+	patches/1.9.3/130-brkpt.patch,
+	patches/1.9.3/240-iseq-SCRIPT_ISEQS__.patch,
+	patches/1.9.3/310-os-startup.patch,
+	patches/1.9.3/340-trace-func-mask.patch,
+	patches/1.9.3/345-raise-msg.patch, patches/1.9.3/350-c-hook.patch,
+	patches/ruby-1.9.3-combined.patch: Work on 120-frame-tracing.patch
+
+2012-08-04  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/350-c-hook.patch,
+	patches/1.9.3/370-proc-iseq.patch,
+	patches/1.9.3/380-method-extra.patch, patches/1.9.3/README,
+	patches/patch-ruby.sh, patches/ruby-1.9.3-combined.patch,
+	test/unit/test-lib-iseq-extra.rb: Add some extra methods to Proc,
+	Method and UnboundMethod
+
+2012-08-04  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/350-c-hook.patch,
+	patches/1.9.3/360-save-compile-opts.patch,
+	patches/1.9.3/410-c-hook.patch, patches/1.9.3/README,
+	patches/patch-ruby.sh, patches/ruby-1.9.3-combined.patch: Save
+	compile options used to create instruction sequence as well as the
+	internal tree node
+
+2012-08-04  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/000-testit.patch,
+	patches/1.9.3/215-iseq-field-access.patch,
+	patches/1.9.3/220-iseq-eval-source-save.patch,
+	patches/1.9.3/230-iseq-top-name.patch,
+	patches/1.9.3/240-iseq-SCRIPT_ISEQS__.patch,
+	patches/1.9.3/245-method-arity.patch,
+	patches/1.9.3/246-frame.patch, patches/1.9.3/310-os-startup.patch,
+	patches/1.9.3/320-disasm-insns.patch,
+	patches/1.9.3/410-c-hook.patch, patches/1.9.3/README,
+	patches/ruby-1.9.3-combined.patch: Add iseq#encoded, less verbose
+	testit.sh
+
+2012-08-04  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/110-thread-tracing.patch,
+	patches/1.9.3/130-brkpt.patch,
+	patches/1.9.3/215-iseq-field-access.patch,
+	patches/1.9.3/220-iseq-eval-source-save.patch,
+	patches/1.9.3/230-iseq-top-name.patch,
+	patches/1.9.3/240-iseq-SCRIPT_ISEQS__.patch,
+	patches/1.9.3/245-method-arity.patch,
+	patches/1.9.3/246-frame.patch, patches/1.9.3/247-c-argc.patch,
+	patches/1.9.3/300-os-startup.patch,
+	patches/1.9.3/310-os-startup.patch,
+	patches/1.9.3/320-disasm-insns.patch,
+	patches/1.9.3/340-trace-func-mask.patch,
+	patches/1.9.3/345-raise-msg.patch,
+	patches/1.9.3/400-disasm-insns.patch,
+	patches/1.9.3/410-c-hook.patch,
+	patches/1.9.3/500-trace-func-mask.patch,
+	patches/1.9.3/510-raise-msg.patch, patches/1.9.3/520-c-hook.patch,
+	patches/1.9.3/README, patches/patch-ruby.sh,
+	patches/ruby-1.9.3-combined.patch: Restructural changes. Redo patch
+	numbering. Add iseq methods equal?, compile_options, parent,
+	line_rang. 1.9.9 Combined patch synched with individual patches.
+
+2012-08-03  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/500-trace-func-mask.patch,
+	patches/1.9.3/520-c-hook.patch, patches/1.9.3/README,
+	patches/patch-ruby.sh, patches/ruby-1.9.3-combined.patch: Give
+	access to trace hook of a frame in C calls and returns. Allow the
+	hook to change the return value.
+
+2012-08-03  rocky <rockyb@rubyforge.org>
+
+	* patches/ruby-1.9.2-combined.patch: Update a couple of 1.9.2
+	offsets for 1.9.2-p320
+
+2012-08-03  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.2/00-OS_ARGV_and_OS_STARTUP_DIR.patch,
+	patches/1.9.2/00-eval-source-save.patch,
+	patches/1.9.2/00-extern-access.patch,
+	patches/1.9.2/02-frame-trace.patch,
+	patches/1.9.2/03-disasm-insns.patch,
+	patches/1.9.2/04-iseq-access.patch,
+	patches/1.9.2/09-raise-msg.patch,
+	patches/1.9.3/510-raise-msg.patch, patches/1.9.3/README,
+	patches/patch-ruby.sh, patches/ruby-1.9.3-combined.patch: Provide a
+	way to get the exception object on a "raise" event in a trace hook
+	More attempts to straighten out 1.9.2 separated patches.
+
+2012-08-02  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.2/00-OS_ARGV_and_OS_STARTUP_DIR.patch,
+	patches/1.9.2/00-eval-source-save.patch,
+	patches/1.9.2/00-extern-access.patch,
+	patches/1.9.2/01-get-sourceline.patch,
+	patches/1.9.2/02-frame-trace.patch,
+	patches/1.9.2/08-raise-msg.patch,
+	patches/1.9.2/08-trace_func.patch,
+	patches/1.9.2/09-raise-msg.patch, patches/1.9.2/09-trace_func.patch: 
+	Attempt to get 1.9.2 split-out patches under control. Not successful
+	yet.
+
+2012-08-02  rocky <rockyb@rubyforge.org>
+
+	* test/unit/test-iseq-brkpt.rb, test/unit/test-iseq.rb: Get a couple
+	more unit tests passing for 1.9.3.
+
+2012-08-02  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/000-testit.patch,
+	patches/1.9.3/500-trace-func-mask.patch, patches/1.9.3/README,
+	patches/patch-ruby.sh, patches/ruby-1.9.3-combined.patch: Add
+	ability to filter trace events using a trace mask. Adds
+	clear_trace_func().
+
+2012-08-01  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/130-brkpt.patch,
+	patches/1.9.3/210-iseq-field-access.patch,
+	patches/1.9.3/215-iseq-field-access.patch,
+	patches/1.9.3/220-iseq-eval-source-save.patch,
+	patches/1.9.3/240-iseq-SCRIPT_ISEQS__.patch,
+	patches/1.9.3/245-method-arity.patch,
+	patches/1.9.3/246-frame.patch, patches/1.9.3/300-os-startup.patch,
+	patches/1.9.3/400-disasm-insns.patch, patches/1.9.3/README,
+	patches/patch-ruby.sh, patches/ruby-1.9.3-combined.patch,
+	test/unit/test-thread-trace-masks.rb: Add VM support for
+	breakpoints.
+
+2012-07-31  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/400-disasm-insns.patch, patches/1.9.3/README,
+	patches/patch-ruby.sh, patches/ruby-1.9.3-combined.patch: Add patch
+	for finer access to instructions and to disassemble without child
+	instruction sequences.
+
+2012-07-31  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/120-frame-tracing.patch,
+	patches/1.9.3/240-iseq-SCRIPT_ISEQS__.patch,
+	patches/1.9.3/246-frame.patch, patches/1.9.3/247-c-argc.patch,
+	patches/1.9.3/README, patches/patch-ruby.sh,
+	patches/ruby-1.9.3-combined.patch: Start to add a per-frame tracing
+	flag splitting off changes from the large frame.patch. Note two
+	kinds of patch dependencies.
+
+2012-07-29  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, patches/1.9.3/246-frame.patch,
+	patches/1.9.3/247-c-argc.patch, patches/ruby-1.9.3-combined.patch: 
+	Sync 1.9.2 extension with 1.9.3 frame code. Both benefit from this.
+
+
+2012-07-29  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/215-iseq-field-access.patch,
+	patches/1.9.3/245-method-arity.patch,
+	patches/1.9.3/246-frame.patch, patches/1.9.3/247-c-argc.patch,
+	patches/ruby-1.9.3-combined.patch, test/unit/test-frame.rb,
+	test/unit/test-invalid.rb, test/unit/test-sp-size.rb,
+	test/unit/test-thread.rb: Add tf#arity. Remove fuzz in patches.
+	Other small improvements.
+
+2012-07-29  rvm <rocky@gnu.org>
+
+	* patches/1.9.3/246-frame.patch, patches/ruby-1.9.3-combined.patch,
+	test/unit/test-sp-size.rb: Add another test from 1.9.2 and make it
+	work on both 1.9.2 and 1.9.3
+
+2012-07-29  rvm <rocky@gnu.org>
+
+	* ext/thread_frame.c, patches/1.9.3/210-iseq-field-access.patch,
+	patches/1.9.3/215-iseq-field-access.patch,
+	patches/1.9.3/246-frame.patch, patches/1.9.3/247-c-argc.patch,
+	patches/patch-ruby.sh, patches/ruby-1.9.3-combined.patch,
+	test/unit/test-binding.rb, test/unit/test-thread.rb: Access C arity.
+	Tidy code: more rb_ prefixes, fix a spelling mistake and threadframe
+	-> frame.
+
+2012-07-29  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/246-frame.patch, patches/ruby-1.9.3-combined.patch: 
+	Add frame binding test to ruby originally only in frame extension.
+
+2012-07-29  rocky <rockyb@rubyforge.org>
+
+	* Rakefile, patches/1.9.3/246-frame.patch,
+	patches/ruby-1.9.3-combined.patch, test/unit/test-argc.rb,
+	test/unit/test-invalid.rb, test/unit/test-iseq-brkpt.rb,
+	test/unit/test-proc.rb, test/unit/test-return-stop.rb,
+	test/unit/test-source.rb, test/unit/test-thread.rb: Add Method#iseq.
+	Make unit tests more 1.9.3 compatible
+
+2012-07-29  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/210-iseq-field-access.patch,
+	patches/1.9.3/215-iseq-field-access.patch,
+	patches/1.9.3/220-iseq-eval-source-save.patch,
+	patches/1.9.3/245-method-arity.patch,
+	patches/1.9.3/246-frame.patch, test/unit/test-trace.rb: Run around
+	the patch line numbering game.
+
+2012-07-29  rocky <rockyb@rubyforge.org>
+
+	* Rakefile, lib/iseq_extra.rb,
+	patches/1.9.3/210-iseq-field-access.patch,
+	patches/1.9.3/215-iseq-field-access.patch, patches/1.9.3/README,
+	patches/patch-ruby.sh, patches/ruby-1.9.3-combined.patch,
+	test/unit/test-binding.rb, test/unit/test-iseq-save.rb,
+	test/unit/test-iseq.rb, test/unit/test-lib-iseq.rb,
+	test/unit/test-prev.rb: Add more RubyVM::InstructionSequnce methods.
+	Start to make unit tests work both on 1.9.2 and 1.9.3
+
+2012-07-29  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/246-frame.patch, patches/ruby-1.9.3-combined.patch: 
+	Fill out more of RubyVM::Frame. Add sp access, tf#source location
+	and iseq#source_container
+
+2012-07-28  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/245-method-arity.patch,
+	patches/1.9.3/246-frame.patch, patches/1.9.3/300-os-startup.patch,
+	patches/patch-ruby.sh, patches/ruby-1.9.3-combined.patch: Start
+	RubyVM::Frame. YAY! Process of applying individual patches more
+	thoroughly tested. patch-ruby.sh: argument "combined" now applies
+	1.9.3 combined patches.
+
+2012-07-28  rocky <rockyb@rubyforge.org>
+
+	Merge commit 'b00e7d0f814c698bc1db50c218aeae5edd2b460b'
+
+2012-07-28  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/246-frame.patch: Start RubyVM::Frame. YAY! Process
+	of applying individual patches more thoroughly tested.
+	patch-ruby.sh: argument "combined" now applies 1.9.3 combined
+	patches.
+
+2012-07-28  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/246-frame.patch: Start RubyVM::Frame. YAY! Process
+	of applying individual patches more thoroughly tested.
+	patch-ruby.sh: argument "combined" now applies 1.9.3 combined
+	patches.
+
+2012-07-28  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/210-iseq-field-access.patch,
+	patches/1.9.3/220-iseq-eval-source-save.patch,
+	patches/1.9.3/230-iseq-top-name.patch,
+	patches/1.9.3/240-iseq-SCRIPT_ISEQS__.patch,
+	patches/ruby-1.9.3-combined.patch: Adjust line numbers in patches.
+
+2012-07-28  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/245-method-arity.patch,
+	patches/1.9.3/300-os-startup.patch, patches/1.9.3/README,
+	patches/ruby-1.9.3-combined.patch: Add Method#arity
+
+2012-07-27  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/300-os-startup.patch, patches/1.9.3/README,
+	patches/patch-ruby.sh, patches/ruby-1.9.3-combined.patch: Add
+	RubyVM::OS_ARGV and RubyVM::OS_STARTUP_DIR. These capture the
+	initial @ARGV and current working directory to make this happen.
+	(Inside a Ruby program, one can change @ARGV and cwd)
+
+2012-07-27  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/001-thread-tracing.patch,
+	patches/1.9.3/002-iseq-eval-source-save.patch,
+	patches/1.9.3/003-iseq-field-access.patch,
+	patches/1.9.3/004-iseq-SCRIPT_ISEQS__.patch,
+	patches/1.9.3/005-iseq-top-name.patch,
+	patches/1.9.3/110-thread-tracing.patch,
+	patches/1.9.3/210-iseq-field-access.patch,
+	patches/1.9.3/220-iseq-eval-source-save.patch,
+	patches/1.9.3/230-iseq-top-name.patch,
+	patches/1.9.3/240-iseq-SCRIPT_ISEQS__.patch, patches/1.9.3/README,
+	patches/patch-ruby.sh: Renumber patches to use a scheme which allows
+	us to specify tree-like dependencies.  starting # with '#' will be
+	ignored, and an empty message aborts the commit.  # Explicit paths
+	specified without -i nor -o; assuming --only paths...  # On branch
+	master # Changes to be committed: # (use "git reset HEAD <file>..."
+	to unstage) # # renamed: patches/1.9.3/001-thread-tracing.patch ->
+	patches/1.9.3/110-thread-tracing.patch # renamed:
+	patches/1.9.3/003-iseq-field-access.patch ->
+	patches/1.9.3/210-iseq-field-access.patch # renamed:
+	patches/1.9.3/002-iseq-eval-source-save.patch ->
+	patches/1.9.3/220-iseq-eval-source-save.patch # renamed:
+	patches/1.9.3/005-iseq-top-name.patch ->
+	patches/1.9.3/230-iseq-top-name.patch # renamed:
+	patches/1.9.3/004-iseq-SCRIPT_ISEQS__.patch ->
+	patches/1.9.3/240-iseq-SCRIPT_ISEQS__.patch # modified:
+	patches/1.9.3/README # modified: patches/patch-ruby.sh #
+
+2012-07-27  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_extra.c, lib/thread_frame.rb: Thread#tracing is an
+	alias for Thread#tracing? for backward compatibility
+
+2012-07-27  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/002-iseq-eval-source-save.patch,
+	patches/1.9.3/README: Small documentation stuff
+
+2012-07-27  rocky <rockyb@rubyforge.org>
+
+	* README.md: Update README
+
+2012-07-27  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_extra.c, patches/1.9.3/001-thread-tracing.patch,
+	patches/1.9.3/004-iseq-SCRIPT_ISEQS__.patch,
+	patches/1.9.3/005-iseq-top-name.patch, patches/1.9.3/README,
+	patches/patch-ruby.sh, patches/ruby-1.9.3-combined.patch: Add two
+	methods to allow per-thread tracing.
+
+2012-07-24  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/004-iseq-SCRIPT_ISEQS__.patch,
+	patches/ruby-1.9.3-combined.patch: Looks like ISEQS__ and
+	SCRIPT_ISEQS__ can't be used if $SAFE >= 4.
+
+2012-07-22  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/003-iseq-field-access.patch,
+	patches/ruby-1.9.3-combined.patch: Grammar in comment
+
+2012-07-22  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/00-eval-source-save.patch,
+	patches/1.9.3/000-iseq-access.patch,
+	patches/1.9.3/000-testit.patch,
+	patches/1.9.3/002-iseq-eval-source-save.patch,
+	patches/1.9.3/003-iseq-field-access.patch,
+	patches/1.9.3/004-iseq-SCRIPT_ISEQS__.patch,
+	patches/1.9.3/005-iseq-top-name.patch, patches/patch-ruby.sh,
+	patches/ruby-1.9.3-combined.patch: Add ISEQ__ and SCRIPT_ISEQ__
+	patches. Start combined patches. Fix up patch script for 1.9.3.
+
+2012-07-22  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.2/.gitignore,
+	patches/1.9.2/00-OS_ARGV_and_OS_STARTUP_DIR.patch,
+	patches/1.9.2/00-eval-source-save.patch,
+	patches/1.9.2/00-extern-access.patch,
+	patches/1.9.2/01-get-sourceline.patch,
+	patches/1.9.2/02-frame-trace.patch,
+	patches/1.9.2/03-disasm-insns.patch,
+	patches/1.9.2/04-iseq-access.patch,
+	patches/1.9.2/05-iseq-create.patch, patches/1.9.2/06-C-argc.patch,
+	patches/1.9.2/07-brkpt.patch, patches/1.9.2/08-raise-msg.patch,
+	patches/1.9.2/09-trace_func.patch,
+	patches/1.9.2/10-iseq-top-name.patch,
+	patches/1.9.2/11-binding-arity.patch,
+	patches/1.9.2/12-insn-step.patch,
+	patches/1.9.2/13-hook-error-recover.patch,
+	patches/1.9.2/14-eval-iseq-name.patch,
+	patches/1.9.3/00-iseq-access.patch,
+	patches/1.9.3/000-iseq-access.patch, patches/trunk/.gitignore,
+	patches/trunk/00-OS_ARGV_and_OS_STARTUP_DIR.patch,
+	patches/trunk/00-eval-source-save.patch,
+	patches/trunk/00-extern-access.patch,
+	patches/trunk/01-get-sourceline.patch,
+	patches/trunk/02-frame-trace.patch,
+	patches/trunk/03-disasm-insns.patch,
+	patches/trunk/04-iseq-access.patch,
+	patches/trunk/05-iseq-create.patch, patches/trunk/06-C-argc.patch,
+	patches/trunk/07-brkpt.patch, patches/trunk/08-raise-msg.patch,
+	patches/trunk/09-trace_func.patch,
+	patches/trunk/10-iseq-top-name.patch,
+	patches/trunk/11-binding-arity.patch,
+	patches/trunk/12-insn-step.patch,
+	patches/trunk/13-hook-error-recover.patch,
+	patches/trunk/14-eval-iseq-name.patch: Give top iseq a better name.
+	trunk->1.9.2
+
+2012-07-22  rocky <rockyb@rubyforge.org>
+
+	* patches/1.9.3/00-eval-source-save.patch,
+	patches/1.9.3/00-iseq-access.patch: Add read-only access to various
+	instruction sequence fields.
+
+2012-07-21  rocky <rockyb@rubyforge.org>
+
+	Merge branch 'master' of github.com:rocky/rb-threadframe
+	Conflicts: 	ext/thread_frame.c
+
+2012-07-21  rocky <rockyb@rubyforge.org>
+
+	* .gitignore, ext/thread_frame.c,
+	patches/1.9.3/00-eval-source-save.patch,
+	patches/1.9.3/00-extern-access.patch, patches/1.9.3/README: Bump
+	version and start 1.9.3 patches
+
+2012-07-02  rocky <rockyb@rubyforge.org>
+
+	* .gitignore, patches/1.9.3/00-eval-source-save.patch,
+	patches/1.9.3/README: Start 1.9.3 patches off of 1.9.3-p194
+
+2012-07-02  rocky <rockyb@rubyforge.org>
+
+	* NEWS, ext/thread_frame.c: RubyVM::ThreadFrame is now
+	RubyVM::Frame. RubyVM::ThreadFrame is still there for compatibility.
+
+
+2012-07-02  rocky <rockyb@rubyforge.org>
+
+	Merge branch 'master' of github.com:rocky/rb-threadframe
+
+2012-07-02  rocky <rockyb@rubyforge.org>
+
+	* ext/thread_frame.c, lib/thread_frame.rb, test/unit/cfunc-use.rb,
+	test/unit/test-argc.rb, test/unit/test-binding.rb,
+	test/unit/test-invalid.rb, test/unit/test-iseq-brkpt.rb,
+	test/unit/test-iseq.rb, test/unit/test-lib-iseq-extra.rb,
+	test/unit/test-lib-iseq.rb, test/unit/test-prev.rb,
+	test/unit/test-return-stop.rb, test/unit/test-source.rb,
+	test/unit/test-sp-size.rb, test/unit/test-thread.rb,
+	test/unit/test-trace.rb, th.rb, threadframe.rd: ThreadFrame -> Frame
+
+
+2011-10-27  rocky <rockyb@rubyforge.org>
+
+	* ChangeLog, NEWS, ext/thread_frame.c: Get ready for release 0.39
+
 2011-10-04  rocky <rockyb@rubyforge.org>
 
 	* README.md, patches/patch-ruby.sh: A stray 'a' was inserted

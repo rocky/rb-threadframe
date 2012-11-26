@@ -1,3 +1,9 @@
+MRI 1.9 Ruby has always chained trace event hooks. This allow more use access and control of them. You can 
+
+* get an array of hooks in effect
+* see if a particular hook is a member or is valid
+* set or retrieve an event mask for a hook
+
 diff --git a/common.mk b/common.mk
 index c9ef641..04626a8 100644
 --- a/common.mk

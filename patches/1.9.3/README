@@ -184,7 +184,7 @@ The unit test added here uses ISEQS__ from
 test. Probably the unit test here could be rewritten to avoid this.
 
 -------------------
-246-os-startup.patch
+246-frame.patch
 
 Add RubyVM::Frame - a class for a run-time call frame object. From this we
 can get a binding, and an instruction sequence. 
@@ -305,3 +305,11 @@ Add methods alias_count, original_id, and type to Method and UnboundMethod
 Adds events "send", "leave", "yield", and "insn".  Ruby "yield" context switching triggers these.
 "insn" is for instruction stepping.
 
+-------------------
+400-trace-hook-extra.patch
+
+MRI 1.9 Ruby has always chained trace event hooks. This allow more use access and control of them. You can 
+
+* get an array of hooks in effect
+* see if a particular hook is a member or is valid
+* set or retrieve an event mask for a hook
