@@ -36,7 +36,7 @@ index 0000000..8e55325
 +#include "vm_core.h"
 +#include "iseq.h"
 +
-+VALUE rb_cISeq;
++extern VALUE rb_cISeq;
 +
 +/* 
 + *  call-seq:
