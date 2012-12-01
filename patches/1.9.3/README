@@ -42,11 +42,20 @@ The test for this is has to wait until 246-frame.patch,
 the code that implements pc_offset=  is done.
 
 -------------------
+000-pc-modify.patch:
+
+Allows us to be able to change the PC by conditionally disabling
+USE_MACHINE_REGS which keeps the PC in a register. Note that that this
+optimization of keeping the PC in a register is only done for
+Intel-like machine architectures.
+
+-------------------
 000-testit.patch:
 
 Adds a script that helps me run the debugger-extension unit tests
 easier. Probably not needed if I understood the Ruby testing system
 better.
+
 -------------------
 110-thread-tracing.patch
 

@@ -25,6 +25,7 @@ case $patchfile in
 	for file in \
 	    000-config.patch \
 	    000-get-sourceline.patch \
+	    000-pc-modify.patch \
 	    000-testit.patch \
 	    110-thread-tracing.patch \
 	    120-frame-tracing.patch \
