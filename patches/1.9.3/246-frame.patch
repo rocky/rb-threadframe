@@ -23,7 +23,7 @@ new file mode 100644
 index 0000000..773b67d
 --- /dev/null
 +++ b/frame.c
-@@ -0,0 +1,1013 @@
+@@ -0,0 +1,1012 @@
 +/* 
 + * Copyright (C) 2012 Rocky Bernstein
 + *
@@ -329,7 +329,6 @@ index 0000000..773b67d
 +    }
 +}
 +
-+#ifndef NO_reg_pc
 +/*
 + *  call-seq:
 + *     RubyVM::Frame#pc_offset=
@@ -339,7 +338,7 @@ index 0000000..773b67d
 + * instruction offset since little checking is done.
 + */
 +VALUE
-+rb_frame_set_pc_offset(VALUE klass, VALUE offset_val)
++frame_set_pc_offset(VALUE klass, VALUE offset_val)
 +{
 +    int offset;
 +    FRAME_SETUP_WITH_ERROR ;
@@ -355,7 +354,6 @@ index 0000000..773b67d
 +    }
 +    return Qtrue;
 +}
-+#endif
 +
 +#if 0
 +/*
@@ -1028,9 +1026,10 @@ index 0000000..773b67d
 +    rb_define_method(rb_cFrame, "thread", frame_thread, 0);
 +    rb_define_method(rb_cFrame, "trace_off?", frame_is_trace_off, 0);
 +    rb_define_method(rb_cFrame, "trace_off=", frame_trace_off_set, 1);
-+    rb_define_method(rb_cFrame, "type", frame_type, 0);
++    rb_define_method(rb_cFrame, "type",       frame_type, 0);
 +
-+    rb_define_method(rb_cFrame, "equal?", frame_equal, 1);
++    rb_define_method(rb_cFrame, "equal?",     frame_equal, 1);
++    rb_define_method(rb_cFrame, "pc_offset=", frame_set_pc_offset, 1);
 +
 +    rb_eFrameError = rb_define_class("FrameError", rb_eStandardError);
 +
@@ -1228,7 +1227,7 @@ new file mode 100644
 index 0000000..94b9d41
 --- /dev/null
 +++ b/test/debugger-ext/test_frame.rb
-@@ -0,0 +1,129 @@
+@@ -0,0 +1,125 @@
 +require 'test/unit'
 +
 +class TestFrame < Test::Unit::TestCase

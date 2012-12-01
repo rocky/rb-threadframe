@@ -14,7 +14,7 @@ diff --git a/frame.c b/frame.c
 index 773b67d..7ca859b 100644
 --- a/frame.c
 +++ b/frame.c
-@@ -350,6 +350,49 @@ FRAME_FIELD_METHOD(flag) ;
+@@ -348,6 +348,49 @@ FRAME_FIELD_METHOD(flag) ;
  
  /*
   *  call-seq:
@@ -64,7 +64,7 @@ index 773b67d..7ca859b 100644
   *     RubyVM::Frame#binding   -> binding
   *
   *  Returns a binding for a given thread frame.
-@@ -972,6 +1015,8 @@ Init_Frame(void)
+@@ -970,6 +1013,8 @@ Init_Frame(void)
  
      rb_define_method(rb_cFrame, "invalid?",     frame_invalid, 0);
  

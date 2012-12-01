@@ -76,7 +76,7 @@ diff --git a/vm.c b/vm.c
 index c8e9569..463bc4a 100644
 --- a/vm.c
 +++ b/vm.c
-@@ -2073,6 +2073,8 @@ nsdr(void)
+@@ -2074,6 +2074,8 @@ nsdr(void)
      return ary;
  }
  
@@ -85,7 +85,7 @@ index c8e9569..463bc4a 100644
  void
  Init_VM(void)
  {
-@@ -2085,6 +2087,21 @@ Init_VM(void)
+@@ -2086,6 +2088,21 @@ Init_VM(void)
      rb_undef_alloc_func(rb_cRubyVM);
      rb_undef_method(CLASS_OF(rb_cRubyVM), "new");
  

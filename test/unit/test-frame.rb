@@ -50,7 +50,6 @@ class TestThread < Test::Unit::TestCase
     # because the location is reported on a traceback
     # and that probably can't happen at PC 0.
     def bug_when_zero_pc
-      skip "pc_offset= not implemented on 1.9.3" if '1.9.3' == RUBY_VERSION
       @not_first = true
       tf = RubyVM::Frame::current.prev
       pc_save = tf.pc_offset
@@ -91,9 +90,6 @@ class TestThread < Test::Unit::TestCase
     assert_equal(self, tf.self)
     assert_equal(0, tf.arity)
     assert_equal(0, tf.argc)
-    ## FIXME: Should we allow this?
-    ## assert tf.dfp(0)
-    ## assert tf.lfp(0)
 
     # assert_raises IndexError do
     #   x = tf.lfp(tf.iseq.local_size+1)

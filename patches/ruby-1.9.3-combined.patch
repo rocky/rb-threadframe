@@ -618,7 +618,7 @@ index 0000000..4669d4f
 + * instruction offset since little checking is done.
 + */
 +VALUE
-+rb_frame_set_pc_offset(VALUE klass, VALUE offset_val)
++frame_set_pc_offset(VALUE klass, VALUE offset_val)
 +{
 +    int offset;
 +    FRAME_SETUP_WITH_ERROR ;
@@ -4817,10 +4817,18 @@ index b2b42e1..124b6a6 100644
      "["RUBY_PLATFORM"]"
  # define RUBY_COPYRIGHT 	    \
 diff --git a/vm.c b/vm.c
-index dd026cb..b0ea5fa 100644
+index dd026cb..ad57571 100644
 --- a/vm.c
 +++ b/vm.c
-@@ -2073,6 +2073,8 @@ nsdr(void)
+@@ -761,6 +761,7 @@ rb_vm_get_sourceline(const rb_control_frame_t *cfp)
+     if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
+ 	rb_num_t i;
+ 	size_t pos = cfp->pc - cfp->iseq->iseq_encoded;
++	line_no = iseq->insn_info_table[0].line_no;
+ 
+ 	if (iseq->insn_info_table[0].position == pos) goto found;
+ 	for (i = 1; i < iseq->insn_info_size; i++) {
+@@ -2073,6 +2074,8 @@ nsdr(void)
      return ary;
  }
  
@@ -4829,7 +4837,7 @@ index dd026cb..b0ea5fa 100644
  void
  Init_VM(void)
  {
-@@ -2085,6 +2087,21 @@ Init_VM(void)
+@@ -2085,6 +2088,21 @@ Init_VM(void)
      rb_undef_alloc_func(rb_cRubyVM);
      rb_undef_method(CLASS_OF(rb_cRubyVM), "new");
  

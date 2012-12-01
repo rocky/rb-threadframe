@@ -33,6 +33,15 @@ Notes in RbConfig and in ruby --version an that we have debugger or
 threadframe support.
 
 -------------------
+000-get-sourceline.patch
+
+rb_vm_get_sourceline returns the wrong line number (unconditionally
+set to 0) when the PC is 0.  This patch corrects that. 
+
+The test for this is has to wait until 246-frame.patch, 
+the code that implements pc_offset=  is done.
+
+-------------------
 000-testit.patch:
 
 Adds a script that helps me run the debugger-extension unit tests
