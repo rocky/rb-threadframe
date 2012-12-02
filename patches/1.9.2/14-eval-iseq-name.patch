@@ -43,7 +43,7 @@ Index: vm_eval.c
  static inline VALUE
  vm_call0(rb_thread_t* th, VALUE recv, VALUE id, int argc, const VALUE *argv,
  	 const rb_method_entry_t *me)
-@@ -977,7 +1004,7 @@
+@@ -983,7 +1010,7 @@
  	    if (rb_obj_is_kind_of(scope, rb_cBinding)) {
  		GetBindingPtr(scope, bind);
  		envval = bind->env;
@@ -52,7 +52,7 @@ Index: vm_eval.c
  		    file = RSTRING_PTR(bind->filename);
  		    line = bind->line_no;
  		}
-@@ -1035,7 +1062,7 @@
+@@ -1043,7 +1070,7 @@
      if (state) {
  	if (state == TAG_RAISE) {
  	    VALUE errinfo = th->errinfo;
@@ -61,7 +61,7 @@ Index: vm_eval.c
  		VALUE mesg, errat, bt2;
  		extern VALUE rb_get_backtrace(VALUE info);
  		ID id_mesg;
-@@ -1116,13 +1143,22 @@
+@@ -1124,13 +1151,22 @@
  
      if (!NIL_P(vfile))
  	file = RSTRING_PTR(vfile);
@@ -84,7 +84,7 @@ Index: vm_eval.c
  }
  
  VALUE
-@@ -1271,6 +1307,10 @@
+@@ -1279,6 +1315,10 @@
  	    if (argc > 1) {
  		file = StringValuePtr(argv[1]);
  	    }

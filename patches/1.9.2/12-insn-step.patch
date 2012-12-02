@@ -21,7 +21,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 --- thread.c	(revision 28955)
 +++ thread.c	(working copy)
-@@ -4080,6 +4080,8 @@
+@@ -4078,6 +4078,8 @@
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";

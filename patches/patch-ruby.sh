@@ -63,12 +63,14 @@ case $patchfile in
 	;;
     1.9.2-single )
 	# Up to 04-iseq-access.patch tested
+	echo '*** Warning: these patches are not as complete as the 1.9.2 combined patches'
 	for file in \
 	    00-error.patch \
 	    00-eval-source-save.patch \
 	    00-extern-access.patch \
 	    00-OS_ARGV_and_OS_STARTUP_DIR.patch \
 	    00-pc-modify.patch \
+	    00-typo.patch \
 	    01-get-sourceline.patch \
 	    02-frame-trace.patch \
 	    03-disasm-insns.patch \
@@ -81,7 +83,9 @@ case $patchfile in
 	    10-iseq-top-name.patch \
 	    11-binding-arity.patch \
 	    12-insn-step.patch \
-	    13-hook-error-recover.patch 
+	    13-hook-error-recover.patch \
+	    14-eval-iseq-name.patch \
+	    15-send-yield-hook.patch
 	do 
 	    patch_file=${dirname}/1.9.2/$file
 	    echo -- Applying patches in $patch_file ... | tee -a patches_applied.log

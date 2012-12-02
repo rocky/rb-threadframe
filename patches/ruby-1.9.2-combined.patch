@@ -262,7 +262,7 @@ index d4e138b..8a716ad 100644
      iseq_add_mark_object(iseq, ret);
      return ret;
 diff --git a/error.c b/error.c
-index 7a31735..d4a45af 100644
+index 7a31735..a69a9e9 100644
 --- a/error.c
 +++ b/error.c
 @@ -233,7 +233,8 @@ report_bug(const char *file, int line, const char *fmt, va_list args)
@@ -935,11 +935,12 @@ index e2ee2d7..82e6455 100644
  static VALUE
  iseq_s_disasm(VALUE klass, VALUE body)
  {
-@@ -1493,6 +1780,25 @@ rb_iseq_build_for_ruby2cext(
+@@ -1493,6 +1780,26 @@ rb_iseq_build_for_ruby2cext(
      return iseqval;
  }
  
 +extern int get_iseq_arity(rb_iseq_t *iseq);
++
 +/* 
 + *  call-seq:
 + *  RubyVM::InstructionSequence#arity -> Fixnum
@@ -1324,7 +1325,7 @@ index 0000000..05cb775
 +end
 diff --git a/test/ruby/test_iseq.rb b/test/ruby/test_iseq.rb
 new file mode 100644
-index 0000000..6174ab0
+index 0000000..6af1016
 --- /dev/null
 +++ b/test/ruby/test_iseq.rb
 @@ -0,0 +1,100 @@
@@ -1467,7 +1468,7 @@ index 7af8487..4c4e42a 100644
        nil,
        opts)
 diff --git a/test/ruby/test_settracefunc.rb b/test/ruby/test_settracefunc.rb
-index ddfcaff..45fc45f 100644
+index ddfcaff..1c294c2 100644
 --- a/test/ruby/test_settracefunc.rb
 +++ b/test/ruby/test_settracefunc.rb
 @@ -23,16 +23,18 @@ class TestSetTraceFunc < Test::Unit::TestCase
@@ -2408,9 +2409,9 @@ index fb69176..62da87d 100644
 -    rb_define_global_function("set_trace_func", set_trace_func, 1);
 -    rb_define_method(rb_cThread, "set_trace_func", thread_set_trace_func_m, 1);
 -    rb_define_method(rb_cThread, "add_trace_func", thread_add_trace_func_m, 1);
-+    rb_define_global_function("add_trace_func", add_trace_func, -1);
-+    rb_define_global_function("set_trace_func", set_trace_func, -1);
-+    rb_define_global_function("clear_trace_func", rb_clear_trace_func, 0);
++    rb_define_global_function("add_trace_func",    add_trace_func, -1);
++    rb_define_global_function("set_trace_func",    set_trace_func, -1);
++    rb_define_global_function("clear_trace_func",  rb_clear_trace_func, 0);
 +    rb_define_method(rb_cThread, "set_trace_func", thread_set_trace_func_m, -1);
 +    rb_define_method(rb_cThread, "add_trace_func", thread_add_trace_func_m, -1);
  

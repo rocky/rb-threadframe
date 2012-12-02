@@ -47,7 +47,7 @@ Index: thread.c
 ===================================================================
 --- thread.c	(revision 28955)
 +++ thread.c	(working copy)
-@@ -3890,19 +3890,50 @@
+@@ -3890,19 +3890,48 @@
      return ST_CONTINUE;
  }
  
@@ -93,8 +93,6 @@ Index: thread.c
   *  call-seq:
 - *     set_trace_func(proc)    -> proc
 - *     set_trace_func(nil)     -> nil
-+ *     set_trace_func(proc)        -> proc
-+ *     set_trace_func(nil)         -> nil
 + *     set_trace_func(proc)        -> proc
 + *     set_trace_func(proc, mask)  -> proc
 + *     set_trace_func(nil)         -> nil

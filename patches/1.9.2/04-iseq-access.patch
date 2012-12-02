@@ -44,7 +44,7 @@ Index: iseq.c
      VALUE parent = th->base_block->iseq->self;
      return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), filename, filepath, INT2FIX(0),
 -				parent, ISEQ_TYPE_MAIN, &COMPILE_OPTION_DEFAULT);
-++				parent, ISEQ_TYPE_MAIN, Qnil, &COMPILE_OPTION_DEFAULT);
++				parent, ISEQ_TYPE_MAIN, Qnil, &COMPILE_OPTION_DEFAULT);
 +}
 +
 +/* A debugger or similar introspection tool needs to be able to find
@@ -59,7 +59,7 @@ Index: iseq.c
 + * Similarly, if ISEQS__ is defined and is a hash, then every time a
 + * new instruction sequence is added, it is accessible from ISEQS__
 + * using its iseq_name as a key.  
-+*/
++ */
 +static int
 +update_file_iseq(VALUE filename, VALUE iseq_name, VALUE iseq)
 +{
