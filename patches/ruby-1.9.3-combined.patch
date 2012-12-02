@@ -317,7 +317,7 @@ new file mode 100644
 index 0000000..4669d4f
 --- /dev/null
 +++ b/frame.c
-@@ -0,0 +1,1058 @@
+@@ -0,0 +1,1057 @@
 +/* 
 + * Copyright (C) 2012 Rocky Bernstein
 + *
@@ -623,7 +623,6 @@ index 0000000..4669d4f
 +    }
 +}
 +
-+#ifndef NO_reg_pc
 +/*
 + *  call-seq:
 + *     RubyVM::Frame#pc_offset=
@@ -649,7 +648,6 @@ index 0000000..4669d4f
 +    }
 +    return Qtrue;
 +}
-+#endif
 +
 +#if 0
 +/*
@@ -1368,6 +1366,7 @@ index 0000000..4669d4f
 +    rb_define_method(rb_cFrame, "trace_off?", frame_is_trace_off, 0);
 +    rb_define_method(rb_cFrame, "trace_off=", frame_trace_off_set, 1);
 +    rb_define_method(rb_cFrame, "type", frame_type, 0);
++    rb_define_method(rb_cFrame, "pc_offset=", frame_set_pc_offset, 1);
 +
 +    rb_define_method(rb_cFrame, "equal?", frame_equal, 1);
 +
@@ -3871,6 +3870,20 @@ index 0000000..ab610a2
 +    # echo ../../miniruby -I../../lib -I../.. $t
 +    # gdb ../../miniruby
 +done
+--- a/test/ruby/test_rubyoptions.rb	2012-10-15 21:21:57.000000000 -0400
++++ b/test/ruby/test_rubyoptions.rb	2012-12-02 11:20:17.000000000 -0500
+@@ -458,11 +458,6 @@
+       (?m:.*)
+       \[NOTE\]\n
+       You\smay\shave\sencountered\sa\sbug\sin\sthe\sRuby\sinterpreter\sor\sextension\slibraries.\n
+-      Bug\sreports\sare\swelcome.\n
+-      For\sdetails:\shttp:\/\/www.ruby-lang.org/bugreport.html\n
+-      \n
+-      (?:#{additional})
+-      \z
+       )x,
+       nil,
+       opts)
 diff --git a/test/ruby/test_settracefunc.rb b/test/ruby/test_settracefunc.rb
 index d6c6d06..fdf7920 100644
 --- a/test/ruby/test_settracefunc.rb
