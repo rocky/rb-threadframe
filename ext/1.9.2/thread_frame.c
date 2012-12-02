@@ -386,7 +386,6 @@ frame_sp_set(VALUE klass, VALUE index, VALUE newvalue)
     }
 }
 
-#ifndef NO_reg_pc
 /*
  *  call-seq:
  *     RubyVM::Frame#pc_offset=
@@ -412,7 +411,6 @@ frame_set_pc_offset(VALUE klass, VALUE offset_val)
     }
     return Qtrue;
 }
-#endif
 
 #if 0
 /*
@@ -1137,10 +1135,7 @@ Init_thread_frame(void)
     rb_define_method(rb_cFrame, "type", frame_type, 0);
 
     rb_define_method(rb_cFrame, "equal?", frame_equal, 1);
-
-#ifndef NO_reg_pc
     rb_define_method(rb_cFrame, "pc_offset=", frame_set_pc_offset, 1);
-#endif
 
     rb_eFrameError = rb_define_class("FrameError", rb_eStandardError);
 

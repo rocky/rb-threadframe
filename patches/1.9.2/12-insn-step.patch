@@ -21,7 +21,7 @@ Index: include/ruby/ruby.h
  #define RUBY_EVENT_COVERAGE 0x40000
 --- thread.c	(revision 28955)
 +++ thread.c	(working copy)
-@@ -4092,6 +4096,8 @@
+@@ -4080,6 +4080,8 @@
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -30,16 +30,6 @@ Index: include/ruby/ruby.h
        case RUBY_EVENT_SWITCH:
          return "switch";
        case RUBY_EVENT_COVERAGE:
-@@ -4126,7 +4137,8 @@
-     VALUE klass = 0;
- 
-     if (p->event == RUBY_EVENT_C_CALL ||
--	p->event == RUBY_EVENT_C_RETURN) {
-+	p->event == RUBY_EVENT_C_RETURN ||
-+	p->event == RUBY_EVENT_INSN) {
- 	id = p->id;
- 	klass = p->klass;
-     } else if (p->event == RUBY_EVENT_RAISE) {
 Index: tool/instruction.rb
 ===================================================================
 --- tool/instruction.rb	(revision 28955)
@@ -123,7 +113,7 @@ Index: vm_insnshelper.c
 ===================================================================
 --- vm_insnhelper.c	(revision 28955)
 +++ vm_insnhelper.c	(working copy)
-@@ -497,6 +497,7 @@
+@@ -502,6 +502,7 @@
  
  	cfp->sp = rsp - 1 /* recv */;
 	if (LIKELY(0 == th->tracing && !(VM_FRAME_TRACE_OFF & cfp->tracing))) {

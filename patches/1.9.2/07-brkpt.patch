@@ -31,7 +31,7 @@ Index: iseq.c
 ===================================================================
 --- iseq.c	(revision 28647)
 +++ iseq.c	(working copy)
-@@ -1728,6 +1726,8 @@
+@@ -1745,6 +1743,8 @@
      return iseqval;
  }
  
@@ -40,7 +40,7 @@ Index: iseq.c
  void
  Init_ISeq(void)
  {
-@@ -1753,5 +1753,7 @@
+@@ -1772,5 +1774,7 @@
      rb_define_singleton_method(rb_cISeq, "compile_option=", iseq_s_compile_option_set, 1);
      rb_define_singleton_method(rb_cISeq, "disasm", iseq_s_disasm, 1);
      rb_define_singleton_method(rb_cISeq, "disassemble", iseq_s_disasm, 1);
@@ -64,7 +64,7 @@ Index: thread.c
 ===================================================================
 --- thread.c	(revision 28642)
 +++ thread.c	(working copy)
-@@ -3774,7 +3765,7 @@
+@@ -3760,7 +3760,7 @@
      GetThreadPtr(thval, th);
  
      if (flag) {
@@ -73,7 +73,7 @@ Index: thread.c
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -4034,6 +4013,8 @@
+@@ -4020,6 +4020,8 @@
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -84,18 +84,18 @@ Index: thread.c
        case RUBY_EVENT_RETURN:
 Index: vm_core.h
 ===================================================================
---- vm_core.h	(revision 28955)
-+++ vm_core.h	(working copy)
-@@ -253,6 +253,9 @@
- 
+--- vm_core.h	2012-12-02 06:32:16.000000000 -0500
++++ vm_core.h	2012-12-02 06:38:12.000000000 -0500
+@@ -254,6 +254,9 @@
      /* used at compile time */
      struct iseq_compile_data *compile_data;
-+
+ 
 +    /* Used to set a breakpoint at a VM instruction */
 +    unsigned char *breakpoints; 
- };
- 
- enum ruby_special_exceptions {
++
+     /* If this instruction sequence came from eval, the string of the
+        source as a String. */
+     VALUE eval_source;
 Index: vm_exec.h
 ===================================================================
 --- vm_exec.h	(revision 28647)
@@ -127,7 +127,7 @@ Index: vm_insnhelper.c
 ===================================================================
 --- vm_insnhelper.c	(revision 28647)
 +++ vm_insnhelper.c	(working copy)
-@@ -485,6 +477,12 @@
+@@ -490,6 +490,12 @@
  		      iseq->iseq_encoded + opt_pc, sp, 0, 0);
  
  	cfp->sp = rsp - 1 /* recv */;
@@ -154,7 +154,7 @@ Index: brkpt.c
 +#include "vm_core.h"
 +#include "iseq.h"
 +
-+VALUE rb_cISeq;
++extern VALUE rb_cISeq;
 +
 +/* 
 + *  call-seq:

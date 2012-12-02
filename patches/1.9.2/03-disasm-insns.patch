@@ -61,7 +61,7 @@ Index: iseq.c
  obj_resurrect(VALUE obj)
  {
 @@ -737,6 +769,117 @@
-     return iseq->source;
+     return iseq->eval_source;
  }
  
 +static void
@@ -247,7 +247,7 @@ Index: iseq.c
 +
      rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
      rb_define_method(rb_cISeq, "eval", iseq_eval, 0);
-     rb_define_method(rb_cISeq, "source", rb_iseq_source, 0);
+     rb_define_method(rb_cISeq, "eval_source", rb_iseq_eval_source, 0);
 Index: iseq.h
 ===================================================================
 --- iseq.h	(revision 28955)

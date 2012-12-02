@@ -24,6 +24,7 @@ case $patchfile in
     1.9.3 | head | trunk )
 	for file in \
 	    000-config.patch \
+	    000-error.patch \
 	    000-get-sourceline.patch \
 	    000-pc-modify.patch \
 	    000-testit.patch \
@@ -63,9 +64,11 @@ case $patchfile in
     1.9.2-single )
 	# Up to 04-iseq-access.patch tested
 	for file in \
+	    00-error.patch \
 	    00-eval-source-save.patch \
 	    00-extern-access.patch \
 	    00-OS_ARGV_and_OS_STARTUP_DIR.patch \
+	    00-pc-modify.patch \
 	    01-get-sourceline.patch \
 	    02-frame-trace.patch \
 	    03-disasm-insns.patch \
@@ -85,10 +88,10 @@ case $patchfile in
 	    $patch -p0 < $patch_file
 	done
 	;;
-    1.9.2 | * )
+    1.9.2 | 1.9.2-combined )
 	file=ruby-1.9.2-combined.patch
 	patch_file=${dirname}/$file
 	echo -- Applying patches in $patch_file
-	$patch -p0 < $patch_file
+	$patch -p1 < $patch_file
 	;;
     esac

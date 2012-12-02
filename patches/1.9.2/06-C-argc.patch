@@ -42,7 +42,7 @@ Index: vm_insnhelper.c
 ===================================================================
 --- vm_insnhelper.c	(revision 28783)
 +++ vm_insnhelper.c	(working copy)
-@@ -399,6 +395,10 @@
+@@ -400,6 +400,10 @@
  
      cfp = vm_push_frame(th, 0, VM_FRAME_MAGIC_CFUNC,
  			recv, (VALUE) blockptr, 0, reg_cfp->sp, 0, 1);

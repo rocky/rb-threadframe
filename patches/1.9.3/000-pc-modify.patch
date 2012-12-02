@@ -1,0 +1,17 @@
+Allows us to be able to change the PC by conditionally disabling
+USE_MACHINE_REGS which keeps the PC in a register. Note that that this
+optimization of keeping the PC in a register is only done for
+Intel-like machine architectures.
+
+index 03f9520..d9127d1 100644
+--- a/vm_exec.c
++++ b/vm_exec.c
+@@ -64,7 +64,7 @@ vm_exec_core(rb_thread_t *th, VALUE initial)
+     VALUE *reg_pc;
+ #endif
+ 
+-#if USE_MACHINE_REGS
++#if USE_MACHINE_REGS && defined(DISALLOW_PC_CHANGE)
+ 
+ #undef  RESTORE_REGS
+ #define RESTORE_REGS() \

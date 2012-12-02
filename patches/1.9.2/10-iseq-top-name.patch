@@ -20,7 +20,7 @@ Index: iseq.c
 ===================================================================
 --- iseq.c	(revision 28783)
 +++ iseq.c	(working copy)
-@@ -748,9 +727,13 @@
+@@ -753,9 +753,13 @@
          return rb_sprintf("#<%s: uninitialized>", rb_obj_classname(self));
      }
  
@@ -41,7 +41,7 @@ Index: load.c
 ===================================================================
 --- load.c	(revision 28783)
 +++ load.c	(working copy)
-@@ -294,11 +294,13 @@
+@@ -296,11 +296,13 @@
      if (state == 0) {
  	NODE *node;
  	VALUE iseq;
@@ -50,7 +50,7 @@ Index: load.c
  	th->mild_compile_error++;
  	node = (NODE *)rb_load_file(RSTRING_PTR(fname));
  	loaded = TRUE;
--	iseq = rb_iseq_new_top(node, rb_str_new2("<top (required)>"), fname, rb_realpath_internal(Qnil, fname, 1), Qfalse);
+-	iseq = rb_iseq_new_top(node, rb_str_new2("<top (required)>"), fname, fname, Qfalse);
 +	snprintf(iseq_name, sizeof(iseq_name), "<top %s>", RSTRING_PTR(fname));
 +	iseq = rb_iseq_new_top(node, rb_str_new2(iseq_name), fname, rb_realpath_internal(Qnil, fname, 1), Qfalse);
  	th->mild_compile_error--;

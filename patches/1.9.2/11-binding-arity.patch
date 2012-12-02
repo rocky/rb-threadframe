@@ -13,7 +13,7 @@ Index: iseq.c
 ===================================================================
 --- iseq.c	(revision 28783)
 +++ iseq.c	(working copy)
-@@ -1732,6 +1730,24 @@
+@@ -1749,6 +1749,24 @@
      return iseqval;
  }
  
@@ -38,19 +38,19 @@ Index: iseq.c
  extern void Init_Brkpt(void); /* In brkpt.c */
  
  void
-@@ -1741,6 +1739,7 @@
+@@ -1758,6 +1776,7 @@
      rb_cISeq = rb_define_class_under(rb_cRubyVM, "InstructionSequence", rb_cObject);
      rb_define_alloc_func(rb_cISeq, iseq_alloc);
      rb_define_method(rb_cISeq, "inspect", iseq_inspect, 0);
 +    rb_define_method(rb_cISeq, "arity", rb_iseq_arity, 0);
      rb_define_method(rb_cISeq, "disasm", rb_iseq_disasm, 0);
-     rb_define_method(rb_cISeq, "disasm_nochildren", rb_iseq_disasm_nochildren, 0);
      rb_define_method(rb_cISeq, "disassemble", rb_iseq_disasm, 0);
+     rb_define_method(rb_cISeq, "disasm_nochildren", rb_iseq_disasm_nochildren, 0);
 Index: iseq.c
 ===================================================================
 --- proc.c	(revision 28783)
 +++ proc.c	(working copy)
-@@ -328,6 +324,28 @@
+@@ -324,6 +324,28 @@
      return bindval;
  }
  
@@ -79,7 +79,7 @@ Index: iseq.c
  /*
   *  call-seq:
   *     binding -> a_binding
-@@ -629,6 +643,29 @@
+@@ -625,6 +639,29 @@
      return INT2FIX(arity);
  }
  

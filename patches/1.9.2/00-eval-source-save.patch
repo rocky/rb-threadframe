@@ -9,7 +9,7 @@ Index: vm_core.h
 +
 +    /* If this instruction sequence came from eval, the string of the
 +       source as a String. */
-+    VALUE source;
++    VALUE eval_source;
  };
  
  enum ruby_special_exceptions {
@@ -30,7 +30,7 @@ Index: iseq.c
 +{
 +    rb_iseq_t *iseq = iseq_check(self);
 +    rb_secure(1);
-+    return iseq->source;
++    return iseq->eval_source;
 +}
 +
  static VALUE
@@ -52,7 +52,7 @@ Index: vm_eval.c
  
  	/* save new env */
  	GetISeqPtr(iseqval, iseq);
-+	iseq->source = src;
++	iseq->eval_source = src;
  	if (bind && iseq->local_table_size > 0) {
  	    bind->env = rb_vm_make_env_object(th, th->cfp);
  	}

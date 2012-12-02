@@ -33,7 +33,7 @@ Index: iseq.c
 +	iseq->compile_data = 0;
 +	compile_data_free(data);
 +    } else if (ISEQ_TYPE_EVAL == type) {
-+	iseq->source = src;
++	iseq->eval_source = src;
 +    }
 +    
      if (RTEST(err)) {

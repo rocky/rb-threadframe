@@ -279,6 +279,21 @@ index d35c13f..d6c814f 100644
      debugs("[new_child_iseq]< ---------------------------------------\n");
      iseq_add_mark_object(iseq, ret);
      return ret;
+diff --git a/error.c b/error.c
+index 7a31735..d4a45af 100644
+--- a/error.c
++++ b/error.c
+@@ -43,8 +43,8 @@
+ 	"[NOTE]\n" \
+ 	"You may have encountered a bug in the Ruby interpreter" \
+ 	" or extension libraries.\n" \
+-	"Bug reports are welcome.\n" \
+-	"For details: http://www.ruby-lang.org/bugreport.html\n\n" \
++        "If this is related to debugging or RubyVM::Frame, see:\n" \
++        "http://github.com/rocky/rb-threadframe/issues\n\n" \
+ 
+ static const char *
+ rb_strerrno(int err)
 diff --git a/eval.c b/eval.c
 index 3999ea5..b2c8aae 100644
 --- a/eval.c
