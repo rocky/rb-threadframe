@@ -1,6 +1,6 @@
 diff --git a/brkpt.c b/brkpt.c
 new file mode 100644
-index 0000000..4f6ea93
+index 0000000..29dd23d
 --- /dev/null
 +++ b/brkpt.c
 @@ -0,0 +1,234 @@
@@ -314,10 +314,10 @@ index 3999ea5..b2c8aae 100644
  
 diff --git a/frame.c b/frame.c
 new file mode 100644
-index 0000000..4669d4f
+index 0000000..6317c8e
 --- /dev/null
 +++ b/frame.c
-@@ -0,0 +1,1057 @@
+@@ -0,0 +1,1062 @@
 +/* 
 + * Copyright (C) 2012 Rocky Bernstein
 + *
@@ -330,7 +330,13 @@ index 0000000..4669d4f
 +#include <signal.h>
 +
 +#include <ruby.h>
++#if   defined(_WIN32)
++#include "thread_win32.h"
++#elif defined(HAVE_PTHREAD_H)
 +#include "thread_pthread.h"
++#else
++#error "unsupported thread type"
++#endif
 +#include "vm_core.h"
 +#include "node.h"
 +#include "gc.h"
@@ -1078,7 +1084,6 @@ index 0000000..4669d4f
 +{
 +    VALUE first_val;
 +    VALUE second_val;
-+    VALUE thval = Qnil;
 +    int   prev_count = 0;
 +    rb_thread_t *th = NULL;
 +
@@ -1365,10 +1370,10 @@ index 0000000..4669d4f
 +    rb_define_method(rb_cFrame, "thread", frame_thread, 0);
 +    rb_define_method(rb_cFrame, "trace_off?", frame_is_trace_off, 0);
 +    rb_define_method(rb_cFrame, "trace_off=", frame_trace_off_set, 1);
-+    rb_define_method(rb_cFrame, "type", frame_type, 0);
-+    rb_define_method(rb_cFrame, "pc_offset=", frame_set_pc_offset, 1);
++    rb_define_method(rb_cFrame, "type",       frame_type, 0);
 +
-+    rb_define_method(rb_cFrame, "equal?", frame_equal, 1);
++    rb_define_method(rb_cFrame, "equal?",     frame_equal, 1);
++    rb_define_method(rb_cFrame, "pc_offset=", frame_set_pc_offset, 1);
 +
 +    rb_eFrameError = rb_define_class("FrameError", rb_eStandardError);
 +
@@ -2407,10 +2412,24 @@ index 8df190e..e4cdd5f 100644
  #pragma GCC visibility pop
  #endif
 diff --git a/load.c b/load.c
-index 163ec4c..a6773c1 100644
+index 163ec4c..8590172 100644
 --- a/load.c
 +++ b/load.c
-@@ -301,11 +301,13 @@ rb_load_internal(VALUE fname, int wrap)
+@@ -8,6 +8,13 @@
+ #include "dln.h"
+ #include "eval_intern.h"
+ 
++#ifdef HAVE_SYS_PARAM_H
++# include <sys/param.h>
++#endif
++#ifndef MAXPATHLEN
++# define MAXPATHLEN 1024
++#endif
++
+ VALUE ruby_dln_librefs;
+ 
+ #define IS_RBEXT(e) (strcmp((e), ".rb") == 0)
+@@ -301,11 +308,13 @@ rb_load_internal(VALUE fname, int wrap)
      if (state == 0) {
  	NODE *node;
  	VALUE iseq;
@@ -3717,7 +3736,7 @@ index 0000000..d22674a
 +end
 diff --git a/test/debugger-ext/test_tracemask.rb b/test/debugger-ext/test_tracemask.rb
 new file mode 100644
-index 0000000..2221729
+index 0000000..931d45b
 --- /dev/null
 +++ b/test/debugger-ext/test_tracemask.rb
 @@ -0,0 +1,127 @@
@@ -3849,7 +3868,7 @@ index 0000000..2221729
 +
 +end
 diff --git a/test/debugger-ext/testit.sh b/test/debugger-ext/testit.sh
-new file mode 100755
+new file mode 100644
 index 0000000..ab610a2
 --- /dev/null
 +++ b/test/debugger-ext/testit.sh
@@ -3870,9 +3889,11 @@ index 0000000..ab610a2
 +    # echo ../../miniruby -I../../lib -I../.. $t
 +    # gdb ../../miniruby
 +done
---- a/test/ruby/test_rubyoptions.rb	2012-10-15 21:21:57.000000000 -0400
-+++ b/test/ruby/test_rubyoptions.rb	2012-12-02 11:20:17.000000000 -0500
-@@ -458,11 +458,6 @@
+diff --git a/test/ruby/test_rubyoptions.rb b/test/ruby/test_rubyoptions.rb
+index 0f88342..23d06b0 100644
+--- a/test/ruby/test_rubyoptions.rb
++++ b/test/ruby/test_rubyoptions.rb
+@@ -458,11 +458,6 @@ class TestRubyOptions < Test::Unit::TestCase
        (?m:.*)
        \[NOTE\]\n
        You\smay\shave\sencountered\sa\sbug\sin\sthe\sRuby\sinterpreter\sor\sextension\slibraries.\n

@@ -40,6 +40,20 @@ diff --git a/load.c b/load.c
 index 0ff4b60..4bfc157 100644
 --- a/load.c
 +++ b/load.c
+@@ -8,6 +8,13 @@
+ #include "dln.h"
+ #include "eval_intern.h"
+ 
++#ifdef HAVE_SYS_PARAM_H
++# include <sys/param.h>
++#endif
++#ifndef MAXPATHLEN
++# define MAXPATHLEN 1024
++#endif
++
+ VALUE ruby_dln_librefs;
+ 
+ #define IS_RBEXT(e) (strcmp((e), ".rb") == 0)
 @@ -301,11 +301,13 @@ rb_load_internal(VALUE fname, int wrap)
      if (state == 0) {
  	NODE *node;

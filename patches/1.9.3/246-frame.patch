@@ -23,7 +23,7 @@ new file mode 100644
 index 0000000..773b67d
 --- /dev/null
 +++ b/frame.c
-@@ -0,0 +1,1012 @@
+@@ -0,0 +1,1017 @@
 +/* 
 + * Copyright (C) 2012 Rocky Bernstein
 + *
@@ -36,7 +36,13 @@ index 0000000..773b67d
 +#include <signal.h>
 +
 +#include <ruby.h>
++#if   defined(_WIN32)
++#include "thread_win32.h"
++#elif defined(HAVE_PTHREAD_H)
 +#include "thread_pthread.h"
++#else
++#error "unsupported thread type"
++#endif
 +#include "vm_core.h"
 +#include "node.h"
 +#include "gc.h"
@@ -741,7 +747,6 @@ index 0000000..773b67d
 +{
 +    VALUE first_val;
 +    VALUE second_val;
-+    VALUE thval = Qnil;
 +    int   prev_count = 0;
 +    rb_thread_t *th = NULL;
 +
