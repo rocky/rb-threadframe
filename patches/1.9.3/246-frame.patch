@@ -1229,10 +1229,10 @@ index 0000000..61a4dee
 +end
 diff --git a/test/debugger-ext/test_frame.rb b/test/debugger-ext/test_frame.rb
 new file mode 100644
-index 0000000..94b9d41
+index 0000000..2e29600
 --- /dev/null
 +++ b/test/debugger-ext/test_frame.rb
-@@ -0,0 +1,125 @@
+@@ -0,0 +1,129 @@
 +require 'test/unit'
 +
 +class TestFrame < Test::Unit::TestCase
