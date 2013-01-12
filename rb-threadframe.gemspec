@@ -28,7 +28,6 @@ A set of patches to Ruby MRI 1.9.3 and 1.9.2 that adds run-time introspection, a
 For MRI 1.9.2, there are additional routines are in a C extension. For MRI 1.9.3, everthing is in a patched Ruby. Necessary patches and some simple patch code are found in this repository though. See https://github.com/rocky/rb-threadframe/wiki/How-to-Install for how to install.
 EOF
   spec.email        = 'rockyb@rubyforge.net'
-  spec.extensions   = ['ext/extconf.rb']
   spec.files        = FILES.to_a  
   spec.has_rdoc     = false
   spec.homepage     = 'http://github.com/rocky/rb-threadframe/tree/master'
