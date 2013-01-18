@@ -1,30 +1,45 @@
 # Test of additional tracing flag use to selectively turn on off tracing
+require 'rbconfig'
 require 'test/unit'
 
 require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
 
 class TestTracingMasks < Test::Unit::TestCase
-  @@EVENT2MASK = {
-    'line'     => 0x0001,
-    'call'     => 0x0008,
-    'return'   => 0x0010,
-    'c-call'   => 0x0020,
-    'c-return' => 0x0040,
-    'raise'    => 0x0080,
-    'send'     => 0x0400,
-    'leave'    => 0x0800,
-  }
+  @@EVENT2MASK = 
+    if RbConfig::CONFIG['target_os'].start_with?('mingw')
+      {
+      'line'     => 0x0001,
+      'call'     => 0x0008,
+      'return'   => 0x0010,
+      'c-call'   => 0x0020,
+      'c-return' => 0x0040,
+      'raise'    => 0x0080,
+      } 
+    else 
+      {
+      'line'     => 0x0001,
+      'call'     => 0x0008,
+      'return'   => 0x0010,
+      'c-call'   => 0x0020,
+      'c-return' => 0x0040,
+      'raise'    => 0x0080,
+      'send'     => 0x0400,
+      'leave'    => 0x0800,
+      } 
+    end
+      
+      
 
   def something_to_test(n)
     def sqr(x)
       x * x 
-    end
+    end unless self.methods.member?(:sqr)
     begin
       n += sqr(5)
       raise TypeError, 'error'
     rescue TypeError => $e
     end
-    return [1,2,3].all? {|n| n}
+    return [1,2,3].all? {|k| k}
   end
 
   def chunk(list, char='-')
@@ -51,7 +66,7 @@ class TestTracingMasks < Test::Unit::TestCase
       Thread.current.set_trace_func(method(:trace_hook).to_proc, mask)
       something_to_test(5)
       Thread.current.set_trace_func(nil)
-      checkit(event_name)
+      checkit(event_name) 
     end
     [%w(call return),
      %w(c-call c-return)].each do |c, r|
@@ -68,8 +83,8 @@ class TestTracingMasks < Test::Unit::TestCase
       mask = event_names.map{|name| 
         @@EVENT2MASK[name]
       }.inject do 
-        |mask, bit| 
-        mask |= bit
+        |m, bit| 
+        m |= bit
       end
       Thread.current.set_trace_func(method(:trace_hook).to_proc, mask)
       something_to_test(5)
