@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+require 'rbconfig'
 
 # This program is from Ruby 1.9. We run it here (again) just in case we didn't
 # run as part of checking Ruby 1.9 sanity.
@@ -30,6 +31,9 @@ class TestSetTraceFunc < Test::Unit::TestCase
   end
 
   def checkit(actual, expected)
+    expected = expected.select{|tup| not ['send', 'leave'].member?(tup[1])} if
+      RbConfig::CONFIG['target_os'].start_with?('mingw')
+
     actual.each_with_index do |e, i|
       assert_equal(e, actual[i], showit(actual, expected))
     end
@@ -208,6 +212,8 @@ class TestSetTraceFunc < Test::Unit::TestCase
        [9, 'c-call',   :set_trace_func, Kernel]]
     expected.unshift [3, 'c-return', :set_trace_func, Kernel] if 
       '1.9.3' == RUBY_VERSION
+    expected = expected.select{|tup| not ['send', 'leave'].member?(tup[1])} if
+      RbConfig::CONFIG['target_os'].start_with?('mingw')
 
     @events.each_with_index{|e, i|
       assert_equal(e, @events[i], showit(@events, expected))}
@@ -327,39 +333,47 @@ class TestSetTraceFunc < Test::Unit::TestCase
                 [2, 'send',     :test_thread_trace, TestSetTraceFunc, :set],
                 [2, 'c-call',   :add_trace_func, Thread, :set],
                ]
+    expected = expected.select{|tup| not ['send', 'leave'].member?(tup[1])} if
+      RbConfig::CONFIG['target_os'].start_with?('mingw')
+
     expected.each do |e|
       assert_equal(e, events[:set].shift, showit(events, expected))
     end
 
-    [[2, 'c-return', :add_trace_func, Thread],
-     [3, 'line',     __method__, self.class],
-     [3, 'c-call',   :inherited, Class],
-     [3, 'c-return', :inherited, Class],
-     [3, 'class',    nil, nil],
-     [4, 'line',     nil, nil],
-     [4, 'send',     nil, nil],
-     [4, 'c-call',   :method_added, Module],
-     [4, 'c-return', :method_added, Module],
-     [7, 'end',      nil, nil],
-     [7, 'leave',    nil, nil],
-     [8, 'line',     __method__, self.class],
-     [8, 'send',     __method__, self.class],
-     [8, 'c-call',   :new, Class],
-     [8, 'c-call',   :initialize, BasicObject],
-     [8, 'c-return', :initialize, BasicObject],
-     [8, 'c-return', :new, Class],
-     [8, 'send',     :test_thread_trace, TestSetTraceFunc],
-     [4, 'call',     :foo, ThreadTraceInnerClass],
-     [5, 'line',     :foo, ThreadTraceInnerClass],
-     [5, 'send',     :foo, ThreadTraceInnerClass],
-     [5, 'c-call',   :+, Fixnum],
-     [5, 'c-return', :+, Fixnum],
-     [6, 'return',   :foo, ThreadTraceInnerClass],
-     [6, 'leave',    :foo, ThreadTraceInnerClass],
-     [9, 'line',     __method__, self.class],
-     [9, 'send',     __method__, self.class],
-     [9, 'c-call',   :set_trace_func, Thread]
-    ].each do |e|
+    expected = 
+      [[2, 'c-return', :add_trace_func, Thread],
+       [3, 'line',     __method__, self.class],
+       [3, 'c-call',   :inherited, Class],
+       [3, 'c-return', :inherited, Class],
+       [3, 'class',    nil, nil],
+       [4, 'line',     nil, nil],
+       [4, 'send',     nil, nil],
+       [4, 'c-call',   :method_added, Module],
+       [4, 'c-return', :method_added, Module],
+       [7, 'end',      nil, nil],
+       [7, 'leave',    nil, nil],
+       [8, 'line',     __method__, self.class],
+       [8, 'send',     __method__, self.class],
+       [8, 'c-call',   :new, Class],
+       [8, 'c-call',   :initialize, BasicObject],
+       [8, 'c-return', :initialize, BasicObject],
+       [8, 'c-return', :new, Class],
+       [8, 'send',     :test_thread_trace, TestSetTraceFunc],
+       [4, 'call',     :foo, ThreadTraceInnerClass],
+       [5, 'line',     :foo, ThreadTraceInnerClass],
+       [5, 'send',     :foo, ThreadTraceInnerClass],
+       [5, 'c-call',   :+, Fixnum],
+       [5, 'c-return', :+, Fixnum],
+       [6, 'return',   :foo, ThreadTraceInnerClass],
+       [6, 'leave',    :foo, ThreadTraceInnerClass],
+       [9, 'line',     __method__, self.class],
+       [9, 'send',     __method__, self.class],
+       [9, 'c-call',   :set_trace_func, Thread]
+      ]
+
+    expected = expected.select{|tup| not ['send', 'leave'].member?(tup[1])} if
+      RbConfig::CONFIG['target_os'].start_with?('mingw')
+    expected.each do |e|
       [:set, :add].each do |type|
         assert_equal(e + [type], events[type].shift)
       end
@@ -369,6 +383,8 @@ class TestSetTraceFunc < Test::Unit::TestCase
   end
 
   def test_trace_proc_that_raises_exception_recovery
+    skip "killcache doesn't work on 1.9.3" if 
+      RbConfig::CONFIG['target_os'].start_with?('mingw')
     $first_time = true
     $traced = []
     s = Proc.new {|event|
