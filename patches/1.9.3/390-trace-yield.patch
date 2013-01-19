@@ -331,7 +331,7 @@ diff --git a/thread.c b/thread.c
 index ad8d572..7c029f1 100644
 --- a/thread.c
 +++ b/thread.c
-@@ -4586,6 +4586,14 @@ get_event_name(rb_event_flag_t event)
+@@ -4593,6 +4593,14 @@ get_event_name(rb_event_flag_t event)
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -372,7 +372,7 @@ index 7d4b540..899cde8 100644
 --- a/vm_exec.h
 +++ b/vm_exec.h
 @@ -18,6 +18,51 @@ typedef unsigned long dindex_t;
- typedef rb_num_t GENTRY;
+ typedef VALUE GENTRY;
  typedef rb_iseq_t *ISEQ;
  
 +#include "insns_info.inc"

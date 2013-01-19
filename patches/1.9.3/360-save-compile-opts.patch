@@ -11,7 +11,7 @@ diff --git a/iseq.c b/iseq.c
 index 39f8d74..fb6f052 100644
 --- a/iseq.c
 +++ b/iseq.c
-@@ -271,7 +271,7 @@ static VALUE
+@@ -275,7 +275,7 @@ static VALUE
  prepare_iseq_build(rb_iseq_t *iseq,
  		   VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
  		   VALUE parent, enum iseq_type type, VALUE block_opt,
@@ -20,7 +20,7 @@ index 39f8d74..fb6f052 100644
  {
      OBJ_FREEZE(name);
      OBJ_FREEZE(filename);
-@@ -358,6 +358,8 @@ static rb_compile_option_t COMPILE_OPTION_DEFAULT = {
+@@ -362,6 +362,8 @@ static rb_compile_option_t COMPILE_OPTION_DEFAULT = {
      OPT_INSTRUCTIONS_UNIFICATION, /* int instructions_unification; */
      OPT_STACK_CACHING, /* int stack_caching; */
      OPT_TRACE_INSTRUCTION, /* int trace_instruction */
@@ -29,7 +29,7 @@ index 39f8d74..fb6f052 100644
  };
  static const rb_compile_option_t COMPILE_OPTION_FALSE = {0};
  
-@@ -393,6 +395,8 @@ make_compile_option(rb_compile_option_t *option, VALUE opt)
+@@ -397,6 +399,8 @@ make_compile_option(rb_compile_option_t *option, VALUE opt)
  	SET_COMPILE_OPTION(option, opt, instructions_unification);
  	SET_COMPILE_OPTION(option, opt, stack_caching);
  	SET_COMPILE_OPTION(option, opt, trace_instruction);
@@ -38,7 +38,7 @@ index 39f8d74..fb6f052 100644
  	SET_COMPILE_OPTION_NUM(option, opt, debug_level);
  #undef SET_COMPILE_OPTION
  #undef SET_COMPILE_OPTION_NUM
-@@ -501,7 +505,7 @@ static VALUE
+@@ -505,7 +509,7 @@ static VALUE
  rb_iseq_new_with_bopt_and_opt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
  			      VALUE parent, enum iseq_type type, VALUE bopt,
  			      VALUE src,
@@ -47,7 +47,7 @@ index 39f8d74..fb6f052 100644
  {
      rb_iseq_t *iseq;
      VALUE self = iseq_alloc(rb_cISeq);
-@@ -512,7 +516,11 @@ rb_iseq_new_with_bopt_and_opt(NODE *node, VALUE name, VALUE filename, VALUE file
+@@ -516,7 +520,11 @@ rb_iseq_new_with_bopt_and_opt(NODE *node, VALUE name, VALUE filename, VALUE file
  
      prepare_iseq_build(iseq, name, filename, filepath, line_no, parent, type, bopt, option);
      rb_iseq_compile_node(self, node);
@@ -59,7 +59,7 @@ index 39f8d74..fb6f052 100644
      cleanup_iseq_build(iseq, type, src, saving_iseq);
      return self;
  }
-@@ -520,7 +528,7 @@ rb_iseq_new_with_bopt_and_opt(NODE *node, VALUE name, VALUE filename, VALUE file
+@@ -524,7 +532,7 @@ rb_iseq_new_with_bopt_and_opt(NODE *node, VALUE name, VALUE filename, VALUE file
  VALUE
  rb_iseq_new_with_opt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
  		     VALUE parent, enum iseq_type type, VALUE src,
@@ -68,7 +68,7 @@ index 39f8d74..fb6f052 100644
  {
      /* TODO: argument check */
      return rb_iseq_new_with_bopt_and_opt(node, name, filename, filepath, line_no, parent, type,
-@@ -2084,10 +2092,8 @@ rb_iseq_compile_options(VALUE iseqval)
+@@ -2088,10 +2096,8 @@ rb_iseq_compile_options(VALUE iseqval)
  	COMPILE_OPTS_BOOL_SET_HASH(stack_caching);
  	COMPILE_OPTS_BOOL_SET_HASH(trace_instruction);
  	COMPILE_OPTS_BOOL_SET_HASH(debug_level);
@@ -92,8 +92,8 @@ index be0e38c..e4cdd5f 100644
  };
  
  struct iseq_insn_info_entry {
-@@ -104,7 +106,7 @@ struct iseq_compile_data {
-     int flip_cnt;
+@@ -103,7 +105,7 @@ struct iseq_compile_data {
+     int last_coverable_line;
      int label_no;
      int node_level;
 -    const rb_compile_option_t *option;
@@ -105,7 +105,7 @@ diff --git a/vm_core.h b/vm_core.h
 index ead4380..fd2f2e0 100644
 --- a/vm_core.h
 +++ b/vm_core.h
-@@ -523,7 +523,7 @@ VALUE rb_iseq_new(NODE*, VALUE, VALUE, VALUE, VALUE, enum iseq_type);
+@@ -524,7 +524,7 @@ VALUE rb_iseq_new(NODE*, VALUE, VALUE, VALUE, VALUE, enum iseq_type);
  VALUE rb_iseq_new_top(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE parent);
  VALUE rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath);
  VALUE rb_iseq_new_with_bopt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, VALUE);

@@ -4,7 +4,7 @@ diff --git a/iseq.c b/iseq.c
 index 588e386..7a4b89a 100644
 --- a/iseq.c
 +++ b/iseq.c
-@@ -1495,12 +1495,146 @@
+@@ -1499,12 +1499,146 @@
  
  extern void Init_Brkpt(void); /* In brkpt.c */
  

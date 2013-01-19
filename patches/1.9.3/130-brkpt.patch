@@ -373,7 +373,7 @@ diff --git a/thread.c b/thread.c
 index fc6b152..216e158 100644
 --- a/thread.c
 +++ b/thread.c
-@@ -4121,7 +4121,7 @@ set_threads_event_flags_i(st_data_t key, st_data_t val, st_data_t flag)
+@@ -4128,7 +4128,7 @@ set_threads_event_flags_i(st_data_t key, st_data_t val, st_data_t flag)
      GetThreadPtr(thval, th);
  
      if (flag) {
@@ -382,7 +382,7 @@ index fc6b152..216e158 100644
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -4511,6 +4511,8 @@ get_event_name(rb_event_flag_t event)
+@@ -4518,6 +4518,8 @@ get_event_name(rb_event_flag_t event)
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
