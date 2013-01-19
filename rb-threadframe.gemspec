@@ -5,19 +5,13 @@ require 'rubygems' unless
   Object.const_defined?(:Gem)
 
 
-PACKAGE_VERSION = open('ext/version.h') do |f| 
-  f.grep(/^#define THREADFRAME_VERSION/).first[/"(.+)"/,1]
-end
+require File.dirname(__FILE__) + '/lib/thread_frame' unless 
+  Object.const_defined?(:ThreadFrame) and ThreadFrame.const_defined?(:VERSION)
 
-EXT_FILES     = FileList[%W(ext/#{RUBY_VERSION}/*.c 
-                            ext/version.h
-                            ext/#{RUBY_VERSION}/*.h)] 
-INCLUDE_FILES = FileList['include/*.h']
 LIB_FILES     = FileList['lib/*.rb']
 TEST_FILES    = FileList['test/**/*.rb']
 COMMON_FILES  = FileList[%w(README.md Rakefile Makefile LICENSE NEWS)]
-FILES         = COMMON_FILES + INCLUDE_FILES + LIB_FILES + EXT_FILES + 
-  TEST_FILES
+FILES         = COMMON_FILES + LIB_FILES + TEST_FILES
 
 Gem::Specification.new do |spec|
   spec.authors      = ['R. Bernstein']
@@ -38,11 +32,11 @@ EOF
   # spec.required_ruby_version = '~> 1.9.2frame'
   spec.summary      = 'Call stack introspection and run-time support for debuggers'
 
-  spec.version      = PACKAGE_VERSION
+  spec.version      = RubyVM::Frame::VERSION
   spec.extra_rdoc_files = ['README.md', 'threadframe.rd']
 
   # Make the readme file the start page for the generated html
   spec.rdoc_options += ['--main', 'README.md']
-  spec.rdoc_options += ['--title', "ThreadFrame #{PACKAGE_VERSION} Documentation"]
+  spec.rdoc_options += ['--title', "RubyVM::Frame #{RubyVM::Frame::VERSION} Documentation"]
 
 end
