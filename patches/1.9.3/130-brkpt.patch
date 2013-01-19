@@ -286,7 +286,7 @@ diff --git a/iseq.c b/iseq.c
 index 28cc1e5..5effad2 100644
 --- a/iseq.c
 +++ b/iseq.c
-@@ -1493,6 +1493,8 @@ rb_iseq_build_for_ruby2cext(
+@@ -1497,6 +1497,8 @@ rb_iseq_build_for_ruby2cext(
      return iseqval;
  }
  
@@ -295,7 +295,7 @@ index 28cc1e5..5effad2 100644
  void
  Init_ISeq(void)
  {
-@@ -1521,5 +1523,7 @@ Init_ISeq(void)
+@@ -1525,5 +1527,7 @@ Init_ISeq(void)
      rb_define_singleton_method(rb_cISeq, "compile_option=", iseq_s_compile_option_set, 1);
      rb_define_singleton_method(rb_cISeq, "disasm", iseq_s_disasm, 1);
      rb_define_singleton_method(rb_cISeq, "disassemble", iseq_s_disasm, 1);
@@ -395,7 +395,7 @@ diff --git a/vm_core.h b/vm_core.h
 index 8abccf3..1a1af10 100644
 --- a/vm_core.h
 +++ b/vm_core.h
-@@ -255,6 +255,9 @@ struct rb_iseq_struct {
+@@ -256,6 +256,9 @@ struct rb_iseq_struct {
  
      /* used at compile time */
      struct iseq_compile_data *compile_data;

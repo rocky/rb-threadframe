@@ -15,10 +15,6 @@ patch=${PATCH:-patch}
 file=$(__FILE__)
 dirname=${file%/*}
 
-if cmp /bin/sh /bin/dash 2>/dev/null >/dev/null; then
-    echo 'Warning your /bin/sh is dash. Making Ruby might not work!' 1>&2
-fi
-
 patchfile=${1:-'combined'}
 case $patchfile in
     1.9.3 | head | trunk )

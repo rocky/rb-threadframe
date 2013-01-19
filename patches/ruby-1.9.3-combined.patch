@@ -239,7 +239,7 @@ index 0000000..29dd23d
 +    rb_define_method(rb_cISeq, "brkpts",           iseq_brkpts, 0);
 +}
 diff --git a/common.mk b/common.mk
-index c9ef641..fd3df30 100644
+index ccc9647..10b3a50 100644
 --- a/common.mk
 +++ b/common.mk
 @@ -41,6 +41,7 @@ ENC_MK        = enc.mk
@@ -267,7 +267,7 @@ index c9ef641..fd3df30 100644
  		$(BUILTIN_ENCOBJS) \
  		$(BUILTIN_TRANSOBJS) \
 diff --git a/compile.c b/compile.c
-index d35c13f..d6c814f 100644
+index 4acb301..eb566d9 100644
 --- a/compile.c
 +++ b/compile.c
 @@ -960,7 +960,7 @@ new_child_iseq(rb_iseq_t *iseq, NODE *node,
@@ -280,10 +280,10 @@ index d35c13f..d6c814f 100644
      iseq_add_mark_object(iseq, ret);
      return ret;
 diff --git a/error.c b/error.c
-index 7a31735..d4a45af 100644
+index 7f415e1..309c35a 100644
 --- a/error.c
 +++ b/error.c
-@@ -43,8 +43,8 @@
+@@ -43,8 +43,8 @@ extern const char ruby_description[];
  	"[NOTE]\n" \
  	"You may have encountered a bug in the Ruby interpreter" \
  	" or extension libraries.\n" \
@@ -1438,7 +1438,7 @@ index 59c9284..db5406a 100644
  VALUE rb_get_coverages(void);
  
 diff --git a/iseq.c b/iseq.c
-index 28cc1e5..017ca2a 100644
+index b7d77a9..468d6d2 100644
 --- a/iseq.c
 +++ b/iseq.c
 @@ -27,6 +27,38 @@ VALUE rb_cISeq;
@@ -1513,7 +1513,7 @@ index 28cc1e5..017ca2a 100644
  static size_t
  iseq_memsize(const void *ptr)
  {
-@@ -222,7 +271,7 @@ static VALUE
+@@ -226,7 +275,7 @@ static VALUE
  prepare_iseq_build(rb_iseq_t *iseq,
  		   VALUE name, VALUE filename, VALUE filepath, VALUE line_no,
  		   VALUE parent, enum iseq_type type, VALUE block_opt,
@@ -1522,7 +1522,7 @@ index 28cc1e5..017ca2a 100644
  {
      OBJ_FREEZE(name);
      OBJ_FREEZE(filename);
-@@ -282,13 +331,17 @@ prepare_iseq_build(rb_iseq_t *iseq,
+@@ -286,13 +335,17 @@ prepare_iseq_build(rb_iseq_t *iseq,
  }
  
  static VALUE
@@ -1544,7 +1544,7 @@ index 28cc1e5..017ca2a 100644
      if (RTEST(err)) {
  	rb_funcall2(err, rb_intern("set_backtrace"), 1, &iseq->filename);
  	rb_exc_raise(err);
-@@ -305,6 +358,8 @@ static rb_compile_option_t COMPILE_OPTION_DEFAULT = {
+@@ -309,6 +362,8 @@ static rb_compile_option_t COMPILE_OPTION_DEFAULT = {
      OPT_INSTRUCTIONS_UNIFICATION, /* int instructions_unification; */
      OPT_STACK_CACHING, /* int stack_caching; */
      OPT_TRACE_INSTRUCTION, /* int trace_instruction */
@@ -1553,7 +1553,7 @@ index 28cc1e5..017ca2a 100644
  };
  static const rb_compile_option_t COMPILE_OPTION_FALSE = {0};
  
-@@ -340,6 +395,8 @@ make_compile_option(rb_compile_option_t *option, VALUE opt)
+@@ -344,6 +399,8 @@ make_compile_option(rb_compile_option_t *option, VALUE opt)
  	SET_COMPILE_OPTION(option, opt, instructions_unification);
  	SET_COMPILE_OPTION(option, opt, stack_caching);
  	SET_COMPILE_OPTION(option, opt, trace_instruction);
@@ -1562,7 +1562,7 @@ index 28cc1e5..017ca2a 100644
  	SET_COMPILE_OPTION_NUM(option, opt, debug_level);
  #undef SET_COMPILE_OPTION
  #undef SET_COMPILE_OPTION_NUM
-@@ -376,14 +433,14 @@ VALUE
+@@ -380,14 +437,14 @@ VALUE
  rb_iseq_new(NODE *node, VALUE name, VALUE filename, VALUE filepath,
  	    VALUE parent, enum iseq_type type)
  {
@@ -1579,7 +1579,7 @@ index 28cc1e5..017ca2a 100644
  				&COMPILE_OPTION_DEFAULT);
  }
  
-@@ -393,34 +450,89 @@ rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath)
+@@ -397,34 +454,89 @@ rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath)
      rb_thread_t *th = GET_THREAD();
      VALUE parent = th->base_block->iseq->self;
      return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), filename, filepath, INT2FIX(0),
@@ -1676,7 +1676,7 @@ index 28cc1e5..017ca2a 100644
  }
  
  VALUE
-@@ -429,7 +541,7 @@ rb_iseq_new_with_bopt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VA
+@@ -433,7 +545,7 @@ rb_iseq_new_with_bopt(NODE *node, VALUE name, VALUE filename, VALUE filepath, VA
  {
      /* TODO: argument check */
      return rb_iseq_new_with_bopt_and_opt(node, name, filename, filepath, line_no, parent, type,
@@ -1685,7 +1685,7 @@ index 28cc1e5..017ca2a 100644
  }
  
  #define CHECK_ARRAY(v)   rb_convert_type((v), T_ARRAY, "Array", "to_ary")
-@@ -450,6 +562,7 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
+@@ -454,6 +566,7 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
      rb_iseq_t *iseq;
      rb_compile_option_t option;
      int i = 0;
@@ -1693,7 +1693,7 @@ index 28cc1e5..017ca2a 100644
  
      /* [magic, major_version, minor_version, format_type, misc,
       *  name, filename, line_no,
-@@ -514,11 +627,28 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
+@@ -518,11 +631,28 @@ iseq_load(VALUE self, VALUE data, VALUE parent, VALUE opt)
  		       parent, (enum iseq_type)iseq_type, 0, &option);
  
      rb_iseq_build_from_ary(iseq, locals, args, exception, body);
@@ -1723,7 +1723,7 @@ index 28cc1e5..017ca2a 100644
  static VALUE
  iseq_s_load(int argc, VALUE *argv, VALUE self)
  {
-@@ -559,11 +689,11 @@ rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, V
+@@ -563,11 +693,11 @@ rb_iseq_compile_with_option(VALUE src, VALUE file, VALUE filepath, VALUE line, V
      if (th->base_block && th->base_block->iseq) {
  	return rb_iseq_new_with_opt(node, th->base_block->iseq->name,
  				    file, filepath, line, th->base_block->iseq->self,
@@ -1737,7 +1737,7 @@ index 28cc1e5..017ca2a 100644
      }
  }
  
-@@ -609,7 +739,7 @@ iseq_s_compile_file(int argc, VALUE *argv, VALUE self)
+@@ -613,7 +743,7 @@ iseq_s_compile_file(int argc, VALUE *argv, VALUE self)
      make_compile_option(&option, opt);
      return rb_iseq_new_with_opt(node, rb_str_new2("<main>"), file,
  				rb_realpath_internal(Qnil, file, 1), line, Qfalse,
@@ -1746,7 +1746,7 @@ index 28cc1e5..017ca2a 100644
  }
  
  static VALUE
-@@ -639,6 +769,117 @@ iseq_check(VALUE val)
+@@ -643,6 +773,117 @@ iseq_check(VALUE val)
      return iseq;
  }
  
@@ -1864,7 +1864,7 @@ index 28cc1e5..017ca2a 100644
  static VALUE
  iseq_eval(VALUE self)
  {
-@@ -655,9 +896,13 @@ iseq_inspect(VALUE self)
+@@ -659,9 +900,13 @@ iseq_inspect(VALUE self)
          return rb_sprintf("#<%s: uninitialized>", rb_obj_classname(self));
      }
  
@@ -1881,7 +1881,7 @@ index 28cc1e5..017ca2a 100644
  }
  
  static
-@@ -727,6 +972,59 @@ find_prev_line_no(rb_iseq_t *iseqdat, unsigned long pos)
+@@ -731,6 +976,59 @@ find_prev_line_no(rb_iseq_t *iseqdat, unsigned long pos)
      return 0;
  }
  
@@ -1941,7 +1941,7 @@ index 28cc1e5..017ca2a 100644
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -916,9 +1214,8 @@ catch_type(int type)
+@@ -920,9 +1218,8 @@ catch_type(int type)
  }
  
  VALUE
@@ -1952,7 +1952,7 @@ index 28cc1e5..017ca2a 100644
      VALUE *iseq;
      VALUE str = rb_str_new(0, 0);
      VALUE child = rb_ary_new();
-@@ -1010,14 +1307,44 @@ rb_iseq_disasm(VALUE self)
+@@ -1014,14 +1311,44 @@ rb_iseq_disasm(VALUE self)
  	n += rb_iseq_disasm_insn(str, iseq, n, iseqdat, child);
      }
  
@@ -2001,7 +2001,7 @@ index 28cc1e5..017ca2a 100644
  static VALUE
  iseq_s_disasm(VALUE klass, VALUE body)
  {
-@@ -1493,17 +1820,348 @@ rb_iseq_build_for_ruby2cext(
+@@ -1497,17 +1824,348 @@ rb_iseq_build_for_ruby2cext(
      return iseqval;
  }
  
@@ -2350,7 +2350,7 @@ index 28cc1e5..017ca2a 100644
  
  #if 0 /* TBD */
      rb_define_method(rb_cISeq, "marshal_dump", iseq_marshal_dump, 0);
-@@ -1521,5 +2179,7 @@ Init_ISeq(void)
+@@ -1525,5 +2183,7 @@ Init_ISeq(void)
      rb_define_singleton_method(rb_cISeq, "compile_option=", iseq_s_compile_option_set, 1);
      rb_define_singleton_method(rb_cISeq, "disasm", iseq_s_disasm, 1);
      rb_define_singleton_method(rb_cISeq, "disassemble", iseq_s_disasm, 1);
@@ -2359,7 +2359,7 @@ index 28cc1e5..017ca2a 100644
  }
  
 diff --git a/iseq.h b/iseq.h
-index 8df190e..e4cdd5f 100644
+index 677a944..719906a 100644
 --- a/iseq.h
 +++ b/iseq.h
 @@ -26,10 +26,17 @@ VALUE rb_iseq_build_from_ary(rb_iseq_t *iseq, VALUE locals, VALUE args,
@@ -2389,8 +2389,8 @@ index 8df190e..e4cdd5f 100644
  };
  
  struct iseq_insn_info_entry {
-@@ -97,7 +106,7 @@ struct iseq_compile_data {
-     int flip_cnt;
+@@ -96,7 +105,7 @@ struct iseq_compile_data {
+     int last_coverable_line;
      int label_no;
      int node_level;
 -    const rb_compile_option_t *option;
@@ -2398,9 +2398,9 @@ index 8df190e..e4cdd5f 100644
  #if SUPPORT_JOKE
      st_table *labels_table;
  #endif
-@@ -118,6 +127,12 @@ enum defined_type {
-     DEFINED_FUNC
- };
+@@ -119,6 +128,12 @@ enum defined_type {
+ 
+ #define DEFAULT_SPECIAL_VAR_COUNT 2
  
 +/* some utilities */
 +extern int insn_len(VALUE insn);
@@ -3890,7 +3890,7 @@ index 0000000..ab610a2
 +    # gdb ../../miniruby
 +done
 diff --git a/test/ruby/test_rubyoptions.rb b/test/ruby/test_rubyoptions.rb
-index 0f88342..23d06b0 100644
+index 5533ac2..defb6c0 100644
 --- a/test/ruby/test_rubyoptions.rb
 +++ b/test/ruby/test_rubyoptions.rb
 @@ -458,11 +458,6 @@ class TestRubyOptions < Test::Unit::TestCase
@@ -4229,10 +4229,10 @@ index d6c6d06..fdf7920 100644
        assert_equal(e, events.shift)
      }
 diff --git a/thread.c b/thread.c
-index 93a8925..7c029f1 100644
+index 861fc34..dfa8344 100644
 --- a/thread.c
 +++ b/thread.c
-@@ -4121,7 +4121,7 @@ set_threads_event_flags_i(st_data_t key, st_data_t val, st_data_t flag)
+@@ -4128,7 +4128,7 @@ set_threads_event_flags_i(st_data_t key, st_data_t val, st_data_t flag)
      GetThreadPtr(thval, th);
  
      if (flag) {
@@ -4241,7 +4241,7 @@ index 93a8925..7c029f1 100644
      }
      else {
  	th->event_flags &= (~RUBY_EVENT_VM);
-@@ -4160,31 +4160,62 @@ thread_exec_event_hooks(VALUE args, int running)
+@@ -4167,31 +4167,62 @@ thread_exec_event_hooks(VALUE args, int running)
      rb_thread_t *th = argp->th;
      rb_event_flag_t flag = argp->event;
      VALUE self = argp->self;
@@ -4325,7 +4325,7 @@ index 93a8925..7c029f1 100644
  	    }
  	}
      }
-@@ -4346,19 +4377,48 @@ clear_trace_func_i(st_data_t key, st_data_t val, st_data_t flag)
+@@ -4353,19 +4384,48 @@ clear_trace_func_i(st_data_t key, st_data_t val, st_data_t flag)
      return ST_CONTINUE;
  }
  
@@ -4377,7 +4377,7 @@ index 93a8925..7c029f1 100644
   *
   *  Establishes _proc_ as the handler for tracing, or disables
   *  tracing if the parameter is +nil+. _proc_ takes up
-@@ -4372,6 +4432,8 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
+@@ -4379,6 +4439,8 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
   *  <code>line</code> (execute code on a new line), <code>raise</code>
   *  (raise an exception), and <code>return</code> (return from a Ruby
   *  method). Tracing is disabled within the context of _proc_.
@@ -4386,7 +4386,7 @@ index 93a8925..7c029f1 100644
   *
   *      class Test
   *	def test
-@@ -4396,14 +4458,31 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
+@@ -4403,14 +4465,31 @@ static void call_trace_func(rb_event_flag_t, VALUE data, VALUE self, ID id, VALU
   *	  line prog.rb:3        test     Test
   *	  line prog.rb:4        test     Test
   *      return prog.rb:4        test     Test
@@ -4419,7 +4419,7 @@ index 93a8925..7c029f1 100644
  	GET_THREAD()->tracing = EVENT_RUNNING_NOTHING;
  	return Qnil;
      }
-@@ -4412,18 +4491,18 @@ set_trace_func(VALUE obj, VALUE trace)
+@@ -4419,18 +4498,18 @@ set_trace_func(VALUE obj, VALUE trace)
  	rb_raise(rb_eTypeError, "trace_func needs to be Proc");
      }
  
@@ -4441,7 +4441,7 @@ index 93a8925..7c029f1 100644
  }
  
  /*
-@@ -4435,18 +4514,26 @@ thread_add_trace_func(rb_thread_t *th, VALUE trace)
+@@ -4442,18 +4521,26 @@ thread_add_trace_func(rb_thread_t *th, VALUE trace)
   */
  
  static VALUE
@@ -4471,7 +4471,7 @@ index 93a8925..7c029f1 100644
   *
   *  Establishes _proc_ on _thr_ as the handler for tracing, or
   *  disables tracing if the parameter is +nil+.
-@@ -4454,17 +4541,26 @@ thread_add_trace_func_m(VALUE obj, VALUE trace)
+@@ -4461,17 +4548,26 @@ thread_add_trace_func_m(VALUE obj, VALUE trace)
   */
  
  static VALUE
@@ -4500,7 +4500,7 @@ index 93a8925..7c029f1 100644
      return trace;
  }
  
-@@ -4478,6 +4574,8 @@ get_event_name(rb_event_flag_t event)
+@@ -4485,6 +4581,8 @@ get_event_name(rb_event_flag_t event)
  	return "class";
        case RUBY_EVENT_END:
  	return "end";
@@ -4509,7 +4509,7 @@ index 93a8925..7c029f1 100644
        case RUBY_EVENT_CALL:
  	return "call";
        case RUBY_EVENT_RETURN:
-@@ -4488,6 +4586,20 @@ get_event_name(rb_event_flag_t event)
+@@ -4495,6 +4593,20 @@ get_event_name(rb_event_flag_t event)
  	return "c-return";
        case RUBY_EVENT_RAISE:
  	return "raise";
@@ -4530,7 +4530,7 @@ index 93a8925..7c029f1 100644
        default:
  	return "unknown";
      }
-@@ -4505,11 +4617,18 @@ call_trace_proc(VALUE args, int tracing)
+@@ -4512,11 +4624,18 @@ call_trace_proc(VALUE args, int tracing)
      ID id = 0;
      VALUE klass = 0;
  
@@ -4552,7 +4552,7 @@ index 93a8925..7c029f1 100644
  	rb_thread_method_id_and_class(p->th, &id, &klass);
      }
      if (id == ID_ALLOCATOR)
-@@ -4592,6 +4711,67 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
+@@ -4602,6 +4721,67 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
      return result;
  }
  
@@ -4620,7 +4620,7 @@ index 93a8925..7c029f1 100644
  /*
   *  call-seq:
   *     thr.backtrace    -> array
-@@ -4709,9 +4889,19 @@ Init_Thread(void)
+@@ -4719,9 +4899,19 @@ Init_Thread(void)
      rb_eThreadError = rb_define_class("ThreadError", rb_eStandardError);
  
      /* trace */
@@ -4643,7 +4643,7 @@ index 93a8925..7c029f1 100644
  
      /* init thread core */
      {
-@@ -4846,4 +5036,3 @@ rb_reset_coverages(void)
+@@ -4856,4 +5046,3 @@ rb_reset_coverages(void)
      GET_VM()->coverages = Qfalse;
      rb_remove_event_hook(update_coverage);
  }
@@ -4670,10 +4670,10 @@ index 9dc7604..bf3b371 100755
        make_header_pc insn
        make_header_popn insn
 diff --git a/tool/mkconfig.rb b/tool/mkconfig.rb
-index b707c4b..fcb3761 100755
+index f6f3351..3afcfc7 100755
 --- a/tool/mkconfig.rb
 +++ b/tool/mkconfig.rb
-@@ -155,6 +155,7 @@ ARCH
+@@ -158,6 +158,7 @@ ARCH
  print "  universal = #{universal}\n" if universal
  print "  CONFIG = {}\n"
  print "  CONFIG[\"DESTDIR\"] = DESTDIR\n"
@@ -4853,7 +4853,7 @@ index 0000000..2f4ca65
 +		   trace_hook_valid, 0);
 +}
 diff --git a/version.h b/version.h
-index b2b42e1..124b6a6 100644
+index 7d4cbdc..1c22320 100644
 --- a/version.h
 +++ b/version.h
 @@ -42,7 +42,7 @@
@@ -4866,10 +4866,10 @@ index b2b42e1..124b6a6 100644
      "["RUBY_PLATFORM"]"
  # define RUBY_COPYRIGHT 	    \
 diff --git a/vm.c b/vm.c
-index dd026cb..ad57571 100644
+index c919f5d..325bbad 100644
 --- a/vm.c
 +++ b/vm.c
-@@ -761,6 +761,7 @@ rb_vm_get_sourceline(const rb_control_frame_t *cfp)
+@@ -774,6 +774,7 @@ rb_vm_get_sourceline(const rb_control_frame_t *cfp)
      if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
  	rb_num_t i;
  	size_t pos = cfp->pc - cfp->iseq->iseq_encoded;
@@ -4877,7 +4877,7 @@ index dd026cb..ad57571 100644
  
  	if (iseq->insn_info_table[0].position == pos) goto found;
  	for (i = 1; i < iseq->insn_info_size; i++) {
-@@ -2073,6 +2074,8 @@ nsdr(void)
+@@ -2086,6 +2087,8 @@ nsdr(void)
      return ary;
  }
  
@@ -4886,7 +4886,7 @@ index dd026cb..ad57571 100644
  void
  Init_VM(void)
  {
-@@ -2085,6 +2088,21 @@ Init_VM(void)
+@@ -2098,6 +2101,21 @@ Init_VM(void)
      rb_undef_alloc_func(rb_cRubyVM);
      rb_undef_method(CLASS_OF(rb_cRubyVM), "new");
  
@@ -4909,10 +4909,10 @@ index dd026cb..ad57571 100644
      fcore = rb_class_new(rb_cBasicObject);
      RBASIC(fcore)->flags = T_ICLASS;
 diff --git a/vm_core.h b/vm_core.h
-index ea6b1d4..02da93d 100644
+index 6530fbf..ccebbc6 100644
 --- a/vm_core.h
 +++ b/vm_core.h
-@@ -255,6 +255,23 @@ struct rb_iseq_struct {
+@@ -256,6 +256,23 @@ struct rb_iseq_struct {
  
      /* used at compile time */
      struct iseq_compile_data *compile_data;
@@ -4936,7 +4936,7 @@ index ea6b1d4..02da93d 100644
  };
  
  enum ruby_special_exceptions {
-@@ -340,6 +357,9 @@ typedef struct {
+@@ -341,6 +358,9 @@ typedef struct {
      rb_iseq_t *block_iseq;	/* cfp[8] / block[3] */
      VALUE proc;			/* cfp[9] / block[4] */
      const rb_method_entry_t *me;/* cfp[10] */
@@ -4946,7 +4946,7 @@ index ea6b1d4..02da93d 100644
  } rb_control_frame_t;
  
  typedef struct rb_block_struct {
-@@ -476,7 +496,10 @@ typedef struct rb_thread_struct {
+@@ -477,7 +497,10 @@ typedef struct rb_thread_struct {
      /* tracer */
      rb_event_hook_t *event_hooks;
      rb_event_flag_t event_flags;
@@ -4958,7 +4958,7 @@ index ea6b1d4..02da93d 100644
  
      /* fiber */
      VALUE fiber;
-@@ -500,10 +523,11 @@ VALUE rb_iseq_new(NODE*, VALUE, VALUE, VALUE, VALUE, enum iseq_type);
+@@ -501,10 +524,11 @@ VALUE rb_iseq_new(NODE*, VALUE, VALUE, VALUE, VALUE, enum iseq_type);
  VALUE rb_iseq_new_top(NODE *node, VALUE name, VALUE filename, VALUE filepath, VALUE parent);
  VALUE rb_iseq_new_main(NODE *node, VALUE filename, VALUE filepath);
  VALUE rb_iseq_new_with_bopt(NODE*, VALUE, VALUE, VALUE, VALUE, VALUE, enum iseq_type, VALUE);
@@ -4971,7 +4971,7 @@ index ea6b1d4..02da93d 100644
  int rb_iseq_disasm_insn(VALUE str, VALUE *iseqval, size_t pos, rb_iseq_t *iseq, VALUE child);
  const char *ruby_node_name(int node);
  int rb_iseq_first_lineno(rb_iseq_t *iseq);
-@@ -583,6 +607,10 @@ enum vm_special_object_type {
+@@ -584,6 +608,10 @@ enum vm_special_object_type {
  
  #define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)
  
@@ -5043,11 +5043,11 @@ index 03f9520..d9127d1 100644
  #undef  RESTORE_REGS
  #define RESTORE_REGS() \
 diff --git a/vm_exec.h b/vm_exec.h
-index 57ed474..899cde8 100644
+index c0aea27..0abd81e 100644
 --- a/vm_exec.h
 +++ b/vm_exec.h
 @@ -18,6 +18,51 @@ typedef unsigned long dindex_t;
- typedef rb_num_t GENTRY;
+ typedef VALUE GENTRY;
  typedef rb_iseq_t *ISEQ;
  
 +#include "insns_info.inc"
@@ -5122,7 +5122,7 @@ index 57ed474..899cde8 100644
  #if VMDEBUG > 0
  #define debugs printf
 diff --git a/vm_insnhelper.c b/vm_insnhelper.c
-index 8e7fe94..77b7f11 100644
+index 04461d9..1953615 100644
 --- a/vm_insnhelper.c
 +++ b/vm_insnhelper.c
 @@ -28,9 +28,12 @@ vm_push_frame(rb_thread_t * th, const rb_iseq_t * iseq,
@@ -5174,7 +5174,7 @@ index 8e7fe94..77b7f11 100644
 +	if (UNLIKELY(wait_event__)) {
 +	    PUSH(val);
 +	    rb_threadptr_exec_event_hooks(th, RUBY_EVENT_C_RETURN, recv, 
-+					  me->called_id, me->klass);
++					  me->called_id, me->klass, 0);
 +	    val = reg_cfp->sp[-1];    /* Allow for hook to change value */
 +	    reg_cfp->sp--; /* for above push */
 +	}

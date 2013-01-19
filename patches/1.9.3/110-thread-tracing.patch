@@ -8,10 +8,10 @@ by adding a couple of methods.
 exec_event_tracing is a little bit hoaky.
 
 diff --git a/thread.c b/thread.c
-index 2cf1064..69e6daa 100644
+index 861fc34..dfa8344 100644
 --- a/thread.c
 +++ b/thread.c
-@@ -4160,31 +4160,62 @@ thread_exec_event_hooks(VALUE args, int running)
+@@ -4167,31 +4167,62 @@ thread_exec_event_hooks(VALUE args, int running)
      rb_thread_t *th = argp->th;
      rb_event_flag_t flag = argp->event;
      VALUE self = argp->self;
@@ -95,7 +95,7 @@ index 2cf1064..69e6daa 100644
  	    }
  	}
      }
-@@ -4404,6 +4435,7 @@
+@@ -4411,6 +4442,7 @@
      rb_remove_event_hook(call_trace_func);
  
      if (NIL_P(trace)) {
@@ -103,7 +103,7 @@ index 2cf1064..69e6daa 100644
  	GET_THREAD()->tracing = EVENT_RUNNING_NOTHING;
  	return Qnil;
      }
-@@ -4461,6 +4493,7 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
+@@ -4468,6 +4500,7 @@ thread_suppress_tracing(rb_thread_t *th, int ev, VALUE (*func)(VALUE, int), VALU
      rb_threadptr_remove_event_hook(th, call_trace_func);
  
      if (NIL_P(trace)) {
@@ -111,7 +111,7 @@ index 2cf1064..69e6daa 100644
  	th->tracing = EVENT_RUNNING_NOTHING;
  	return Qnil;
      }
-@@ -4592,6 +4625,67 @@
+@@ -4602,6 +4635,67 @@
      return result;
  }
  
@@ -179,7 +179,7 @@ index 2cf1064..69e6daa 100644
  /*
   *  call-seq:
   *     thr.backtrace    -> array
-@@ -4713,6 +4807,14 @@ Init_Thread(void)
+@@ -4723,6 +4817,14 @@ Init_Thread(void)
      rb_define_method(rb_cThread, "set_trace_func", thread_set_trace_func_m, 1);
      rb_define_method(rb_cThread, "add_trace_func", thread_add_trace_func_m, 1);
  
@@ -194,7 +194,7 @@ index 2cf1064..69e6daa 100644
      /* init thread core */
      {
  	/* main thread setting */
-@@ -4846,4 +4948,3 @@ rb_reset_coverages(void)
+@@ -4856,4 +4958,3 @@ rb_reset_coverages(void)
      GET_VM()->coverages = Qfalse;
      rb_remove_event_hook(update_coverage);
  }

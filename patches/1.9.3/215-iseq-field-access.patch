@@ -28,7 +28,7 @@ index b096d05..ec66a69 100644
  static size_t
  iseq_memsize(const void *ptr)
  {
-@@ -1510,6 +1527,105 @@ iseq_name(VALUE iseqval)
+@@ -1514,6 +1531,105 @@ iseq_name(VALUE iseqval)
  }
  
  /* 
@@ -134,7 +134,7 @@ index b096d05..ec66a69 100644
   * call-seq:
   *     RubyVM::InstructionSequence#offsetlines -> Hash[Fixnum] -> [Fixnum]
   * 
-@@ -1604,6 +1720,95 @@ ISEQ_INT_FIELD_METHOD(line_no) ;
+@@ -1608,6 +1724,95 @@ ISEQ_INT_FIELD_METHOD(line_no) ;
  ISEQ_INT_FIELD_METHOD(local_size) ;
  ISEQ_INT_FIELD_METHOD(local_table_size) ;
  
@@ -230,7 +230,7 @@ index b096d05..ec66a69 100644
  void
  Init_ISeq(void)
  {
-@@ -1615,14 +1820,16 @@ Init_ISeq(void)
+@@ -1619,14 +1824,16 @@ Init_ISeq(void)
      rb_define_method(rb_cISeq, "arg_post_len",     rb_iseq_arg_post_len, 0) ;
      rb_define_method(rb_cISeq, "arg_rest",         rb_iseq_arg_rest, 0) ;
      rb_define_method(rb_cISeq, "arg_simple",       rb_iseq_arg_simple, 0) ;

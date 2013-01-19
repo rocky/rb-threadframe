@@ -2,10 +2,10 @@ Notes in RbConfig and in ruby --version an that we have debugger or
 threadframe support.
 
 diff --git a/tool/mkconfig.rb b/tool/mkconfig.rb
-index b707c4b..fcb3761 100755
+index f6f3351..3afcfc7 100755
 --- a/tool/mkconfig.rb
 +++ b/tool/mkconfig.rb
-@@ -155,6 +155,7 @@ ARCH
+@@ -158,6 +158,7 @@ ARCH
  print "  universal = #{universal}\n" if universal
  print "  CONFIG = {}\n"
  print "  CONFIG[\"DESTDIR\"] = DESTDIR\n"

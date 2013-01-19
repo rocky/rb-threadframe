@@ -1066,7 +1066,7 @@ index 570d825..accc6b9 100644
  iseq_mark(void *ptr)
  {
      RUBY_MARK_ENTER("iseq");
-@@ -833,6 +833,47 @@ rb_iseq_source(VALUE self)
+@@ -837,6 +837,47 @@ rb_iseq_source(VALUE self)
      return iseq->source;
  }
  
@@ -1114,7 +1114,7 @@ index 570d825..accc6b9 100644
  static VALUE
  insn_operand_intern(rb_iseq_t *iseq,
  		    VALUE insn, int op_no, VALUE op,
-@@ -1938,6 +1979,7 @@ Init_ISeq(void)
+@@ -1942,6 +1983,7 @@ Init_ISeq(void)
      rb_define_method(rb_cISeq, "to_a", iseq_to_a, 0);
      rb_define_method(rb_cISeq, "eval", iseq_eval, 0);
      rb_define_method(rb_cISeq, "eval_source",      rb_iseq_eval_source, 0);
@@ -1566,7 +1566,7 @@ diff --git a/vm_core.h b/vm_core.h
 index 18fbf1b..26a2637 100644
 --- a/vm_core.h
 +++ b/vm_core.h
-@@ -262,6 +262,16 @@ struct rb_iseq_struct {
+@@ -263,6 +263,16 @@ struct rb_iseq_struct {
      /* If this instruction sequence came from eval, the string of the
         source as a String. */
      VALUE source;

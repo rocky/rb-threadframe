@@ -99,7 +99,7 @@ diff --git a/vm_core.h b/vm_core.h
 index b28a222..8abccf3 100644
 --- a/vm_core.h
 +++ b/vm_core.h
-@@ -340,6 +340,9 @@ typedef struct {
+@@ -341,6 +341,9 @@ typedef struct {
      rb_iseq_t *block_iseq;	/* cfp[8] / block[3] */
      VALUE proc;			/* cfp[9] / block[4] */
      const rb_method_entry_t *me;/* cfp[10] */
@@ -109,7 +109,7 @@ index b28a222..8abccf3 100644
  } rb_control_frame_t;
  
  typedef struct rb_block_struct {
-@@ -476,7 +496,10 @@ typedef struct rb_thread_struct {
+@@ -477,7 +497,10 @@ typedef struct rb_thread_struct {
      /* tracer */
      rb_event_hook_t *event_hooks;
      rb_event_flag_t event_flags;
@@ -121,7 +121,7 @@ index b28a222..8abccf3 100644
  
      /* fiber */
      VALUE fiber;
-@@ -583,6 +586,10 @@ enum vm_special_object_type {
+@@ -584,6 +587,10 @@ enum vm_special_object_type {
  
  #define VM_FRAME_TYPE(cfp) ((cfp)->flag & VM_FRAME_MAGIC_MASK)
  

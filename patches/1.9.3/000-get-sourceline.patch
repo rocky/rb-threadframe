@@ -5,10 +5,10 @@ The test for this is has to wait until 246-frame.patch,
 the code that implements pc_offset=  is done.
 
 diff --git a/vm.c b/vm.c
-index b0ea5fa..ad57571 100644
+index c919f5d..325bbad 100644
 --- a/vm.c
 +++ b/vm.c
-@@ -761,6 +761,7 @@ rb_vm_get_sourceline(const rb_control_frame_t *cfp)
+@@ -774,6 +774,7 @@ rb_vm_get_sourceline(const rb_control_frame_t *cfp)
      if (RUBY_VM_NORMAL_ISEQ_P(iseq) && iseq->insn_info_size > 0) {
  	rb_num_t i;
  	size_t pos = cfp->pc - cfp->iseq->iseq_encoded;

@@ -125,7 +125,7 @@ index 07bca00..77b7f11 100644
 +	if (UNLIKELY(wait_event__)) {
 +	    PUSH(val);
 +	    rb_threadptr_exec_event_hooks(th, RUBY_EVENT_C_RETURN, recv, 
-+					  me->called_id, me->klass);
++					  me->called_id, me->klass, 0);
 +	    val = reg_cfp->sp[-1];    /* Allow for hook to change value */
 +	    reg_cfp->sp--; /* for above push */
 +	}
