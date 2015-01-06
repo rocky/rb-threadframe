@@ -6,13 +6,13 @@ require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
 class TestSpSize < Test::Unit::TestCase
 
   def sizes
-    tf = RubyVM::Frame::current
+    tf = RubyVM::Frame::get
     ary = []
     0.upto(2) do |i|
       ary << tf.sp_size
       tf = tf.prev
     end
-    # Swap first two items. The item that generally 
+    # Swap first two items. The item that generally
     # will vary is the a[0].
     ary[0], ary[1] = ary[1], ary[0]
     # p ary
@@ -35,8 +35,8 @@ class TestSpSize < Test::Unit::TestCase
     assert_equal(f1_s[0]+1,   f2_s[0])
     assert_equal(f1_s[1..-1], f2_s[1..-1])
 
-    assert_raises ArgumentError do 
-      tf = RubyVM::Frame.current
+    assert_raises ArgumentError do
+      tf = RubyVM::Frame.get
       tf.sp_set(tf.sp_size, "Should not be able to set this.")
     end
   end

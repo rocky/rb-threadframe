@@ -10,22 +10,22 @@ class TestLibISeq < Test::Unit::TestCase
   TEST_LINE = __LINE__
 
   def test_sha1
-    iseq1 = RubyVM::Frame::current.iseq
-    iseq2 = RubyVM::Frame::current.iseq
-    assert_equal(iseq1.sha1, iseq2.sha1, 
+    iseq1 = RubyVM::Frame::get.iseq
+    iseq2 = RubyVM::Frame::get.iseq
+    assert_equal(iseq1.sha1, iseq2.sha1,
                  "SHA1 for same threadframe should match")
   end
 
   def test_lines
     line = __LINE__
-    iseq = RubyVM::Frame::current.iseq
+    iseq = RubyVM::Frame::get.iseq
     assert_equal((line-1..__LINE__+2).to_a, iseq.lines,
                  "lines of test_lines() don't match")
   end
 
   def test_locate_line
     line = __LINE__
-    iseq = RubyVM::Frame::current.iseq
+    iseq = RubyVM::Frame::get.iseq
     assert iseq.locate_line(line)
     assert_nil iseq.locate_line(line - 2)
   end
@@ -35,14 +35,14 @@ class TestLibISeq < Test::Unit::TestCase
     # It is lame how little we can do here.
     line = __LINE__
     def find_line(line) # :nodoc
-      tf = RubyVM::Frame.current
-      assert(tf.iseq.find_iseq_with_line(line), 
+      tf = RubyVM::Frame.get
+      assert(tf.iseq.find_iseq_with_line(line),
              "should have found line #{line}")
     end
-    tf = RubyVM::Frame.current
+    tf = RubyVM::Frame.get
     find_line(line+2)
     # line2 = nil
-    # 1.times do 
+    # 1.times do
     #   line2 = __LINE__
     # end
     # find_line(line2)

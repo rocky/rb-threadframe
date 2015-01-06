@@ -4,7 +4,7 @@ require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
 
 class TestTracing < Test::Unit::TestCase
   def test_basic_query_set_unset
-    tf = RubyVM::Frame::current
+    tf = RubyVM::Frame::get
     # Test default values
     assert_equal(false, tf.trace_off?)
     assert_equal(false, tf.return_stop?)
@@ -25,14 +25,14 @@ class TestTracing < Test::Unit::TestCase
   def test_trace_off
     @levels = []
     def trace_hook(event, file, line, id, binding, klass)
-      @levels << RubyVM::Frame::current.stack_size
+      @levels << RubyVM::Frame::get.stack_size
     end
 
     def baz
       6
     end
     def bar(set_off)
-      RubyVM::Frame::current.trace_off = true if set_off
+      RubyVM::Frame::get.trace_off = true if set_off
       baz
       5
     end
@@ -40,14 +40,14 @@ class TestTracing < Test::Unit::TestCase
       bar(set_off)
     end
     # 0x10 is the mask for tracing return events
-    Thread.current.set_trace_func(method(:trace_hook).to_proc, 0x10)
+    Thread.get.set_trace_func(method(:trace_hook).to_proc, 0x10)
     foo(false)
     assert_equal(3,  @levels.size)
 
     @levels = []
-    Thread.current.set_trace_func(method(:trace_hook).to_proc, 0x10)
+    Thread.get.set_trace_func(method(:trace_hook).to_proc, 0x10)
     foo(true)
-    Thread.current.set_trace_func(nil)
+    Thread.get.set_trace_func(nil)
     assert_equal(1,  @levels.size)
 
   end

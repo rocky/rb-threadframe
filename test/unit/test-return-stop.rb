@@ -8,7 +8,7 @@ class TestReturnStop < Test::Unit::TestCase
   def setup
     @tuples = []
     @p = Proc.new { |event, file, lineno, mid, binding, klass|
-      # RubyVM::Frame.current.trace_off = true
+      # RubyVM::Frame.get.trace_off = true
       @tuples << [event, lineno, mid, klass]
       # p [event, lineno, mid, klass]
     }
@@ -19,7 +19,7 @@ class TestReturnStop < Test::Unit::TestCase
   def five; 5 end
 
   def recurse(a, trace_off)
-    tf = RubyVM::Frame::current
+    tf = RubyVM::Frame::get
     if a==1
       assert_equal false, tf.return_stop?
       tf.return_stop=trace_off
@@ -34,7 +34,7 @@ class TestReturnStop < Test::Unit::TestCase
   end
 
   def tup_to_s(tuples)
-    tuples.map do |t| 
+    tuples.map do |t|
       '[' + t.map{|t2| t2.inspect}.join(', ') + ']'
     end.join("\n")
   end
@@ -44,7 +44,7 @@ class TestReturnStop < Test::Unit::TestCase
     set_trace_func(nil)
     first = @tuples.dup
     assert_equal('return', @tuples[0][0],
-                 "First tuple recorded should have been a return event," + 
+                 "First tuple recorded should have been a return event," +
                  "got: #{ tup_to_s(@tuples)}")
     recurse(1, false)
     set_trace_func(nil)

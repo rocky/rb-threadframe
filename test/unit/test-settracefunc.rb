@@ -49,7 +49,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
      5: set_trace_func(nil)
     EOF
 
-    expected = 
+    expected =
       [
        [4, 'line',     __method__, self.class],
        [4, 'send',     __method__, self.class],
@@ -59,7 +59,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
        [5, "send",     __method__, self.class],
        [5, "c-call",   :set_trace_func, Kernel]
       ]
-    expected.unshift [5, 'c-return', :set_trace_func, Kernel] if 
+    expected.unshift [5, 'c-return', :set_trace_func, Kernel] if
       '1.9.3' == RUBY_VERSION
     checkit(@events, expected)
   end
@@ -76,7 +76,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
      8: set_trace_func(nil)
     EOF
 
-    expected = 
+    expected =
       [
        [4, 'line',     __method__,    self.class],
        [4, 'send',     __method__,    self.class],
@@ -95,7 +95,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
        [8, 'send',      __method__,   self.class],
        [8, 'c-call',   :set_trace_func, Kernel]
       ]
-    expected.unshift [3, 'c-return', :set_trace_func, Kernel] if 
+    expected.unshift [3, 'c-return', :set_trace_func, Kernel] if
       '1.9.3' == RUBY_VERSION
 
     checkit(@events, expected)
@@ -113,7 +113,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
      8: x = Foo.new.bar
      9: clear_trace_func()
     EOF
-    expected = 
+    expected =
       [
        [4, 'line',     __method__,   self.class],
        [4, 'c-call',   :inherited,   Class],
@@ -139,7 +139,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
        [9, 'send',     __method__,    self.class],
        [9, 'c-call',   :clear_trace_func, Kernel]
       ]
-    expected.unshift [3, 'c-return', :set_trace_func, Kernel] if 
+    expected.unshift [3, 'c-return', :set_trace_func, Kernel] if
       '1.9.3' == RUBY_VERSION
     checkit(@events, expected)
   end
@@ -157,7 +157,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
      9: foo(false)
     10: set_trace_func(nil)
     EOF
-    expected = 
+    expected =
       [
        [ 4, 'line',     __method__,   self.class],
        [ 4, 'send',     __method__,   self.class],
@@ -194,7 +194,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
      9: set_trace_func(nil)
     EOF
 
-    expected = 
+    expected =
       [
        [4, 'line',     __method__, self.class],
        [4, 'send',     __method__, self.class],
@@ -210,7 +210,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
        [9, 'line',     :test_return2, self.class],
        [9, 'send',     :test_return2, self.class],
        [9, 'c-call',   :set_trace_func, Kernel]]
-    expected.unshift [3, 'c-return', :set_trace_func, Kernel] if 
+    expected.unshift [3, 'c-return', :set_trace_func, Kernel] if
       '1.9.3' == RUBY_VERSION
     expected = expected.select{|tup| not ['send', 'leave'].member?(tup[1])} if
       RbConfig::CONFIG['target_os'].start_with?('mingw')
@@ -232,8 +232,8 @@ class TestSetTraceFunc < Test::Unit::TestCase
      7: end
      8: set_trace_func(nil)
     EOF
-    
-    expected = 
+
+    expected =
       [
        [4, 'line',     __method__,     self.class],
        [5, 'line',     __method__,     self.class],
@@ -247,7 +247,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
        [5, 'c-return', :backtrace,     Exception],
        [5, 'c-call',   :set_backtrace, Exception],
        [5, 'c-return', :set_backtrace, Exception],
-       [5, 'raise',    :test_raise,    $e], 
+       [5, 'raise',    :test_raise,    $e],
        [5, 'c-return', :raise,         Kernel],
        [5, 'send',     __method__,     Kernel],
        [6, 'c-call',   :===,           Module],
@@ -257,7 +257,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
        [8, 'send',     __method__,     self.class],
        [8, 'c-call',   :set_trace_func, Kernel]
       ]
-    expected.unshift [3, 'c-return', :set_trace_func, Kernel] if 
+    expected.unshift [3, 'c-return', :set_trace_func, Kernel] if
       '1.9.3' == RUBY_VERSION
 
     checkit(events, expected)
@@ -273,7 +273,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
      8: set_trace_func(nil)
     EOF
 
-    expected = 
+    expected =
       [
        [4, 'line',     __method__, self.class],
        [4, 'send',     __method__, self.class],
@@ -287,10 +287,10 @@ class TestSetTraceFunc < Test::Unit::TestCase
        [5, 'send',     __method__, self.class],
        [5, 'c-call',   :set_trace_func, Kernel]
       ]
-    expected.unshift [3, 'c-return', :set_trace_func, Kernel] if 
+    expected.unshift [3, 'c-return', :set_trace_func, Kernel] if
       '1.9.3' == RUBY_VERSION
 
-      
+
     checkit(events, expected)
   end
 
@@ -313,7 +313,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
     }
 
     th = Thread.new do
-      th = Thread.current
+      th = Thread.get
       eval <<-EOF.gsub(/^.*?: /, '')
        1: th.set_trace_func(prc)
        2: th.add_trace_func(prc2)
@@ -340,7 +340,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
       assert_equal(e, events[:set].shift, showit(events, expected))
     end
 
-    expected = 
+    expected =
       [[2, 'c-return', :add_trace_func, Thread],
        [3, 'line',     __method__, self.class],
        [3, 'c-call',   :inherited, Class],
@@ -383,7 +383,7 @@ class TestSetTraceFunc < Test::Unit::TestCase
   end
 
   def test_trace_proc_that_raises_exception_recovery
-    skip "killcache doesn't work on 1.9.3" if 
+    skip "killcache doesn't work on 1.9.3" if
       RbConfig::CONFIG['target_os'].start_with?('mingw')
     $first_time = true
     $traced = []

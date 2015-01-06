@@ -4,16 +4,16 @@ require_relative '../../lib/iseq_extra'
 class TestLibISeqExtra < Test::Unit::TestCase
 
   def test_basic
-    tf = RubyVM::Frame.current
+    tf = RubyVM::Frame.get
     iseq = tf.iseq
     # See that we get the same line numbers
-    assert_equal(iseq.offsetlines.values.flatten.uniq.sort, 
+    assert_equal(iseq.offsetlines.values.flatten.uniq.sort,
                  iseq.lineoffsets.keys.sort)
     # See that we get the same offsets
-    assert_equal(iseq.lineoffsets.values.flatten.uniq.sort, 
+    assert_equal(iseq.lineoffsets.values.flatten.uniq.sort,
                  iseq.offsetlines.keys.sort)
 
-    assert_equal(iseq.lineoffsets[__LINE__].sort, 
+    assert_equal(iseq.lineoffsets[__LINE__].sort,
                  iseq.line2offsets(__LINE__-1).sort)
 
     assert_equal([], iseq.line2offsets(__LINE__+100))
@@ -25,23 +25,23 @@ class TestLibISeqExtra < Test::Unit::TestCase
     assert_equal(iseq.sha1, iseq2.sha1)
     #    and equal instruction sequences
     assert_equal(true, iseq.equal?(iseq2))
-    
+
     # Now try two different iseqs
     tf2 = tf.prev
     tf2 = tf2.prev until !tf2.prev || tf2.prev.iseq
     if tf2
-      assert_not_equal(iseq.sha1, tf2.iseq.sha1) 
+      assert_not_equal(iseq.sha1, tf2.iseq.sha1)
       assert_equal(false, iseq.equal?(tf2.iseq))
     end
   end
 
   def test_iseq_type
-    tf = RubyVM::Frame.current
+    tf = RubyVM::Frame.get
     top_iseq = tf.prev(-1).iseq
-    if '1.9.3' == RUBY_VERSION 
+    if '1.9.3' == RUBY_VERSION
       assert_equal('METHOD', tf.prev.type)
     else
-      assert_equal('method', 
+      assert_equal('method',
                    RubyVM::InstructionSequence::TYPE2STR[top_iseq.type])
     end
   end
@@ -51,7 +51,7 @@ class TestLibISeqExtra < Test::Unit::TestCase
     def evaluate(context, statements, file = __FILE__, line = __LINE__); end
     def def_extend_command(cmd_name, load_file, *aliases); end
 
-    assert_equal('context, statements; file, line', 
+    assert_equal('context, statements; file, line',
                  method(:evaluate).iseq.format_args)
     assert_equal('cmd_name, load_file; aliases',
                  method(:def_extend_command).iseq.format_args)
@@ -64,9 +64,9 @@ class TestLibISeqExtra < Test::Unit::TestCase
   end
 
   def test_iseq_parent
-    parent_iseq = RubyVM::Frame::current.iseq
-    1.times do 
-      tf = RubyVM::Frame::current
+    parent_iseq = RubyVM::Frame::get.iseq
+    1.times do
+      tf = RubyVM::Frame::get
       assert_equal(true, tf.iseq.parent.equal?(parent_iseq))
     end
   end

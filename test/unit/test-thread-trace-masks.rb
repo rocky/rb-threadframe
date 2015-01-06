@@ -5,7 +5,7 @@ require 'test/unit'
 require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
 
 class TestTracingMasks < Test::Unit::TestCase
-  @@EVENT2MASK = 
+  @@EVENT2MASK =
     if RbConfig::CONFIG['target_os'].start_with?('mingw')
       {
       'line'     => 0x0001,
@@ -14,8 +14,8 @@ class TestTracingMasks < Test::Unit::TestCase
       'c-call'   => 0x0020,
       'c-return' => 0x0040,
       'raise'    => 0x0080,
-      } 
-    else 
+      }
+    else
       {
       'line'     => 0x0001,
       'call'     => 0x0008,
@@ -25,14 +25,14 @@ class TestTracingMasks < Test::Unit::TestCase
       'raise'    => 0x0080,
       'send'     => 0x0400,
       'leave'    => 0x0800,
-      } 
+      }
     end
-      
-      
+
+
 
   def something_to_test(n)
     def sqr(x)
-      x * x 
+      x * x
     end unless self.methods.member?(:sqr)
     begin
       n += sqr(5)
@@ -49,10 +49,10 @@ class TestTracingMasks < Test::Unit::TestCase
 
   def checkit(event_name)
     chunk(@events) if $DEBUG
-    assert @events.all?{|e| e[1] == event_name}, chunk(@events)  
+    assert @events.all?{|e| e[1] == event_name}, chunk(@events)
     assert @events.size > 0, "Expecting at least one #{event_name}"
     @counts[event_name] = @events.size if @keep_count
-  end  
+  end
 
   def test_thread_trace_mask
     def trace_hook(event, file, line, id, binding, klass)
@@ -63,14 +63,14 @@ class TestTracingMasks < Test::Unit::TestCase
     @counts = {}
     @@EVENT2MASK.each do |event_name, mask|
       @events = []
-      Thread.current.set_trace_func(method(:trace_hook).to_proc, mask)
+      Thread.get.set_trace_func(method(:trace_hook).to_proc, mask)
       something_to_test(5)
-      Thread.current.set_trace_func(nil)
-      checkit(event_name) 
+      Thread.get.set_trace_func(nil)
+      checkit(event_name)
     end
     [%w(call return),
      %w(c-call c-return)].each do |c, r|
-      assert_equal(@counts[c], @counts[r], 
+      assert_equal(@counts[c], @counts[r],
                    "Expecting # of #{c}'s to equal # of #{r}'s")
     end
 
@@ -80,17 +80,17 @@ class TestTracingMasks < Test::Unit::TestCase
      %w(raise c-return return),
     ].each do |event_names|
       @events = []
-      mask = event_names.map{|name| 
+      mask = event_names.map{|name|
         @@EVENT2MASK[name]
-      }.inject do 
-        |m, bit| 
+      }.inject do
+        |m, bit|
         m |= bit
       end
-      Thread.current.set_trace_func(method(:trace_hook).to_proc, mask)
+      Thread.get.set_trace_func(method(:trace_hook).to_proc, mask)
       something_to_test(5)
-      Thread.current.set_trace_func(nil)
-      total = event_names.map{|name| @counts[name]}.inject do 
-        |sum, n| 
+      Thread.get.set_trace_func(nil)
+      total = event_names.map{|name| @counts[name]}.inject do
+        |sum, n|
         sum += n
       end
       assert_equal(total, @events.size, chunk(@events))
@@ -98,9 +98,9 @@ class TestTracingMasks < Test::Unit::TestCase
 
     # Try without a mask and see that we get the sum of all events
     @events = []
-    Thread.current.set_trace_func(method(:trace_hook).to_proc)
+    Thread.get.set_trace_func(method(:trace_hook).to_proc)
     something_to_test(5)
-    Thread.current.set_trace_func(nil)
+    Thread.get.set_trace_func(nil)
     total = @counts.values.inject {|sum, n| sum += n}
     assert_equal(total, @events.size, chunk(@events))
   end

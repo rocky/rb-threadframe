@@ -4,7 +4,7 @@ require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
 class TestISeqBrkpt < Test::Unit::TestCase
 
   def test_iseq_brkpt
-    iseq = RubyVM::Frame.current.iseq
+    iseq = RubyVM::Frame.get.iseq
     assert iseq
     assert_equal(nil, iseq.brkpts)
     assert_equal(true, iseq.brkpt_alloc)
@@ -27,7 +27,7 @@ class TestISeqBrkpt < Test::Unit::TestCase
       iseq.brkpt_set(offset) # For test below
     end
     assert_equal(2, iseq.brkpts.size)
-    
+
     max_offset = offsets.max[0]
 
     assert_raises TypeError do iseq.brkpt_get(iseq.iseq_size) end
@@ -48,12 +48,12 @@ class TestISeqBrkpt < Test::Unit::TestCase
                     })
 
     $saw_brkpt = false
-    tf = RubyVM::Frame.current
+    tf = RubyVM::Frame.get
     tf.iseq.offsetlines.keys.each do |offset|
       tf.iseq.brkpt_set(offset)
     end
     assert_equal(true, $saw_brkpt)
-    clear_trace_func
+    set_trace_func nil
   end
 end
 
