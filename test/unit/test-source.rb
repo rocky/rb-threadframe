@@ -9,7 +9,7 @@ class TestSource < Test::Unit::TestCase
     test_basic_lineno = __LINE__ - 1
     tup = method(:test_iseq_source_container).iseq.source_container
     tup[1] = File.basename(tup[1])
-    assert_equal(['file',  File.basename(__FILE__)], tup)
+    assert_equal(['file',  File.basename(__FILE__)], tup[0...-1])
 
     eval('def foo; 5 end')
     tup = method(:foo).iseq.source_container
@@ -32,7 +32,7 @@ class TestSource < Test::Unit::TestCase
     # Is this too specific to test/unit.rb implementation details?
     tup = tf.source_container
     tup[1] = File.basename(tup[1])
-    assert_equal(['file',  File.basename(__FILE__)], tup)
+    assert_equal(['file',  File.basename(__FILE__)], tup[0...-1])
     assert_equal(__LINE__, tf.source_location[0])
 
     # 1.times creates a C frame.
@@ -41,7 +41,7 @@ class TestSource < Test::Unit::TestCase
       tf = RubyVM::Frame::get
       tup = tf.source_container
       tup[1] = File.basename(tup[1])
-      assert_equal(['file',  File.basename(__FILE__)], tup)
+      assert_equal(['file',  File.basename(__FILE__)], tup[0...-1])
       assert_equal(tf.source_location[0], __LINE__)
       tf = tf.prev
       assert_equal('CFUNC', tf.type)
@@ -57,7 +57,7 @@ class TestSource < Test::Unit::TestCase
       assert_equal('BLOCK', tf.type)
       tup = tf.source_container
       tup[1] = File.basename(tup[1])
-      assert_equal(['file',  File.basename(__FILE__)], tup)
+      assert_equal(['file',  File.basename(__FILE__)], tup[0...-1])
       assert_equal(__LINE__, tf.source_location[0])
       tf = tf.prev
       assert_equal('CFUNC', tf.type)
@@ -71,7 +71,7 @@ class TestSource < Test::Unit::TestCase
       assert_equal('LAMBDA', tf.type)
       tup = tf.source_container
       tup[1] = File.basename(tup[1])
-      assert_equal(['file',  File.basename(__FILE__)], tup)
+      assert_equal(['file',  File.basename(__FILE__)], tup[0...-1])
       assert_equal(__LINE__, tf.source_location[0])
       tf = tf.prev
       assert_equal('CFUNC', tf.type)
@@ -85,7 +85,7 @@ class TestSource < Test::Unit::TestCase
       tf = RubyVM::Frame::get
       tup = tf.source_container
       tup[1] = File.basename(tup[1])
-      assert_equal(['file',  File.basename(__FILE__)], tup)
+      assert_equal(['file',  File.basename(__FILE__)], tup[0...-1])
       assert_equal(__LINE__, tf.source_location[0])
       tf = tf.prev
       tup = tf.source_container

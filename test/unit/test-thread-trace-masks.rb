@@ -2,33 +2,30 @@
 require 'rbconfig'
 require 'test/unit'
 
-require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
 
 class TestTracingMasks < Test::Unit::TestCase
-  @@EVENT2MASK =
-    if RbConfig::CONFIG['target_os'].start_with?('mingw')
-      {
-      'line'     => 0x0001,
-      'call'     => 0x0008,
-      'return'   => 0x0010,
-      'c-call'   => 0x0020,
-      'c-return' => 0x0040,
+    @@EVENT2MASK =
+        if RbConfig::CONFIG['target_os'].start_with?('mingw')
+            {
+            'line'     => 0x0001,
+            'call'     => 0x0008,
+            'return'   => 0x0010,
+            'c-call'   => 0x0020,
+            'c-return' => 0x0040,
+            'raise'    => 0x0080,
+        }
+        else
+            {
+            'line'     => 0x0001,
+            'call'     => 0x0008,
+            'return'   => 0x0010,
+            'c-call'   => 0x0020,
+            'c-return' => 0x0040,
       'raise'    => 0x0080,
-      }
-    else
-      {
-      'line'     => 0x0001,
-      'call'     => 0x0008,
-      'return'   => 0x0010,
-      'c-call'   => 0x0020,
-      'c-return' => 0x0040,
-      'raise'    => 0x0080,
-      'send'     => 0x0400,
-      'leave'    => 0x0800,
-      }
-    end
-
-
+            'send'     => 0x0400,
+            'leave'    => 0x0800,
+        }
+        end
 
   def something_to_test(n)
     def sqr(x)
@@ -55,6 +52,7 @@ class TestTracingMasks < Test::Unit::TestCase
   end
 
   def test_thread_trace_mask
+    skip("Figure out what to do with tracing masks")
     def trace_hook(event, file, line, id, binding, klass)
       @events << [line, event, id, klass]
     end
