@@ -1,7 +1,5 @@
 require 'test/unit'
 
-require_relative '../../ext/thread_frame' if '1.9.2' == RUBY_VERSION
-
 # Test source_location and source_container.
 class TestSource < Test::Unit::TestCase
 

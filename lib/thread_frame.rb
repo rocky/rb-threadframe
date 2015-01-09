@@ -2,11 +2,11 @@
 require_relative 'iseq_extra'
 
 class RubyVM::Frame
-  VERSION = '0.42'
+  VERSION = '0.50'
 end
 
-RubyVM::ThreadFrame = RubyVM::Frame
-class Thread
-  # For compatibility with old stuff
-  alias tracing tracing? 
-end
+# RubyVM::ThreadFrame = RubyVM::Frame
+# class Thread
+#   # For compatibility with old stuff
+#   alias tracing tracing?
+# end

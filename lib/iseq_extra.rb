@@ -8,19 +8,19 @@ class RubyVM::InstructionSequence
 
   # Returns a String containing a list of arguments for the RubyVM::InstructionSequence
   # A semicolon separates required arguments from optional ones.
-  # For example: for 
+  # For example: for
   #  def evaluate(context, statements, file = __FILE__, line = __LINE__)
   # we return:
   #  context, statements; file, line
   def format_args
     required_max = arity < 0 ? -arity-1 : arity
-    args = 0.upto(required_max-1).map do |i| 
+    args = 0.upto(required_max-1).map do |i|
       local_name(i)
     end.join(', ')
-    
+
     last = local_table_size-1
     if last >= required_max
-      opt_args = required_max.upto(last).map do |i| 
+      opt_args = required_max.upto(last).map do |i|
         local_name(i)
       end.join(', ')
       args += '; ' + opt_args
@@ -45,16 +45,16 @@ class RubyVM::InstructionSequence
   # Return An array of VM instruction byte offsets (Fixnums) for a
   # given line_number.
   def line2offsets(line_number)
-    offsetlines.select do |offset, lines| 
-      lines.member?(line_number) 
+    offsetlines.select do |offset, lines|
+      lines.member?(line_number)
     end.keys
   end
 
   # Returns a cryptographic checksum (in particluar a SHA1) for the
   # encoded bytes of the instruction sequence.
-  # 
+  #
   # ==== Example
-  # 
+  #
   #   proc{ 5 }.iseq.sha1 => 'b361a73f9efd7dc4d2c5e86d4e94d40b36141d42'
   def sha1
     Digest::SHA1.hexdigest(encoded)
@@ -89,7 +89,7 @@ class RubyVM::InstructionSequence
     iseq = self
     offset = iseq.locate_line(line)
     return iseq, offset if offset
-    
+
     # Didn't find line in this iseq, so check if a contained
     # InstructionSequence encompasses the line searched for
     until offset
@@ -141,9 +141,9 @@ end
 
 if __FILE__ == $0
   # Demo it.
-  iseq = RubyVM::Frame.current.iseq
+  iseq = RubyVM::Frame.get.iseq
   ## FIXME
-  ## puts iseq.format_args
+  puts iseq.format_args
   puts iseq.disassemble
   puts iseq.lineoffsets
   puts iseq.sha1
@@ -151,7 +151,7 @@ if __FILE__ == $0
   p iseq.line2offsets(__LINE__+100)
 
   def show_type # :nodoc:
-    tf = RubyVM::Frame.current
+    tf = RubyVM::Frame.get
     while tf do
       is = tf.iseq
       if is
@@ -164,20 +164,20 @@ if __FILE__ == $0
   end
   show_type
   puts '-' * 40
-  
+
   line = __LINE__
   def find_line(line) # :nodoc
-    tf = RubyVM::Frame.current
+    tf = RubyVM::Frame.get
     puts "find_line has lines: #{tf.iseq.lines}"
     p tf.iseq.find_iseq_with_line(line)
   end
 
-  tf = RubyVM::Frame.current
+  tf = RubyVM::Frame.get
   puts tf.iseq.disassemble
-  puts("offset %d above should be at line %d" % 
+  puts("offset %d above should be at line %d" %
        [tf.iseq.locate_line(line), line])
   find_line(line+2)
-  find_line(line)
-  p tf.iseq.find_iseq_with_line(line+2)
+  # FIXME: reinstate by reconciling top_iseq
+  # find_line(line)
+   #p tf.iseq.find_iseq_with_line(line+2)
 end
-

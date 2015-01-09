@@ -35,7 +35,30 @@ class TestLibISeqExtra < Test::Unit::TestCase
     end
   end
 
+  def show_type # :nodoc:
+      results = []
+      tf = RubyVM::Frame.get
+      while tf do
+          is = tf.iseq
+          if is
+              ist = tf.iseq.type
+              isn = RubyVM::InstructionSequence::TYPE2STR[ist]
+              results << isn
+          end
+          tf = tf.prev
+      end
+      return results
+  end
+
   def test_iseq_type
+      # Create an artificial block, for testing.
+      1.times do
+          got = show_type[0..2] + [show_type[-1]]
+          assert_equal(%w(method block method top), got)
+      end
+  end
+
+  def test_tf_type
     tf = RubyVM::Frame.get
     top_iseq = tf.prev(-1).iseq
     assert_equal('METHOD', tf.prev.type)
